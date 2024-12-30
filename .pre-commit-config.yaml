@@ -1,0 +1,40 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-added-large-files
+
+  - repo: local
+    hooks:
+      - id: isort
+        name: isort
+        entry: poetry run isort .
+        language: system
+        types: [python]
+        pass_filenames: false
+
+      - id: ruff-check
+        name: ruff check
+        entry: poetry run ruff check --fix .
+        language: system
+        types: [python]
+        pass_filenames: false
+
+      - id: ruff-format
+        name: ruff format
+        entry: poetry run ruff format .
+        language: system
+        types: [python]
+        pass_filenames: false
+
+      - id: pytest-with-coverage
+        name: pytest with coverage check
+        entry: bash -c 'COVERAGE_REPORT=term-missing poetry run pytest && poetry run python scripts/check_coverage.py'
+        language: system
+        types: [python]
+        pass_filenames: false
+        always_run: true
