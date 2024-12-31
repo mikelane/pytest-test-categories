@@ -14,10 +14,10 @@ from pydantic import (
     ConfigDict,
 )
 
+from pytest_test_categories import timing
 from pytest_test_categories.types import (
     TestSize,
     TestTimer,
-    TimingViolationError,
 )
 
 if TYPE_CHECKING:
@@ -51,7 +51,7 @@ class TestCategories(BaseModel):
 
     @pytest.hookimpl(hookwrapper=True)
     def pytest_runtest_makereport(self, item: pytest.Item) -> Generator[None, None, None]:
-        """Modify test report to show size category."""
+        """Modify test report to show size category and validate timing."""
         found_sizes = [size.marker_name for size in TestSize if item.get_closest_marker(size.marker_name)]
 
         if not found_sizes:
@@ -82,12 +82,9 @@ class TestCategories(BaseModel):
         if not self.timer or not report.passed:
             return
 
-        duration = self.timer.duration()
-        if test_size == TestSize.SMALL and duration > 1.0:
-            msg = f'SMALL test exceeded time limit of 1.0 seconds ' f'(took {duration:.1f} seconds)'
-            raise TimingViolationError(msg)
+        timing.validate(test_size, self.timer.duration())
 
 
 def pytest_configure(config: pytest.Config) -> None:
     """Register the plugin."""
-    config.pluginmanager.register(TestCategories())
+    config.pluginmanager.register(TestCategories())  # pragma: no cover

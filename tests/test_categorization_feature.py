@@ -52,10 +52,10 @@ class DescribeTestCategorization:
     @pytest.mark.parametrize(
         ('minimal_test_file', 'expected_label'),
         [
-            pytest.param('small', '[SMALL]', id='small_test'),
-            pytest.param('medium', '[MEDIUM]', id='medium_test'),
-            pytest.param('large', '[LARGE]', id='large_test'),
-            pytest.param('xlarge', '[XLARGE]', id='xlarge_test'),
+            pytest.param('small', '[SMALL]', id='small test'),
+            pytest.param('medium', '[MEDIUM]', id='medium test'),
+            pytest.param('large', '[LARGE]', id='large test'),
+            pytest.param('xlarge', '[XLARGE]', id='xlarge test'),
         ],
         indirect=['minimal_test_file'],
     )
