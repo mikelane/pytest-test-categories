@@ -39,6 +39,8 @@ class DescribeTestCategorization:
         [
             pytest.param('small', '[SMALL]', id='small_test'),
             pytest.param('medium', '[MEDIUM]', id='medium_test'),
+            pytest.param('large', '[LARGE]', id='large_test'),
+            pytest.param('xlarge', '[XLARGE]', id='xlarge_test'),
         ],
         indirect=['minimal_test_file'],
     )

@@ -19,6 +19,8 @@ class TestSize(Enum):
 
     SMALL = auto()
     MEDIUM = auto()
+    LARGE = auto()
+    XLARGE = auto()
 
     @property
     def marker_name(self) -> str:
