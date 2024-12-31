@@ -84,3 +84,17 @@ class DescribeTestCategorization:
                 '*Test cannot have multiple size markers: small, medium*',
             ]
         )
+
+    def it_warns_when_test_has_no_size_marker(self, pytester: pytest.Pytester) -> None:
+        """Verify that tests are properly categorized in the output based on their size marker."""
+        test_file = pytester.makepyfile(
+            test_file="""
+            def test_example():
+                assert True
+            """,
+        )
+
+        result: pytest.RunResult = pytester.runpytest(test_file)
+
+        assert result.ret == 0
+        result.stdout.fnmatch_lines(['*PytestWarning: Test has no size marker: test_file.py::test_example'])
