@@ -205,3 +205,34 @@ class DescribeTestCategorization:
         assert len(test_lines) == expected_number_of_test_lines
         # Each variant should have the size marker
         assert all('[SMALL]' in line for line in test_lines)
+
+    def it_handles_nested_test_classes(self, pytester: pytest.Pytester) -> None:
+        """Verify that size markers work correctly with nested test classes."""
+        test_file = pytester.makepyfile(
+            test_file="""
+            import pytest
+
+            @pytest.mark.small
+            class TestOuter:
+                def test_outer_method(self):
+                    assert True
+
+                class TestInner:
+                    def test_inner_method(self):
+                        assert True
+
+                    class TestDeepNested:
+                        def test_nested_method(self):
+                            assert True
+            """,
+        )
+
+        result: pytest.RunResult = pytester.runpytest('-vv', test_file)
+
+        assert result.ret == 0
+        stdout = result.stdout.str()
+        test_lines = [line for line in stdout.splitlines() if 'test_' in line and 'PASSED' in line]
+
+        expected_number_of_test_lines = 3
+        assert len(test_lines) == expected_number_of_test_lines
+        assert all('[SMALL]' in line for line in test_lines)
