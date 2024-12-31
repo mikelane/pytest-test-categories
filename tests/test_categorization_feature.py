@@ -137,3 +137,22 @@ class DescribeTestCategorization:
 
         assert result.ret != 0
         result.stderr.fnmatch_lines(['*Test cannot have multiple size markers: small, medium*'])
+
+    def it_handles_collection_errors_gracefully(self, pytester: pytest.Pytester) -> None:
+        """Verify that the plugin handles test collection failures gracefully."""
+        test_file = pytester.makepyfile(
+            test_file="""
+            import pytest
+
+            # This will cause a collection error due to invalid syntax
+            @pytest.mark.small
+            def test_example()  # Missing colon and function body
+            """,
+        )
+
+        result: pytest.RunResult = pytester.runpytest(test_file)
+
+        # The test should fail due to syntax error
+        assert result.ret != 0
+        # But it shouldn't cause our plugin to raise additional errors
+        assert 'Exception in pytest_runtest_makereport' not in result.stderr.str()
