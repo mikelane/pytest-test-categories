@@ -117,6 +117,7 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
     "D103", # Don't require function docstrings in tests
     "D104", # Don't require init docstrings in tests
 ]
+"tests/_utils/check_coverage.py" = ["T201"] # allow print function in the scripts
 "scripts/*" = ["T201"] # allow print function in the scripts
 "conftest.py" = ["D100"] # Don't require module docstrings in conftest
 "__init__.py" = ["F401"] # allow unused imports in __init__.py
