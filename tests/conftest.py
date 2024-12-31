@@ -2,4 +2,7 @@
 
 from __future__ import annotations
 
-pytest_plugins = ['pytester']
+pytest_plugins = [
+    'pytester',
+    'tests._fixtures.timer',
+]

@@ -12,6 +12,24 @@ files = [
 ]
 
 [[package]]
+name = "asttokens"
+version = "2.4.1"
+description = "Annotate AST trees with source code positions"
+optional = false
+python-versions = "*"
+files = [
+    {file = "asttokens-2.4.1-py2.py3-none-any.whl", hash = "sha256:051ed49c3dcae8913ea7cd08e46a606dba30b79993209636c4875bc1d637bc24"},
+    {file = "asttokens-2.4.1.tar.gz", hash = "sha256:b03869718ba9a6eb027e134bfdf69f38a236d681c83c160d510768af11254ba0"},
+]
+
+[package.dependencies]
+six = ">=1.12.0"
+
+[package.extras]
+astroid = ["astroid (>=1,<2)", "astroid (>=2,<4)"]
+test = ["astroid (>=1,<2)", "astroid (>=2,<4)", "pytest"]
+
+[[package]]
 name = "attrs"
 version = "24.3.0"
 description = "Classes Without Boilerplate"
@@ -157,6 +175,24 @@ files = [
 
 [package.extras]
 test = ["pytest (>=6)"]
+
+[[package]]
+name = "icontract"
+version = "2.7.1"
+description = "Provide design-by-contract with informative violation messages."
+optional = false
+python-versions = "*"
+files = [
+    {file = "icontract-2.7.1-py3-none-any.whl", hash = "sha256:aac4073aebb117f16dcb73b8496209a247fc6b153f203a0648d1065ff8bb81af"},
+    {file = "icontract-2.7.1.tar.gz", hash = "sha256:2e8196754743bd1a3659d66da2ddf1dc0950d01e535c2933bd997b02c6412a03"},
+]
+
+[package.dependencies]
+asttokens = ">=2,<3"
+typing-extensions = "*"
+
+[package.extras]
+dev = ["astor (==0.8.1)", "asyncstdlib (==3.9.1)", "black (==23.9.1)", "coverage (>=6.5.0,<7)", "deal (>=4,<5)", "docutils (>=0.14,<1)", "dpcontracts (==0.6.0)", "mypy (==1.5.1)", "numpy (>=1,<2)", "py-cpuinfo (>=5.0.0,<6)", "pydocstyle (>=6.3.0,<7)", "pygments (>=2.2.0,<3)", "pylint (==2.17.5)", "tabulate (>=0.8.7,<1)", "tox (>=3.0.0)", "typeguard (>=2,<5)"]
 
 [[package]]
 name = "iniconfig"
@@ -480,6 +516,17 @@ typing-extensions = "*"
 dev = ["mypy (==1.4.1)", "pip-tools (>=6.13.0,<7.0.0)", "pytest (>=7.3.1,<8.0.0)", "pytest-asyncio (==0.21.2)", "python-lsp-jsonrpc (==1.0.0)"]
 
 [[package]]
+name = "six"
+version = "1.17.0"
+description = "Python 2 and 3 compatibility utilities"
+optional = false
+python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
+files = [
+    {file = "six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274"},
+    {file = "six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81"},
+]
+
+[[package]]
 name = "tomli"
 version = "2.2.1"
 description = "A lil' TOML parser"
@@ -534,4 +581,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<4.0"
-content-hash = "852c6963e38bd84ee900660bb0bfc25f5e5e240ec88c59eeb49b6433df13b2b6"
+content-hash = "7bd2f4047566318c600d02c3b15898b915c17013a03ba63e88c526f3ae6bad98"
