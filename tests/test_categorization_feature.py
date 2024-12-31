@@ -10,17 +10,21 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-@pytest.fixture
-def minimal_test_file(pytester: pytest.Pytester, request: pytest.FixtureRequest) -> Path:
-    """Create a test file with a single test marked with the specified size."""
-    test_size = request.param
-
-    pytester.makeconftest("""
+@pytest.fixture(autouse=True)
+def conftest_file(pytester: pytest.Pytester) -> Path:
+    """Create a conftest file with the test categories plugin registered."""
+    return pytester.makeconftest("""
         from pytest_test_categories.plugin import TestCategories
 
         def pytest_configure(config):
             config.pluginmanager.register(TestCategories())
     """)
+
+
+@pytest.fixture
+def minimal_test_file(pytester: pytest.Pytester, request: pytest.FixtureRequest) -> Path:
+    """Create a test file with a single test marked with the specified size."""
+    test_size = request.param
 
     return pytester.makepyfile(
         test_file=f"""
@@ -58,3 +62,25 @@ class DescribeTestCategorization:
         assert (
             expected_label in test_output_line
         ), f'Test output should show size category {expected_label} next to test name'
+
+    def it_raises_error_when_test_has_multiple_size_markers(self, pytester: pytest.Pytester) -> None:
+        test_file = pytester.makepyfile(
+            test_file="""
+            import pytest
+
+            @pytest.mark.small
+            @pytest.mark.medium
+            def test_example():
+                assert True
+            """,
+        )
+
+        result: pytest.RunResult = pytester.runpytest(test_file)
+
+        assert result.ret != 0
+
+        result.stderr.fnmatch_lines(
+            [
+                '*Test cannot have multiple size markers: small, medium*',
+            ]
+        )

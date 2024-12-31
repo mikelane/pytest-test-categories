@@ -41,6 +41,8 @@ class TestSize(Enum):
 class TestCategories:
     """Test categories plugin."""
 
+    MULTIPLE_MARKERS_ERROR = 'Test cannot have multiple size markers: {}'
+
     def __init__(self) -> None:
         """Initialize the test categories plugin."""
         self.active = True
@@ -53,6 +55,11 @@ class TestCategories:
     @pytest.hookimpl(hookwrapper=True)
     def pytest_runtest_makereport(self, item: pytest.Item) -> Generator[None, None, None]:
         """Modify test report to show size category."""
+        found_sizes = [size.marker_name for size in TestSize if item.get_closest_marker(size.marker_name)]
+
+        if len(found_sizes) > 1:
+            raise pytest.UsageError(self.MULTIPLE_MARKERS_ERROR.format(', '.join(found_sizes)))
+
         outcome = yield
         report = outcome.get_result()
 
