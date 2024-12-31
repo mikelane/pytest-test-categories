@@ -156,3 +156,52 @@ class DescribeTestCategorization:
         assert result.ret != 0
         # But it shouldn't cause our plugin to raise additional errors
         assert 'Exception in pytest_runtest_makereport' not in result.stderr.str()
+
+    def it_raises_error_when_test_inherits_multiple_size_markers(self, pytester: pytest.Pytester) -> None:
+        """Verify that inheriting conflicting size markers from multiple parent classes raises an error."""
+        test_file = pytester.makepyfile(
+            test_file="""
+            import pytest
+
+            @pytest.mark.small
+            class SmallTests:
+                pass
+
+            @pytest.mark.medium
+            class MediumTests:
+                pass
+
+            class TestExample(SmallTests, MediumTests):
+                def test_method(self):
+                    assert True
+            """,
+        )
+
+        result: pytest.RunResult = pytester.runpytest(test_file)
+
+        assert result.ret != 0
+        result.stderr.fnmatch_lines(['*Test cannot have multiple size markers: small, medium*'])
+
+    def it_applies_size_marker_to_all_parametrized_variants(self, pytester: pytest.Pytester) -> None:
+        """Verify that size markers are correctly applied to all parametrized test variants."""
+        test_file = pytester.makepyfile(
+            test_file="""
+            import pytest
+
+            @pytest.mark.small
+            @pytest.mark.parametrize('value', [1, 2, 3])
+            def test_example(value):
+                assert value in [1, 2, 3]
+            """,
+        )
+
+        result: pytest.RunResult = pytester.runpytest('-vv', test_file)
+
+        stdout = result.stdout.str()
+        test_lines = [line for line in stdout.splitlines() if 'test_example' in line and 'PASSED' in line]
+
+        # Should have 3 test variants
+        expected_number_of_test_lines = 3
+        assert len(test_lines) == expected_number_of_test_lines
+        # Each variant should have the size marker
+        assert all('[SMALL]' in line for line in test_lines)
