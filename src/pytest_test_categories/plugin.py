@@ -3,9 +3,16 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING
+from typing import (
+    TYPE_CHECKING,
+    Final,
+)
 
 import pytest
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+)
 
 from pytest_test_categories.types import TestSize
 
@@ -13,14 +20,13 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
 
-class TestCategories:
+class TestCategories(BaseModel):
     """Test categories plugin."""
 
-    MULTIPLE_MARKERS_ERROR = 'Test cannot have multiple size markers: {}'
+    MULTIPLE_MARKERS_ERROR: Final[str] = 'Test cannot have multiple size markers: {}'
+    active: bool = True
 
-    def __init__(self) -> None:
-        """Initialize the test categories plugin."""
-        self.active = True
+    model_config = ConfigDict(frozen=True)
 
     def pytest_configure(self, config: pytest.Config) -> None:
         """Register the plugin and markers."""

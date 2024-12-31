@@ -2,19 +2,20 @@
 
 from __future__ import annotations
 
-from enum import (
-    Enum,
-    auto,
-)
+from enum import StrEnum
 
 
-class TestSize(Enum):
+class TimingViolationError(Exception):
+    """Exception raised for timing violations."""
+
+
+class TestSize(StrEnum):
     """Test size categories."""
 
-    SMALL = auto()
-    MEDIUM = auto()
-    LARGE = auto()
-    XLARGE = auto()
+    SMALL = 'small'
+    MEDIUM = 'medium'
+    LARGE = 'large'
+    XLARGE = 'xlarge'
 
     @property
     def marker_name(self) -> str:
