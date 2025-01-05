@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import pytest
 
+from pytest_test_categories.distribution.stats import TestCounts
+
 
 @pytest.fixture(autouse=True)
 def conftest_file(pytester: pytest.Pytester) -> None:
@@ -82,9 +84,8 @@ class DescribeDistributionAnalysis:
             """
         )
 
-        result = pytester.runpytest('test_distribution.py', '-v')
+        result = pytester.runpytest('test_distribution.py', '-vv')
 
-        # Test should fail since calculate_percentages() isn't implemented
         assert result.ret == 0
 
     def it_calculates_round_percentages_evenly_from_counts(self, pytester: pytest.Pytester) -> None:
@@ -142,4 +143,169 @@ class DescribeDistributionAnalysis:
 
         result = pytester.runpytest('test_zero_counts.py', '-vv')
 
+        assert result.ret == 0
+
+    def it_validates_compliant_distribution(self, pytester: pytest.Pytester) -> None:
+        """Verify that a test distribution within target ranges is validated successfully."""
+        pytester.makepyfile(
+            test_distribution="""
+            from pytest_test_categories.distribution.stats import TestCounts, DistributionStats
+
+            def test_valid_distribution(distribution_stats):
+                # Given a test suite with distribution within targets
+                counts = TestCounts(
+                    small=80,     # 80% - within 75-85% target
+                    medium=15,    # 15% - within 10-20% target
+                    large=4,      # 5% combined - within 2-8% target
+                    xlarge=1
+                )
+                stats = DistributionStats(counts=counts)
+
+                # When validating the distribution
+                stats.validate_distribution()
+
+                # Then no exception should be raised
+                assert True  # If we get here, validation passed
+            """
+        )
+
+        result = pytester.runpytest('test_distribution.py', '-vv')
+
+        assert result.ret == 0
+
+    @pytest.mark.parametrize(
+        ('counts', 'expected_error'),
+        [
+            pytest.param(
+                TestCounts(
+                    small=70,  # 70% - below target
+                    medium=25,  # 25%
+                    large=4,  # 5% combined
+                    xlarge=1,
+                ),
+                'Small test percentage (70.00%) outside target range 75.00%-85.00%',
+                id='small below range',
+            ),
+            pytest.param(
+                TestCounts(
+                    small=90,  # 90% - above target
+                    medium=8,  # 8%
+                    large=1,  # 2% combined
+                    xlarge=1,
+                ),
+                'Small test percentage (90.00%) outside target range 75.00%-85.00%',
+                id='small above range',
+            ),
+            pytest.param(
+                TestCounts(
+                    small=85,  # 85%
+                    medium=8,  # 8% - below target
+                    large=6,  # 7% combined
+                    xlarge=1,
+                ),
+                'Medium test percentage (8.00%) outside target range 10.00%-20.00%',
+                id='medium below range',
+            ),
+            pytest.param(
+                TestCounts(
+                    small=75,  # 75%
+                    medium=22,  # 22% - above target
+                    large=2,  # 3% combined
+                    xlarge=1,
+                ),
+                'Medium test percentage (22.00%) outside target range 10.00%-20.00%',
+                id='medium above range',
+            ),
+            pytest.param(
+                TestCounts(
+                    small=85,  # 85%
+                    medium=14,  # 14%
+                    large=1,  # 1% combined - below target
+                    xlarge=0,
+                ),
+                'Large/XLarge test percentage (1.00%) outside target range 2.00%-8.00%',
+                id='large xlarge below range',
+            ),
+            pytest.param(
+                TestCounts(
+                    small=80,  # 80%
+                    medium=10,  # 10%
+                    large=8,  # 10% combined - above target
+                    xlarge=2,
+                ),
+                'Large/XLarge test percentage (10.00%) outside target range 2.00%-8.00%',
+                id='large/xlarge above range',
+            ),
+        ],
+    )
+    def it_fails_when_distribution_outside_target_ranges(
+        self,
+        pytester: pytest.Pytester,
+        counts: TestCounts,
+        expected_error: str,
+    ) -> None:
+        """Verify that validation fails when test percentages fall outside target ranges."""
+        pytester.makepyfile(
+            test_distribution=f"""
+            import pytest
+            from pytest_test_categories.distribution.stats import TestCounts, DistributionStats
+
+            def test_invalid_distribution():
+                # Given a test suite with invalid distribution
+                counts = TestCounts(
+                    small={counts.small},
+                    medium={counts.medium},
+                    large={counts.large},
+                    xlarge={counts.xlarge}
+                )
+                stats = DistributionStats(counts=counts)
+
+                # When validating the distribution
+                with pytest.raises(ValueError) as exc_info:
+                    stats.validate_distribution()
+
+                # Then it should fail with appropriate error message
+                assert "{expected_error}" in str(exc_info.value)
+            """
+        )
+
+        result = pytester.runpytest('test_distribution.py', '-vv')
+        assert result.ret == 0
+
+    def it_validates_percentages_must_sum_to_100_percent(self, pytester: pytest.Pytester) -> None:
+        """Verify that test percentages must sum to 100% (unless all zero)."""
+        pytester.makepyfile(
+            test_percentages="""
+            import pytest
+            from pytest_test_categories.distribution.stats import TestPercentages
+
+            def test_invalid_total_percentage():
+                # Given percentages that don't sum to 100%
+                with pytest.raises(ValueError, match='Percentages must sum to 100% .*'):
+                    TestPercentages(
+                        small=80.0,    # Total sums to 95%
+                        medium=10.0,
+                        large=3.0,
+                        xlarge=2.0
+                    )
+
+                # Zero percentages are allowed
+                TestPercentages(
+                    small=0.0,
+                    medium=0.0,
+                    large=0.0,
+                    xlarge=0.0
+                )
+
+                # Small rounding differences are allowed
+                TestPercentages(
+                    small=80.004,    # Total = 100.004%
+                    medium=15.0,
+                    large=3.0,
+                    xlarge=2.0
+                )
+            """
+        )
+
+        result = pytester.runpytest('test_percentages.py', '-vv')
         assert result.ret == 0
