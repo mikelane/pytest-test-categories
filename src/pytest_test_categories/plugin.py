@@ -30,10 +30,29 @@ class TestCategories(BaseModel):
     """Test categories plugin."""
 
     MULTIPLE_MARKERS_ERROR: Final[str] = 'Test cannot have multiple size markers: {}'
+    DISTRIBUTION_WARNING: Final[str] = 'Test distribution does not meet targets: {}'
     active: bool = True
     timer: TestTimer | None = None
     distribution_stats: DistributionStats = DistributionStats()
     model_config = ConfigDict(frozen=True)
+
+    def _count_tests_by_size(self, items: list[pytest.Item]) -> dict[str, int]:
+        """Count the number of tests in each size category.
+
+        Args:
+            items: List of test items to count.
+
+        Returns:
+            Dictionary mapping size marker names to counts.
+
+        """
+        counts = defaultdict(int)
+        for item in items:
+            for size in TestSize:
+                if item.get_closest_marker(size.marker_name):
+                    counts[size.marker_name] += 1
+                    break
+        return counts
 
     def pytest_configure(self, config: pytest.Config) -> None:
         """Register the plugin and markers."""
@@ -46,15 +65,15 @@ class TestCategories(BaseModel):
     @pytest.hookimpl(tryfirst=True)
     def pytest_collection_modifyitems(self, config: pytest.Config, items: list[pytest.Item]) -> None:
         """Count tests by size during collection."""
-        counts = defaultdict(int)
+        config.distribution_stats = DistributionStats.update_counts(counts=self._count_tests_by_size(items))
 
-        for item in items:
-            for size in TestSize:
-                if item.get_closest_marker(size.marker_name):
-                    counts[size.marker_name] += 1
-                    break
-
-        config.distribution_stats = DistributionStats.update_counts(counts)
+    @pytest.hookimpl
+    def pytest_collection_finish(self, session: pytest.Session) -> None:
+        """Validate test distribution after collection."""
+        try:
+            session.config.distribution_stats.validate_distribution()
+        except ValueError as e:
+            warnings.warn(self.DISTRIBUTION_WARNING.format(e), pytest.PytestWarning, stacklevel=2)
 
     @pytest.hookimpl(hookwrapper=True)
     def pytest_runtest_protocol(self, item: pytest.Item) -> Generator[None, None, None]:  # noqa: ARG002

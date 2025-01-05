@@ -309,3 +309,22 @@ class DescribeDistributionAnalysis:
 
         result = pytester.runpytest('test_percentages.py', '-vv')
         assert result.ret == 0
+
+    def it_validates_distribution_after_collection(self, pytester: pytest.Pytester) -> None:
+        """Verify that the plugin validates test distribution after collection."""
+        pytester.makepyfile(
+            test_distribution="""
+            import pytest
+
+            @pytest.mark.small
+            def test_one():
+                assert True
+            """
+        )
+
+        result = pytester.runpytest('-vv')
+
+        # The pytester test itself should pass
+        assert result.ret == 0
+        # But it should show a warning about distribution
+        result.stdout.fnmatch_lines(['*PytestWarning: Test distribution does not meet targets*'])
