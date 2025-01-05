@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import warnings
+from collections import defaultdict
 from typing import (
     TYPE_CHECKING,
     Final,
@@ -15,6 +16,7 @@ from pydantic import (
 )
 
 from pytest_test_categories import timing
+from pytest_test_categories.distribution.stats import DistributionStats
 from pytest_test_categories.types import (
     TestSize,
     TestTimer,
@@ -30,13 +32,29 @@ class TestCategories(BaseModel):
     MULTIPLE_MARKERS_ERROR: Final[str] = 'Test cannot have multiple size markers: {}'
     active: bool = True
     timer: TestTimer | None = None
-
+    distribution_stats: DistributionStats = DistributionStats()
     model_config = ConfigDict(frozen=True)
 
     def pytest_configure(self, config: pytest.Config) -> None:
         """Register the plugin and markers."""
+        if not hasattr(config, 'distribution_stats'):
+            config.distribution_stats = self.distribution_stats
+
         for size in TestSize:
             config.addinivalue_line('markers', f'{size.marker_name}: {size.description}')
+
+    @pytest.hookimpl(tryfirst=True)
+    def pytest_collection_modifyitems(self, config: pytest.Config, items: list[pytest.Item]) -> None:
+        """Count tests by size during collection."""
+        counts = defaultdict(int)
+
+        for item in items:
+            for size in TestSize:
+                if item.get_closest_marker(size.marker_name):
+                    counts[size.marker_name] += 1
+                    break
+
+        config.distribution_stats = DistributionStats.update_counts(counts)
 
     @pytest.hookimpl(hookwrapper=True)
     def pytest_runtest_protocol(self, item: pytest.Item) -> Generator[None, None, None]:  # noqa: ARG002
