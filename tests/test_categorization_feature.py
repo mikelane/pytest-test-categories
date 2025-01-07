@@ -86,7 +86,7 @@ class DescribeTestCategorization:
             """,
         )
 
-        result: pytest.RunResult = pytester.runpytest(test_file)
+        result: pytest.RunResult = pytester.runpytest('-vv', test_file)
 
         assert result.ret != 0
 

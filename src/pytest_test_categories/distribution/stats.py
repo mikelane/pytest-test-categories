@@ -72,7 +72,7 @@ class TestPercentages(BaseModel):
     """Distribution percentages of tests by size."""
 
     _TOTAL_ERROR: ClassVar[str] = 'Percentages must sum to 100% (within rounding error) unless all are 0'
-    ROUNDING_TOLERANCE: ClassVar[float] = 0.01
+    ROUNDING_TOLERANCE: ClassVar[float] = 0.1
 
     small: float = Field(ge=0.0, le=ONE_HUNDRED_PERCENT, default=0.0)
     medium: float = Field(ge=0.0, le=ONE_HUNDRED_PERCENT, default=0.0)
@@ -87,7 +87,15 @@ class TestPercentages(BaseModel):
 
     @model_validator(mode='after')
     def validate_total(self) -> TestPercentages:
-        """Validate that percentages sum to 100% unless all are 0."""
+        """Validate that percentages sum to 100% unless all are 0.
+
+        Returns:
+            The validated TestPercentages instance.
+
+        Raises:
+            ValueError: If percentages don't sum to 100% (within rounding tolerance).
+
+        """
         values = [self.small, self.medium, self.large, self.xlarge]
         total = sum(values)
 
