@@ -14,20 +14,25 @@ from pytest_test_categories.types import (
 
 
 class MockTimer(TestTimer):
-    """A mock timer implementation for testing."""
+    """A mock timer implementation for testing with predefined durations."""
 
     desired_duration: float = Annotated[float, Field(gt=0, default=1.0)]
 
     def start(self) -> None:
         """Start the mock timer."""
-        self.state = TimerState.RUNNING
+        if self.state != TimerState.READY:
+            self.reset()
+        super().start()
 
     def stop(self) -> None:
         """Stop the mock timer."""
-        self.state = TimerState.STOPPED
+        super().stop()
 
     def duration(self) -> float:
-        """Get the duration of the test."""
+        """Get the predefined duration."""
+        if self.state != TimerState.STOPPED:
+            msg = f'Timer must be stopped to get duration, current state: {self.state}'
+            raise RuntimeError(msg)
         return self.desired_duration
 
 

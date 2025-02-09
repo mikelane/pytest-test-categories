@@ -49,7 +49,6 @@ class DistributionRange(BaseModel):
         return min(ONE_HUNDRED_PERCENT, self.target + self.tolerance)
 
 
-# Define distribution targets
 DISTRIBUTION_TARGETS = {
     'small': DistributionRange(target=80.0, tolerance=5.0),  # 75-85%
     'medium': DistributionRange(target=15.0, tolerance=5.0),  # 10-20%
@@ -72,18 +71,18 @@ class TestPercentages(BaseModel):
     """Distribution percentages of tests by size."""
 
     _TOTAL_ERROR: ClassVar[str] = 'Percentages must sum to 100% (within rounding error) unless all are 0'
-    ROUNDING_TOLERANCE: ClassVar[float] = 0.1
+    ROUNDING_TOLERANCE: ClassVar[float] = 0.01
 
     small: float = Field(ge=0.0, le=ONE_HUNDRED_PERCENT, default=0.0)
     medium: float = Field(ge=0.0, le=ONE_HUNDRED_PERCENT, default=0.0)
     large: float = Field(ge=0.0, le=ONE_HUNDRED_PERCENT, default=0.0)
     xlarge: float = Field(ge=0.0, le=ONE_HUNDRED_PERCENT, default=0.0)
 
-    @field_validator('small', 'medium', 'large', 'xlarge')
+    @field_validator('small', 'medium', 'large', 'xlarge', mode='before')
     @classmethod
     def round_to_two_decimals(cls: type[TestPercentages], v: Number) -> float:
         """Round percentage values to two decimal places."""
-        return round(v, 2)
+        return round(float(v), 2)
 
     @model_validator(mode='after')
     def validate_total(self) -> TestPercentages:
@@ -115,9 +114,7 @@ class DistributionStats(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     @classmethod
-    def update_counts(
-        cls: type[DistributionStats], counts: Mapping[TestSize, int] | TestCounts
-    ) -> type[DistributionStats]:
+    def update_counts(cls: type[DistributionStats], counts: Mapping[TestSize, int] | TestCounts) -> DistributionStats:
         """Return a new instance with updated counts."""
         return cls(counts=TestCounts.model_validate(counts))
 

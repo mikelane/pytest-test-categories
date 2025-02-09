@@ -1,10 +1,11 @@
 [tool.poetry]
 name = "pytest-test-categories"
-version = "0.1.0"
+version = "0.3.0"
 description = "A pytest plugin to enforce test timing constraints and size distributions."
 authors = ["Mike Lane <mikelane@gmail.com>"]
 packages = [{ include = "pytest_test_categories", from = "src" }]
 license = "MIT"
+requires-poetry = "^2.0"
 
 [project]
 name = "pytest-test-categories"
@@ -44,7 +45,7 @@ ruff-lsp = "^0.0.59"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["it_*.py", "test_*.py"]
-python_functions = ["it_*", "test_*"]
+python_functions = ["it_*"]
 python_classes = ["Describe[A-Z]*"]
 addopts = ["-s", "-ra", "-q", "-vv", "--cov=src", "--cov-config=pyproject.toml"]
 pythonpath = ["src", "tests/plugins"]
@@ -54,19 +55,6 @@ filterwarnings = [
     "ignore:The `__fields__` attribute is deprecated:DeprecationWarning",
 ]
 
-[tool.coverage.run]
-omit = ["tests/*"]
-
-[tool.coverage.report]
-exclude_lines = [
-    "pragma: no cover",
-    "def __repr__",
-    "if TYPE_CHECKING:",
-    "raise NotImplementedError",
-    "return NotImplemented",
-    "if __name__ == .__main__.:",
-    "pass",
-]
 
 [tool.isort]
 line_length = 120
@@ -112,6 +100,7 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
     "D100", # Don't require module docstrings
     "D101", # Don't require class docstrings
     "D102", # Don't require method docstrings
+    "PLR2004", # Don't prevent magic values in tests
     "S101", # Don't prevent asserts
 ]
 "tests/*" = [

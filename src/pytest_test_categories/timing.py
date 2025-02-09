@@ -24,7 +24,6 @@ class TimeLimit(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-# Define standard time limits
 SMALL_LIMIT = TimeLimit(limit=1.0)
 MEDIUM_LIMIT = TimeLimit(limit=300.0)
 LARGE_LIMIT = TimeLimit(limit=900.0)

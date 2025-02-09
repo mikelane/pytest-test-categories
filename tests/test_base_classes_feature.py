@@ -12,17 +12,6 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture(autouse=True)
-def plugin_conftest(pytester: pytest.Pytester) -> None:
-    """Create a conftest file with the test categories plugin registered."""
-    pytester.makeconftest("""
-        from pytest_test_categories.plugin import TestCategories
-
-        def pytest_configure(config):
-            config.pluginmanager.register(TestCategories())
-    """)
-
-
-@pytest.fixture(autouse=True)
 def test_file(pytester: pytest.Pytester, request: pytest.FixtureRequest) -> None:
     """Create a test file using the specified test base class."""
     test_size = request.param
