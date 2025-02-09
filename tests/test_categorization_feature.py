@@ -10,28 +10,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-@pytest.fixture(autouse=True)
-def conftest_file(pytester: pytest.Pytester) -> Path:
-    """Create a conftest file with the test categories plugin registered.
-
-    This fixture is automatically used in all tests to ensure the plugin
-    is properly registered with pytest.
-
-    Args:
-        pytester: The pytest fixture for testing pytest plugins.
-
-    Returns:
-        The path to the created conftest file.
-
-    """
-    return pytester.makeconftest("""
-        from pytest_test_categories.plugin import TestCategories
-
-        def pytest_configure(config):
-            config.pluginmanager.register(TestCategories())
-    """)
-
-
 @pytest.fixture
 def minimal_test_file(pytester: pytest.Pytester, request: pytest.FixtureRequest) -> Path:
     """Create a test file with a single test marked with the specified size."""

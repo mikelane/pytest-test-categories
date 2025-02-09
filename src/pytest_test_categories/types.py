@@ -6,21 +6,13 @@ from abc import (
     ABC,
     abstractmethod,
 )
-from enum import (
-    Enum,
-    StrEnum,
-    auto,
-)
-from typing import TYPE_CHECKING
+from enum import StrEnum
 
 from icontract import (
     ensure,
     require,
 )
 from pydantic import BaseModel
-
-if TYPE_CHECKING:
-    from numbers import Real
 
 
 class TimingViolationError(Exception):
@@ -51,27 +43,25 @@ class TestSize(StrEnum):
         return f'[{self.name}]'
 
 
-class TimerState(Enum):
+class TimerState(StrEnum):
     """Represents the possible states of a timer."""
 
-    READY = auto()
-    RUNNING = auto()
-    STOPPED = auto()
+    READY = 'ready'
+    RUNNING = 'running'
+    STOPPED = 'stopped'
 
 
-class TestTimer(ABC, BaseModel):
-    """Abstract base class defining the timer interface.
-
-    Attributes:
-        _state: The current state of the timer, managed by Pydantic.
-
-    """
+class TestTimer(BaseModel, ABC):
+    """Abstract base class defining the timer interface."""
 
     state: TimerState = TimerState.READY
 
+    def reset(self) -> None:
+        """Reset timer to initial state."""
+        self.state = TimerState.READY
+
     @require(lambda self: self.state == TimerState.READY, 'Timer must be in READY state to start')
     @ensure(lambda self: self.state == TimerState.RUNNING, 'Timer must be in RUNNING state after starting')
-    @abstractmethod
     def start(self) -> None:
         """Start timing a test.
 
@@ -79,10 +69,10 @@ class TestTimer(ABC, BaseModel):
             RuntimeError: If the timer is not in READY state.
 
         """
+        self.state = TimerState.RUNNING
 
     @require(lambda self: self.state == TimerState.RUNNING, 'Timer must be in RUNNING state to stop')
     @ensure(lambda self: self.state == TimerState.STOPPED, 'Timer must be in STOPPED state after stopping')
-    @abstractmethod
     def stop(self) -> None:
         """Stop timing a test.
 
@@ -90,15 +80,16 @@ class TestTimer(ABC, BaseModel):
             RuntimeError: If the timer is not in RUNNING state.
 
         """
+        self.state = TimerState.STOPPED
 
     @require(lambda self: self.state == TimerState.STOPPED, 'Timer must be in STOPPED state to get duration')
     @ensure(lambda result: result > 0, 'Duration must be positive')
     @abstractmethod
-    def duration(self) -> Real:
+    def duration(self) -> float:
         """Get the duration of the test in seconds.
 
         Returns:
-            Real: The duration of the test in seconds (must be positive).
+            The duration of the test in seconds (must be positive).
 
         Raises:
             RuntimeError: If the timer is not in STOPPED state.

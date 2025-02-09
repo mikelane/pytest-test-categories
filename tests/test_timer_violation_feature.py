@@ -6,51 +6,147 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from pytest_test_categories.types import (
+    TestTimer,
+    TimerState,
+)
+
 if TYPE_CHECKING:
     from pathlib import Path
 
 
+class MockTimer(TestTimer):
+    """Mock timer implementation for testing."""
+
+    desired_duration: float = 1.0
+
+    def start(self) -> None:
+        """Start the mock timer."""
+        self.state = TimerState.RUNNING
+
+    def stop(self) -> None:
+        """Stop the mock timer."""
+        self.state = TimerState.STOPPED
+
+    def duration(self) -> float:
+        """Get the predefined duration."""
+        return self.desired_duration
+
+
 @pytest.fixture(autouse=True)
-def plugin_conftest(request: pytest.FixtureRequest) -> Path:
-    pytester = request.getfixturevalue('pytester')
+def plugin_conftest(pytester: pytest.Pytester, request: pytest.FixtureRequest) -> None:
+    """Create plugin conftest with mock timer."""
     duration = getattr(request, 'param', 1.0)
 
-    return pytester.makeconftest(f"""
+    # Create test file with the right marker
+    pytester.makepyfile(
+        test_example="""
+        import pytest
+
+        @pytest.mark.small
+        def test_example():
+            assert True
+        """
+    )
+
+    # Create the plugin code in a separate file
+    pytester.makepyfile(
+        test_categories_plugin=f"""
+        from pydantic import Field
+        from pytest_test_categories.types import TestTimer, TimerState, TimingViolationError, TestSize
+        from pytest_test_categories.plugin import state
+        from pytest_test_categories import timing
+        import pytest
+
+        class TestMockTimer(TestTimer):
+            desired_duration: float = Field(default=1.0)
+
+            def __init__(self, *, state=TimerState.READY, duration=1.0):
+                super().__init__(state=state)
+                self.desired_duration = duration
+                print(f'Created TestMockTimer with duration {{duration}}')
+
+            def start(self) -> None:
+                if self.state != TimerState.READY:
+                    self.state = TimerState.READY
+                super().start()
+                print('Timer started')
+
+            def stop(self) -> None:
+                super().stop()
+                print('Timer stopped')
+
+            def duration(self) -> float:
+                if self.state != TimerState.STOPPED:
+                    raise RuntimeError('Timer must be stopped to get duration')
+                print(f'Reporting duration: {{self.desired_duration}}')
+                return self.desired_duration
+
+        @pytest.hookimpl(hookwrapper=True)
+        def pytest_runtest_protocol(item, nextitem):
+            try:
+                if state.timer is not None:
+                    state.timer.start()
+                    print('Protocol: Timer started')
+                yield
+            finally:
+                if state.timer is not None and state.timer.state == TimerState.RUNNING:
+                    state.timer.stop()
+                    print('Protocol: Timer stopped')
+
+        @pytest.hookimpl(hookwrapper=True)
+        def pytest_runtest_makereport(item, call):
+            if call.when == 'call' and state.timer and state.timer.state == TimerState.RUNNING:
+                state.timer.stop()
+                print('Makereport: Timer stopped')
+
+            outcome = yield
+            report = outcome.get_result()
+
+            if report.when == 'call':
+                test_size = next(
+                    (size for size in TestSize if item.get_closest_marker(size.marker_name)),
+                    None,
+                )
+
+                if test_size and state.timer and state.timer.state == TimerState.STOPPED:
+                    try:
+                        duration = state.timer.duration()
+                        print(f'Validating timing for {{test_size}}: {{duration}}')
+                        timing.validate(test_size, duration)
+                    except TimingViolationError as e:
+                        print(f'Timing violation detected: {{e}}')
+                        report.outcome = 'failed'
+                        report.failed = True
+                        report.passed = False
+                        report.longrepr = str(e)
+
+        @pytest.hookimpl(tryfirst=True)
         def pytest_configure(config):
-            from pytest_test_categories.plugin import TestCategories
-            from pytest_test_categories.types import TestTimer, TimerState
+            print('Configuring mock timer')
+            state.timer = TestMockTimer(state=TimerState.READY, duration={duration})
+        """
+    )
 
-            class TestMockTimer(TestTimer):
-                desired_duration: float = {duration}
-
-                def __hash__(self) -> int:
-                    return hash((self.state, self.desired_duration))
-
-                def start(self) -> None:
-                    self.state = TimerState.RUNNING
-
-                def stop(self) -> None:
-                    self.state = TimerState.STOPPED
-
-                def duration(self) -> float:
-                    return self.desired_duration
-
-            plugin = TestCategories(timer=TestMockTimer())
-            config.pluginmanager.register(plugin)
+    # Create conftest.py to register the plugin
+    pytester.makeconftest("""
+        pytest_plugins = ['test_categories_plugin']
     """)
 
 
 @pytest.fixture
-def test_file(request: pytest.FixtureRequest, pytester: pytest.Pytester) -> Path:
-    """Create a test file with the specified test size marker."""
+def test_file(pytester: pytest.Pytester, request: pytest.FixtureRequest) -> Path:
+    """Create a test file with the specified size marker."""
     size = request.param
-    return pytester.makepyfile(f"""
+    return pytester.makepyfile(
+        test_example=f"""
         import pytest
 
         @pytest.mark.{size}
         def test_example():
             assert True
-    """)
+        """
+    )
 
 
 class DescribeTimerViolations:

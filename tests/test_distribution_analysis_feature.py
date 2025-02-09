@@ -12,12 +12,7 @@ def conftest_file(pytester: pytest.Pytester) -> None:
     """Create a conftest file with the test categories plugin registered."""
     pytester.makeconftest("""
         import pytest
-        from pytest_test_categories.plugin import TestCategories
         from pytest_test_categories.distribution.stats import DistributionStats
-
-        def pytest_configure(config):
-            plugin = TestCategories()
-            config.pluginmanager.register(plugin)
 
         @pytest.fixture
         def distribution_stats(request):
