@@ -37,6 +37,7 @@ pytest-mock = "^3.14.0"
 
 [tool.poetry.group.lint.dependencies]
 isort = "^5.13.2"
+pre-commit = "^4.1.0"
 ruff = "^0.8.0"
 ruff-lsp = "^0.0.59"
 
