@@ -56,6 +56,14 @@ poetry run pytest
 
 This project follows best practices for testing, linting, and code quality.
 
+### Install Development Dependencies
+
+```bash
+poetry install --no-root --all-groups
+```
+
+`--no-root` is required to avoid installing the package itself, which can result in plugin double-registration when running pytest.
+
 ### Setup Pre-commit Hooks
 
 To ensure code quality, set up pre-commit hooks:
