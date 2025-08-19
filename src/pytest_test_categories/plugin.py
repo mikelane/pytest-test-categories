@@ -53,9 +53,10 @@ class PluginState(BaseModel):
     """Global plugin state."""
 
     active: bool = True
-    timer: TestTimer = WallTimer(state=TimerState.READY)
     distribution_stats: DistributionStats = DistributionStats()
     warned_tests: set[str] = set()
+    # Store timers per test item to avoid race conditions
+    timers: dict[str, TestTimer] = Field(default_factory=dict)
 
 
 state = PluginState()
@@ -136,18 +137,17 @@ def pytest_collection_finish(session: pytest.Session) -> None:
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None) -> Generator[None, None, None]:  # noqa: ARG001
     """Track test timing."""
+    # Create a unique timer for this test item
+    timer = WallTimer(state=TimerState.READY)
+    state.timers[item.nodeid] = timer
+    
     try:
-        if state.timer is not None:
-            # Reset timer state for each test
-            state.timer.state = TimerState.READY
-            state.timer.start()
-
+        timer.start()
         yield  # Let the test run
-
     finally:
         # Ensure timer is always stopped, even if test fails
-        if state.timer is not None and state.timer.state == TimerState.RUNNING:
-            state.timer.stop()
+        if timer.state == TimerState.RUNNING:
+            timer.stop()
 
 
 @pytest.hookimpl(hookwrapper=True)
@@ -172,15 +172,20 @@ def pytest_runtest_makereport(item: pytest.Item) -> Generator[None, None, None]:
     )
 
     # Only validate timing for tests in the call phase
-    if test_size and report.when == 'call' and state.timer and state.timer.state == TimerState.STOPPED:
-        try:
-            timing.validate(test_size, state.timer.duration())
-        except TimingViolationError:
-            excinfo = sys.exc_info()
-            report.longrepr = item.repr_failure(excinfo)
-            report.outcome = 'failed'
-            report.failed = True
-            report.passed = False
+    if test_size and report.when == 'call':
+        timer = state.timers.get(item.nodeid)
+        if timer and timer.state == TimerState.STOPPED:
+            try:
+                timing.validate(test_size, timer.duration())
+            except TimingViolationError:
+                excinfo = sys.exc_info()
+                report.longrepr = item.repr_failure(excinfo)
+                report.outcome = 'failed'
+                report.failed = True
+                report.passed = False
+            finally:
+                # Clean up the timer after use
+                del state.timers[item.nodeid]
 
 
 def _pluralize_test(count: int) -> str:

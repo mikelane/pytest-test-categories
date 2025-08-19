@@ -30,8 +30,6 @@ class WallTimer(TestTimer):
 
     def start(self) -> None:
         """Start timing, recording the current time."""
-        if self.state != TimerState.READY:
-            self.reset()  # Reset if not in ready state
         super().start()  # Parent handles state transition and contracts
         self.start_time = time.perf_counter()
         self.end_time = None

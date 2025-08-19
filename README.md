@@ -167,13 +167,7 @@ To contribute to this project, follow these steps:
 
 ## License
 
-This project is available under a dual-license model:
-
-- **Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0):** You are free to use, modify, and distribute the project for non-commercial purposes, provided that you give appropriate credit.
-
-- **Commercial License:** If you wish to use this project in a commercial setting, please contact me at [mikelane@gmail.com](mailto:mikelane@gmail.com) to obtain a commercial license.
-
-See the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ---
 
