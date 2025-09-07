@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import sys
 import warnings
 from collections import defaultdict
 from typing import (
@@ -19,6 +18,7 @@ from pytest_test_categories.distribution.stats import (
     DistributionStats,
     TestPercentages,
 )
+from pytest_test_categories.reporting import TestSizeReport
 from pytest_test_categories.timers import WallTimer
 from pytest_test_categories.types import (
     TestSize,
@@ -50,22 +50,28 @@ CRITICAL_SMALL_PCT: Final[float] = 50.0  # Threshold for severe warning
 
 
 class PluginState(BaseModel):
-    """Global plugin state."""
+    """Plugin state for a test session."""
 
     active: bool = True
     timer: TestTimer = WallTimer(state=TimerState.READY)
     distribution_stats: DistributionStats = DistributionStats()
     warned_tests: set[str] = set()
+    test_size_report: TestSizeReport | None = None
 
 
-state = PluginState()
+def _get_session_state(config: pytest.Config) -> PluginState:
+    """Get or create plugin state for the current session."""
+    if not hasattr(config, '_test_categories_state'):
+        config._test_categories_state = PluginState()  # noqa: SLF001
+    return config._test_categories_state  # noqa: SLF001
 
 
-def _iter_sized_items(items: list[pytest.Item]) -> Iterator[SizedItem]:
+def _iter_sized_items(items: list[pytest.Item], session_state: PluginState) -> Iterator[SizedItem]:
     """Iterate through test items yielding those with size markers.
 
     Args:
         items: List of test items to process.
+        session_state: The plugin state for this session.
 
     Yields:
         Pairs of (TestSize, Item) for items with size markers.
@@ -75,13 +81,13 @@ def _iter_sized_items(items: list[pytest.Item]) -> Iterator[SizedItem]:
         found_sizes = [size for size in TestSize if item.get_closest_marker(size.marker_name)]
 
         if not found_sizes:
-            if item.nodeid not in state.warned_tests:
+            if item.nodeid not in session_state.warned_tests:
                 warnings.warn(
                     f'Test has no size marker: {item.nodeid}',
                     pytest.PytestWarning,
                     stacklevel=2,
                 )
-                state.warned_tests.add(item.nodeid)
+                session_state.warned_tests.add(item.nodeid)
             continue
 
         if len(found_sizes) > 1:
@@ -90,37 +96,60 @@ def _iter_sized_items(items: list[pytest.Item]) -> Iterator[SizedItem]:
         yield SizedItem(found_sizes[0], item)
 
 
-def _count_tests_by_size(items: list[pytest.Item]) -> dict[str, int]:
+def _count_tests_by_size(items: list[pytest.Item], session_state: PluginState) -> dict[str, int]:
     """Count the number of tests in each size category.
 
     Args:
         items: List of test items to count.
+        session_state: The plugin state for this session.
 
     Returns:
         Dictionary mapping size marker names to counts.
 
     """
     counts = defaultdict(int)
-    for sized_item in _iter_sized_items(items):
+    for sized_item in _iter_sized_items(items, session_state):
         counts[sized_item.size.marker_name] += 1
     return counts
 
 
+def pytest_addoption(parser: pytest.Parser) -> None:
+    """Add plugin-specific command-line options."""
+    group = parser.getgroup('test-categories')
+    group.addoption(
+        '--test-size-report',
+        action='store',
+        default=None,
+        choices=[None, 'basic', 'detailed'],  # Added "basic" to valid choices
+        nargs='?',
+        const='basic',
+        help='Generate a report of test sizes (basic or detailed)',
+    )
+
+
+@pytest.hookimpl(tryfirst=True)
 def pytest_configure(config: pytest.Config) -> None:
     """Register the plugin and markers."""
+    session_state = _get_session_state(config)
+
     if not hasattr(config, 'distribution_stats'):
-        config.distribution_stats = state.distribution_stats
+        config.distribution_stats = session_state.distribution_stats
 
     for size in TestSize:
         config.addinivalue_line('markers', f'{size.marker_name}: {size.description}')
+
+    # Initialize the report if requested
+    if config.getoption('--test-size-report') is not None:
+        session_state.test_size_report = TestSizeReport()
 
 
 @pytest.hookimpl(tryfirst=True)
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
     """Count tests by size during collection."""
-    config.distribution_stats = DistributionStats.update_counts(counts=_count_tests_by_size(items))
+    session_state = _get_session_state(config)
+    config.distribution_stats = DistributionStats.update_counts(counts=_count_tests_by_size(items, session_state))
 
-    for sized_item in _iter_sized_items(items):
+    for sized_item in _iter_sized_items(items, session_state):
         sized_item.item._nodeid = f'{sized_item.item._nodeid} {sized_item.size.label}'  # noqa: SLF001
 
 
@@ -135,33 +164,45 @@ def pytest_collection_finish(session: pytest.Session) -> None:
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None) -> Generator[None, None, None]:  # noqa: ARG001
-    """Track test timing."""
+    """Track test timing and collect report data."""
+    session_state = _get_session_state(item.config)
+
+    # Determine test size for reporting
+    if session_state.test_size_report is not None:
+        test_size = next(
+            (size for size in TestSize if item.get_closest_marker(size.marker_name)),
+            None,
+        )
+        # Add test to report (outcome will be updated later)
+        session_state.test_size_report.add_test(item.nodeid, test_size)
+
     try:
-        if state.timer is not None:
+        if session_state.timer is not None:
             # Reset timer state for each test
-            state.timer.state = TimerState.READY
-            state.timer.start()
+            session_state.timer.state = TimerState.READY
+            session_state.timer.start()
 
         yield  # Let the test run
 
     finally:
         # Ensure timer is always stopped, even if test fails
-        if state.timer is not None and state.timer.state == TimerState.RUNNING:
-            state.timer.stop()
+        if session_state.timer is not None and session_state.timer.state == TimerState.RUNNING:
+            session_state.timer.stop()
 
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item: pytest.Item) -> Generator[None, None, None]:
     """Modify test report to show size category and validate timing."""
+    session_state = _get_session_state(item.config)
     found_sizes = [size.marker_name for size in TestSize if item.get_closest_marker(size.marker_name)]
 
-    if not found_sizes and item.nodeid not in state.warned_tests:
+    if not found_sizes and item.nodeid not in session_state.warned_tests:
         warnings.warn(
             f'Test has no size marker: {item.nodeid}',
             pytest.PytestWarning,
             stacklevel=2,
         )
-        state.warned_tests.add(item.nodeid)
+        session_state.warned_tests.add(item.nodeid)
 
     outcome = yield
     report = outcome.get_result()
@@ -172,15 +213,28 @@ def pytest_runtest_makereport(item: pytest.Item) -> Generator[None, None, None]:
     )
 
     # Only validate timing for tests in the call phase
-    if test_size and report.when == 'call' and state.timer and state.timer.state == TimerState.STOPPED:
+    if test_size and report.when == 'call' and session_state.timer and session_state.timer.state == TimerState.STOPPED:
         try:
-            timing.validate(test_size, state.timer.duration())
-        except TimingViolationError:
-            excinfo = sys.exc_info()
-            report.longrepr = item.repr_failure(excinfo)
+            timing.validate(test_size, session_state.timer.duration())
+        except TimingViolationError as e:
+            report.longrepr = str(e)
             report.outcome = 'failed'
-            report.failed = True
-            report.passed = False
+
+    # Update test report data if we're generating a report
+    if session_state.test_size_report is not None and report.when == 'call':
+        try:
+            # Use the report's timing information instead of the timer
+            # This is more reliable for capturing the actual sleep times
+            duration = report.duration if hasattr(report, 'duration') else None
+            if duration is None and session_state.timer and session_state.timer.state == TimerState.STOPPED:
+                duration = session_state.timer.duration()
+        except (RuntimeError, ValueError):
+            duration = None
+
+        # Update test information in the report
+        if duration is not None:
+            session_state.test_size_report.test_durations[item.nodeid] = duration
+        session_state.test_size_report.test_outcomes[item.nodeid] = report.outcome
 
 
 def _pluralize_test(count: int) -> str:
@@ -280,6 +334,7 @@ def _get_status_message(percentages: TestPercentages) -> list[str]:
 @pytest.hookimpl
 def pytest_terminal_summary(terminalreporter: pytest.TerminalReporter) -> None:
     """Add test size distribution summary to the terminal report."""
+    session_state = _get_session_state(terminalreporter.config)
     distribution_stats = terminalreporter.config.distribution_stats
     counts = distribution_stats.counts
     percentages = distribution_stats.calculate_percentages()
@@ -301,3 +356,11 @@ def pytest_terminal_summary(terminalreporter: pytest.TerminalReporter) -> None:
         terminalreporter.write_line(line)
 
     terminalreporter.write_sep('=')
+
+    # Add test size report if requested
+    if session_state.test_size_report is not None:
+        report_type = terminalreporter.config.getoption('--test-size-report')
+        if report_type == 'detailed':
+            session_state.test_size_report.write_detailed_report(terminalreporter)
+        else:
+            session_state.test_size_report.write_basic_report(terminalreporter)

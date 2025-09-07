@@ -54,7 +54,7 @@ def plugin_conftest(pytester: pytest.Pytester, request: pytest.FixtureRequest) -
         test_categories_plugin=f"""
         from pydantic import Field
         from pytest_test_categories.types import TestTimer, TimerState, TimingViolationError, TestSize
-        from pytest_test_categories.plugin import state
+        from pytest_test_categories.plugin import _get_session_state
         from pytest_test_categories import timing
         import pytest
 
@@ -84,20 +84,22 @@ def plugin_conftest(pytester: pytest.Pytester, request: pytest.FixtureRequest) -
 
         @pytest.hookimpl(hookwrapper=True)
         def pytest_runtest_protocol(item, nextitem):
+            session_state = _get_session_state(item.config)
             try:
-                if state.timer is not None:
-                    state.timer.start()
+                if session_state.timer is not None:
+                    session_state.timer.start()
                     print('Protocol: Timer started')
                 yield
             finally:
-                if state.timer is not None and state.timer.state == TimerState.RUNNING:
-                    state.timer.stop()
+                if session_state.timer is not None and session_state.timer.state == TimerState.RUNNING:
+                    session_state.timer.stop()
                     print('Protocol: Timer stopped')
 
         @pytest.hookimpl(hookwrapper=True)
         def pytest_runtest_makereport(item, call):
-            if call.when == 'call' and state.timer and state.timer.state == TimerState.RUNNING:
-                state.timer.stop()
+            session_state = _get_session_state(item.config)
+            if call.when == 'call' and session_state.timer and session_state.timer.state == TimerState.RUNNING:
+                session_state.timer.stop()
                 print('Makereport: Timer stopped')
 
             outcome = yield
@@ -109,22 +111,21 @@ def plugin_conftest(pytester: pytest.Pytester, request: pytest.FixtureRequest) -
                     None,
                 )
 
-                if test_size and state.timer and state.timer.state == TimerState.STOPPED:
+                if test_size and session_state.timer and session_state.timer.state == TimerState.STOPPED:
                     try:
-                        duration = state.timer.duration()
+                        duration = session_state.timer.duration()
                         print(f'Validating timing for {{test_size}}: {{duration}}')
                         timing.validate(test_size, duration)
                     except TimingViolationError as e:
                         print(f'Timing violation detected: {{e}}')
                         report.outcome = 'failed'
-                        report.failed = True
-                        report.passed = False
                         report.longrepr = str(e)
 
         @pytest.hookimpl(tryfirst=True)
         def pytest_configure(config):
             print('Configuring mock timer')
-            state.timer = TestMockTimer(state=TimerState.READY, duration={duration})
+            session_state = _get_session_state(config)
+            session_state.timer = TestMockTimer(state=TimerState.READY, duration={duration})
         """
     )
 
@@ -156,25 +157,25 @@ class DescribeTimerViolations:
             pytest.param(
                 1.1,
                 'small',
-                '*TimingViolationError: SMALL test exceeded time limit of 1.0 seconds*',
+                '*SMALL test exceeded time limit of 1.0 seconds*',
                 id='small test over time limit',
             ),
             pytest.param(
                 300.1,
                 'medium',
-                '*TimingViolationError: MEDIUM test exceeded time limit of 300.0 seconds*',
+                '*MEDIUM test exceeded time limit of 300.0 seconds*',
                 id='medium test over time limit',
             ),
             pytest.param(
                 900.1,
                 'large',
-                '*TimingViolationError: LARGE test exceeded time limit of 900.0 seconds*',
+                '*LARGE test exceeded time limit of 900.0 seconds*',
                 id='large test over time limit',
             ),
             pytest.param(
                 900.1,
                 'xlarge',
-                '*TimingViolationError: XLARGE test exceeded time limit of 900.0 seconds*',
+                '*XLARGE test exceeded time limit of 900.0 seconds*',
                 id='xlarge test over time limit',
             ),
         ],

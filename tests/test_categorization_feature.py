@@ -48,9 +48,9 @@ class DescribeTestCategorization:
 
         stdout = result.stdout.str()
         test_output_line = next(line for line in stdout.splitlines() if 'test_example' in line and 'PASSED' in line)
-        assert (
-            expected_label in test_output_line
-        ), f'Test output should show size category {expected_label} next to test name'
+        assert expected_label in test_output_line, (
+            f'Test output should show size category {expected_label} next to test name'
+        )
 
     def it_raises_error_when_test_has_multiple_size_markers(self, pytester: pytest.Pytester) -> None:
         test_file = pytester.makepyfile(

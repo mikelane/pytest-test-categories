@@ -56,5 +56,5 @@ def validate(size: TestSize, duration: float) -> None:
     """
     limit = get_limit(size)
     if duration > limit.limit:
-        msg = f'{size.name} test exceeded time limit of {limit.limit:.1f} seconds ' f'(took {duration:.1f} seconds)'
+        msg = f'{size.name} test exceeded time limit of {limit.limit:.1f} seconds (took {duration:.1f} seconds)'
         raise TimingViolationError(msg)
