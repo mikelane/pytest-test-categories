@@ -1,0 +1,29 @@
+coverage:
+  precision: 2
+  round: down
+  range: "90...100"
+  status:
+    project:
+      default:
+        target: 100%
+        threshold: 0%
+        if_ci_failed: error
+    patch:
+      default:
+        target: 100%
+        threshold: 0%
+        if_ci_failed: error
+
+comment:
+  layout: "header, diff, flags, components, footer"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: true
+
+ignore:
+  - "tests/"
+  - "**/__pycache__"
+  - "**/.pytest_cache"
+  - "**/dist"
+  - "**/build"
