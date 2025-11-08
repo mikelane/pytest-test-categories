@@ -1,0 +1,26 @@
+# CODEOWNERS - Defines individuals or teams responsible for code in this repository
+# More info: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for everything in the repo
+* @mikelane
+
+# Core plugin code requires special attention
+/src/pytest_test_categories/plugin.py @mikelane
+/src/pytest_test_categories/types.py @mikelane
+/src/pytest_test_categories/timing.py @mikelane
+/src/pytest_test_categories/timers.py @mikelane
+
+# Documentation changes
+*.md @mikelane
+/docs/ @mikelane
+
+# GitHub infrastructure
+/.github/ @mikelane
+
+# CI/CD configuration
+/.github/workflows/ @mikelane
+/.pre-commit-config.yaml @mikelane
+
+# Project configuration
+/pyproject.toml @mikelane
+/poetry.lock @mikelane

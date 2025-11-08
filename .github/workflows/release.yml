@@ -1,0 +1,86 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build and create GitHub release
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v5
+
+    - name: Install Poetry
+      run: pipx install poetry
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.12"
+        cache: 'poetry'
+
+    - name: Install dependencies
+      run: |
+        poetry install --no-root --all-groups
+
+    - name: Run tests
+      run: |
+        poetry run pytest
+
+    - name: Build package
+      run: |
+        poetry build
+
+    - name: Extract release notes
+      id: extract_notes
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        # Extract the section for this version from CHANGELOG.md
+        awk "/## \[$VERSION\]/,/## \[/" CHANGELOG.md | sed '1d;$d' > release_notes.md
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        body_path: release_notes.md
+        files: |
+          dist/*
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: build-and-release
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/pytest-test-categories
+    permissions:
+      id-token: write
+
+    steps:
+    - uses: actions/checkout@v5
+
+    - name: Install Poetry
+      run: pipx install poetry
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.12"
+        cache: 'poetry'
+
+    - name: Build package
+      run: |
+        poetry build
+
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1

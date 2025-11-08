@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Test on Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+
+    steps:
+    - uses: actions/checkout@v5
+
+    - name: Install Poetry
+      run: pipx install poetry
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v6
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'poetry'
+
+    - name: Install dependencies
+      run: |
+        poetry install --no-root --all-groups
+
+    - name: Run tests with coverage
+      run: |
+        poetry run pytest --cov=src --cov-report=xml --cov-report=term-missing
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: false
+        token: ${{ secrets.CODECOV_TOKEN }}
+      if: matrix.python-version == '3.12'
+
+    - name: Check coverage meets target
+      run: |
+        poetry run python tests/_utils/check_coverage.py
+      if: matrix.python-version == '3.12'
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v5
+
+    - name: Install Poetry
+      run: pipx install poetry
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.12"
+        cache: 'poetry'
+
+    - name: Install dependencies
+      run: |
+        poetry install --no-root --all-groups
+
+    - name: Run isort
+      run: |
+        poetry run isort --check-only .
+
+    - name: Run ruff check
+      run: |
+        poetry run ruff check .
+
+    - name: Run ruff format check
+      run: |
+        poetry run ruff format --check .
+
+  build:
+    name: Build package
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v5
+
+    - name: Install Poetry
+      run: pipx install poetry
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.12"
+        cache: 'poetry'
+
+    - name: Build package
+      run: |
+        poetry build
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: dist
+        path: dist/
