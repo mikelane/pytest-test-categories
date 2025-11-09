@@ -26,3 +26,4 @@ htmlcov/
 .idea/
 .vscode/
 .DS_Store
+.worktrees/
