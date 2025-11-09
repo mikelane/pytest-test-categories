@@ -55,24 +55,36 @@ poetry run pre-commit run --all-files
 ```
 
 ### Testing Commands
+
+**Coverage Note**: This project uses `coverage run` instead of `pytest --cov` because pytest loads plugins before coverage tracking starts. Using `coverage run -m pytest` ensures all module-level code (imports, class definitions, decorators) is tracked correctly.
+
 ```bash
 # Run all tests with coverage
-poetry run pytest
+poetry run coverage run -m pytest
 
-# Run a single test file
+# View coverage report in terminal
+poetry run coverage report
+
+# View detailed coverage with missing lines
+poetry run coverage report --show-missing
+
+# Generate XML coverage report (for codecov)
+poetry run coverage xml
+
+# Generate HTML coverage report for local viewing
+poetry run coverage html
+
+# Run a single test file (without coverage)
 poetry run pytest tests/test_plugin_module.py
 
-# Run a single test function
+# Run a single test function (without coverage)
 poetry run pytest tests/test_plugin_module.py::test_function_name
 
-# Run a specific test class
+# Run a specific test class (without coverage)
 poetry run pytest tests/test_plugin_module.py::DescribeClass
 
-# Run tests with detailed output
+# Run tests with detailed output (without coverage)
 poetry run pytest -vv
-
-# Run tests with coverage report in terminal
-COVERAGE_REPORT=term-missing poetry run pytest
 ```
 
 ### Code Quality
