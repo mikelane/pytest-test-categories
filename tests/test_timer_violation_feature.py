@@ -58,6 +58,9 @@ def plugin_conftest(pytester: pytest.Pytester, request: pytest.FixtureRequest) -
         from pytest_test_categories import timing
         import pytest
 
+        # Store the desired duration at module level
+        MOCK_DURATION = {duration}
+
         class TestMockTimer(TestTimer):
             desired_duration: float = Field(default=1.0)
 
@@ -82,24 +85,29 @@ def plugin_conftest(pytester: pytest.Pytester, request: pytest.FixtureRequest) -
                 print(f'Reporting duration: {{self.desired_duration}}')
                 return self.desired_duration
 
-        @pytest.hookimpl(hookwrapper=True)
+        @pytest.hookimpl(hookwrapper=True, tryfirst=True)
         def pytest_runtest_protocol(item, nextitem):
             session_state = _get_session_state(item.config)
+            # Create a unique timer for this test item - use tryfirst to run before the real plugin
+            timer = TestMockTimer(state=TimerState.READY, duration=MOCK_DURATION)
+            session_state.timers[item.nodeid] = timer
+
             try:
-                if session_state.timer is not None:
-                    session_state.timer.start()
-                    print('Protocol: Timer started')
+                timer.start()
+                print('Protocol: Timer started')
                 yield
             finally:
-                if session_state.timer is not None and session_state.timer.state == TimerState.RUNNING:
-                    session_state.timer.stop()
+                if timer.state == TimerState.RUNNING:
+                    timer.stop()
                     print('Protocol: Timer stopped')
 
         @pytest.hookimpl(hookwrapper=True)
         def pytest_runtest_makereport(item, call):
             session_state = _get_session_state(item.config)
-            if call.when == 'call' and session_state.timer and session_state.timer.state == TimerState.RUNNING:
-                session_state.timer.stop()
+            timer = session_state.timers.get(item.nodeid)
+
+            if call.when == 'call' and timer and timer.state == TimerState.RUNNING:
+                timer.stop()
                 print('Makereport: Timer stopped')
 
             outcome = yield
@@ -111,21 +119,19 @@ def plugin_conftest(pytester: pytest.Pytester, request: pytest.FixtureRequest) -
                     None,
                 )
 
-                if test_size and session_state.timer and session_state.timer.state == TimerState.STOPPED:
+                if test_size and timer and timer.state == TimerState.STOPPED:
                     try:
-                        duration = session_state.timer.duration()
+                        duration = timer.duration()
                         print(f'Validating timing for {{test_size}}: {{duration}}')
                         timing.validate(test_size, duration)
                     except TimingViolationError as e:
                         print(f'Timing violation detected: {{e}}')
                         report.outcome = 'failed'
                         report.longrepr = str(e)
-
-        @pytest.hookimpl(tryfirst=True)
-        def pytest_configure(config):
-            print('Configuring mock timer')
-            session_state = _get_session_state(config)
-            session_state.timer = TestMockTimer(state=TimerState.READY, duration={duration})
+                    finally:
+                        # Clean up the timer after use
+                        if item.nodeid in session_state.timers:
+                            del session_state.timers[item.nodeid]
         """
     )
 

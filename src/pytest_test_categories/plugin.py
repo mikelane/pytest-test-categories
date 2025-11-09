@@ -53,10 +53,11 @@ class PluginState(BaseModel):
     """Plugin state for a test session."""
 
     active: bool = True
-    timer: TestTimer = WallTimer(state=TimerState.READY)
     distribution_stats: DistributionStats = DistributionStats()
     warned_tests: set[str] = set()
     test_size_report: TestSizeReport | None = None
+    # Store timers per test item to avoid race conditions in parallel execution
+    timers: dict[str, TestTimer] = {}
 
 
 def _get_session_state(config: pytest.Config) -> PluginState:
@@ -176,18 +177,21 @@ def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None) -> 
         # Add test to report (outcome will be updated later)
         session_state.test_size_report.add_test(item.nodeid, test_size)
 
+    # Create a unique timer for this test item to avoid race conditions
+    # Only create if one doesn't already exist (allows test mocking)
+    if item.nodeid not in session_state.timers:
+        timer = WallTimer(state=TimerState.READY)
+        session_state.timers[item.nodeid] = timer
+    else:
+        timer = session_state.timers[item.nodeid]
+
     try:
-        if session_state.timer is not None:
-            # Reset timer state for each test
-            session_state.timer.state = TimerState.READY
-            session_state.timer.start()
-
+        timer.start()
         yield  # Let the test run
-
     finally:
         # Ensure timer is always stopped, even if test fails
-        if session_state.timer is not None and session_state.timer.state == TimerState.RUNNING:
-            session_state.timer.stop()
+        if timer.state == TimerState.RUNNING:
+            timer.stop()
 
 
 @pytest.hookimpl(hookwrapper=True)
@@ -213,21 +217,24 @@ def pytest_runtest_makereport(item: pytest.Item) -> Generator[None, None, None]:
     )
 
     # Only validate timing for tests in the call phase
-    if test_size and report.when == 'call' and session_state.timer and session_state.timer.state == TimerState.STOPPED:
-        try:
-            timing.validate(test_size, session_state.timer.duration())
-        except TimingViolationError as e:
-            report.longrepr = str(e)
-            report.outcome = 'failed'
+    if test_size and report.when == 'call':
+        timer = session_state.timers.get(item.nodeid)
+        if timer and timer.state == TimerState.STOPPED:
+            try:
+                timing.validate(test_size, timer.duration())
+            except TimingViolationError as e:
+                report.longrepr = str(e)
+                report.outcome = 'failed'
 
     # Update test report data if we're generating a report
     if session_state.test_size_report is not None and report.when == 'call':
+        timer = session_state.timers.get(item.nodeid)
         try:
             # Use the report's timing information instead of the timer
             # This is more reliable for capturing the actual sleep times
             duration = report.duration if hasattr(report, 'duration') else None
-            if duration is None and session_state.timer and session_state.timer.state == TimerState.STOPPED:
-                duration = session_state.timer.duration()
+            if duration is None and timer and timer.state == TimerState.STOPPED:
+                duration = timer.duration()
         except (RuntimeError, ValueError):
             duration = None
 
@@ -235,6 +242,10 @@ def pytest_runtest_makereport(item: pytest.Item) -> Generator[None, None, None]:
         if duration is not None:
             session_state.test_size_report.test_durations[item.nodeid] = duration
         session_state.test_size_report.test_outcomes[item.nodeid] = report.outcome
+
+        # Clean up the timer after use to prevent memory leaks
+        if item.nodeid in session_state.timers:
+            del session_state.timers[item.nodeid]
 
 
 def _pluralize_test(count: int) -> str:
