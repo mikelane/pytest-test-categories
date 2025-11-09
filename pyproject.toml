@@ -48,7 +48,7 @@ testpaths = ["tests"]
 python_files = ["it_*.py", "test_*.py"]
 python_functions = ["it_*"]
 python_classes = ["Describe[A-Z]*"]
-addopts = ["-s", "-ra", "-q", "-vv", "--cov=src", "--cov-config=pyproject.toml"]
+addopts = ["-s", "-ra", "-q", "-vv"]
 pythonpath = ["src", "tests/plugins"]
 
 filterwarnings = [

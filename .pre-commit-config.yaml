@@ -30,18 +30,10 @@ repos:
         types: [python]
         pass_filenames: false
 
-      - id: pytest
-        name: pytest
-        entry: poetry run pytest
+      - id: pytest-coverage
+        name: pytest with coverage
+        entry: bash -c 'poetry run coverage run -m pytest && poetry run coverage report && poetry run python tests/_utils/check_coverage.py'
         language: system
         types: [python]
         pass_filenames: false
         always_run: true
-
-#      - id: pytest-with-coverage
-#        name: pytest with coverage check
-#        entry: bash -c 'COVERAGE_REPORT=term-missing poetry run pytest && poetry run python tests/_utils/check_coverage.py'
-#        language: system
-#        types: [python]
-#        pass_filenames: false
-#        always_run: true
