@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import pytest
 
-from pytest_test_categories.distribution.stats import (
+from pytest_test_categories import TestSize
+from pytest_test_categories.distribution import (
     DistributionRange,
     DistributionStats,
     TestCounts,
     TestPercentages,
 )
-from pytest_test_categories.types import TestSize
 
 
 @pytest.mark.small

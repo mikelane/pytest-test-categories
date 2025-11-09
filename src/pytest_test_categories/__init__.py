@@ -3,7 +3,7 @@
 The test limits are taken from the book Software Engineering at Google.
 """
 
-from __future__ import annotations  # pragma: no cover
+from __future__ import annotations
 
-from .plugin import *  # noqa: F403 pragma: no cover
-from .reporting import *  # noqa: F403 pragma: no cover
+from .plugin import *  # noqa: F403
+from .reporting import *  # noqa: F403
