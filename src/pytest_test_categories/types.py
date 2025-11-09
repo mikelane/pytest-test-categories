@@ -30,17 +30,17 @@ class TestSize(StrEnum):
     @property
     def marker_name(self) -> str:
         """Get the pytest marker name for this size."""
-        return self.name.lower()  # pragma: no cover
+        return self.name.lower()
 
     @property
     def description(self) -> str:
         """Get the description for this test size marker."""
-        return f'mark test as {self.name} size'  # pragma: no cover
+        return f'mark test as {self.name} size'
 
     @property
     def label(self) -> str:
         """Get the label to show in test output."""
-        return f'[{self.name}]'  # pragma: no cover
+        return f'[{self.name}]'
 
 
 class TimerState(StrEnum):
@@ -58,7 +58,7 @@ class TestTimer(BaseModel, ABC):
 
     def reset(self) -> None:
         """Reset timer to initial state."""
-        self.state = TimerState.READY  # pragma: no cover
+        self.state = TimerState.READY
 
     @require(lambda self: self.state == TimerState.READY, 'Timer must be in READY state to start')
     @ensure(lambda self: self.state == TimerState.RUNNING, 'Timer must be in RUNNING state after starting')
@@ -69,7 +69,7 @@ class TestTimer(BaseModel, ABC):
             RuntimeError: If the timer is not in READY state.
 
         """
-        self.state = TimerState.RUNNING  # pragma: no cover
+        self.state = TimerState.RUNNING
 
     @require(lambda self: self.state == TimerState.RUNNING, 'Timer must be in RUNNING state to stop')
     @ensure(lambda self: self.state == TimerState.STOPPED, 'Timer must be in STOPPED state after stopping')
@@ -80,7 +80,7 @@ class TestTimer(BaseModel, ABC):
             RuntimeError: If the timer is not in RUNNING state.
 
         """
-        self.state = TimerState.STOPPED  # pragma: no cover
+        self.state = TimerState.STOPPED
 
     @require(lambda self: self.state == TimerState.STOPPED, 'Timer must be in STOPPED state to get duration')
     @ensure(lambda result: result > 0, 'Duration must be positive')
