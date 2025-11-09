@@ -237,3 +237,4 @@ When modifying the plugin:
 - Session state must be thread-safe for parallel test execution
 - Timer state must be reset between tests
 - Distribution validation happens after collection, not during execution
+- do not add attribution or co-authored lines to commits.
