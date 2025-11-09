@@ -1,5 +1,5 @@
 """Distribution analysis."""
 
-from __future__ import annotations  # pragma: no cover
+from __future__ import annotations
 
-from .stats import *  # noqa: F403 pragma: no cover
+from .stats import *  # noqa: F403

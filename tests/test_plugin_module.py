@@ -11,18 +11,15 @@ from unittest.mock import (
 
 import pytest
 
-from pytest_test_categories.distribution.stats import (
+from pytest_test_categories import (
     DistributionStats,
-    TestPercentages,
-)
-from pytest_test_categories.plugin import (
     PluginState,
-    _count_tests_by_size,
-    _format_distribution_row,
-    _get_session_state,
-    _get_status_message,
-    _iter_sized_items,
-    _pluralize_test,
+    TestPercentages,
+    TestSize,
+    TestSizeReport,
+    TimerState,
+    TimingViolationError,
+    WallTimer,
     pytest_addoption,
     pytest_collection_finish,
     pytest_collection_modifyitems,
@@ -31,12 +28,13 @@ from pytest_test_categories.plugin import (
     pytest_runtest_protocol,
     pytest_terminal_summary,
 )
-from pytest_test_categories.reporting import TestSizeReport
-from pytest_test_categories.timers import WallTimer
-from pytest_test_categories.types import (
-    TestSize,
-    TimerState,
-    TimingViolationError,
+from pytest_test_categories.plugin import (
+    _count_tests_by_size,
+    _format_distribution_row,
+    _get_session_state,
+    _get_status_message,
+    _iter_sized_items,
+    _pluralize_test,
 )
 
 

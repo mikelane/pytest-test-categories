@@ -6,8 +6,10 @@ from unittest.mock import Mock
 
 import pytest
 
-from pytest_test_categories.reporting import TestSizeReport
-from pytest_test_categories.types import TestSize
+from pytest_test_categories import (
+    TestSize,
+    TestSizeReport,
+)
 
 
 @pytest.mark.small

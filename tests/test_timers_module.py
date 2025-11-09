@@ -7,10 +7,10 @@ from unittest.mock import patch
 
 import pytest
 
-from pytest_test_categories.timers import WallTimer
-from pytest_test_categories.types import (
+from pytest_test_categories import (
     TestTimer,
     TimerState,
+    WallTimer,
 )
 
 
