@@ -1,0 +1,118 @@
+name: Refactoring
+description: Propose code refactoring to improve maintainability
+title: "[Refactor]: "
+labels: ["refactoring", "technical-debt", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve code quality! Please describe the refactoring below.
+
+  - type: dropdown
+    id: refactor-type
+    attributes:
+      label: Refactoring Type
+      description: What type of refactoring is this?
+      options:
+        - Extract Method/Function
+        - Extract Class
+        - Rename for Clarity
+        - Simplify Conditional Logic
+        - Remove Duplication
+        - Improve Abstraction
+        - Reduce Coupling
+        - Improve Type Safety
+        - Dependency Cleanup
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-code
+    attributes:
+      label: Current Code/Design
+      description: What code or design pattern needs refactoring?
+      placeholder: |
+        The plugin.py file has grown to 500+ lines with multiple responsibilities:
+        - Test collection
+        - Timer management
+        - Distribution validation
+        - Reporting
+    validations:
+      required: true
+
+  - type: textarea
+    id: code-smell
+    attributes:
+      label: Code Smell / Design Issue
+      description: What specific code smell or design issue exists?
+      placeholder: |
+        - Violates Single Responsibility Principle
+        - High cyclomatic complexity in _validate_timing()
+        - Duplicated logic in multiple hook functions
+        - Tight coupling between timer and plugin state
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-refactor
+    attributes:
+      label: Proposed Refactoring
+      description: How should the code be refactored?
+      placeholder: |
+        Split plugin.py into focused modules:
+        1. collection.py - Test collection hooks
+        2. execution.py - Test execution hooks
+        3. validation.py - Timing and distribution validation
+        4. state.py - Plugin state management
+
+        This would reduce file size and improve testability.
+    validations:
+      required: true
+
+  - type: textarea
+    id: benefits
+    attributes:
+      label: Expected Benefits
+      description: What benefits will this refactoring provide?
+      placeholder: |
+        - Improved testability (smaller units to test)
+        - Better separation of concerns
+        - Easier to locate and modify specific functionality
+        - Reduced cognitive load when reading code
+    validations:
+      required: true
+
+  - type: dropdown
+    id: breaking-change
+    attributes:
+      label: Breaking Change
+      description: Will this refactoring introduce breaking changes?
+      options:
+        - No - Internal refactoring only
+        - Yes - API changes required
+        - Maybe - Depends on implementation approach
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: refactor-checklist
+    attributes:
+      label: Refactoring Checklist
+      description: Important considerations for safe refactoring
+      options:
+        - label: Existing tests provide coverage for refactored code
+          required: false
+        - label: No behavior changes - only structure improvements
+          required: false
+        - label: Type safety will be maintained or improved
+          required: false
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Are you willing to contribute this refactoring?
+      options:
+        - label: I'm willing to submit a PR to implement this refactoring
+          required: false

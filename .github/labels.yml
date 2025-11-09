@@ -1,0 +1,184 @@
+# GitHub Labels Configuration
+# This file defines the label taxonomy for pytest-test-categories
+# Apply labels using: gh label create --file .github/labels.yml
+
+# === TYPE LABELS ===
+# Primary categorization of issues/PRs
+
+- name: "bug"
+  color: "d73a4a"
+  description: "Something isn't working as expected"
+
+- name: "enhancement"
+  color: "a2eeef"
+  description: "New feature or request"
+
+- name: "documentation"
+  color: "0075ca"
+  description: "Improvements or additions to documentation"
+
+- name: "performance"
+  color: "f9d0c4"
+  description: "Performance improvements or optimizations"
+
+- name: "refactoring"
+  color: "fbca04"
+  description: "Code quality improvements without behavior changes"
+
+- name: "testing"
+  color: "1d76db"
+  description: "Test coverage or quality improvements"
+
+- name: "security"
+  color: "d93f0b"
+  description: "Security vulnerability or improvement"
+
+- name: "dependencies"
+  color: "0366d6"
+  description: "Dependency updates or management"
+
+# === PRIORITY LABELS ===
+# Severity and urgency indicators
+
+- name: "priority-critical"
+  color: "b60205"
+  description: "Must be fixed immediately (security, data loss, crashes)"
+
+- name: "priority-high"
+  color: "d93f0b"
+  description: "Important issue that should be resolved soon"
+
+- name: "priority-medium"
+  color: "fbca04"
+  description: "Standard priority issue"
+
+- name: "priority-low"
+  color: "0e8a16"
+  description: "Nice to have but not urgent"
+
+# === STATUS LABELS ===
+# Workflow state tracking
+
+- name: "triage"
+  color: "ededed"
+  description: "Needs initial review and categorization"
+
+- name: "accepted"
+  color: "c2e0c6"
+  description: "Issue accepted for implementation"
+
+- name: "in-progress"
+  color: "5319e7"
+  description: "Currently being worked on"
+
+- name: "blocked"
+  color: "d4c5f9"
+  description: "Blocked by another issue or external dependency"
+
+- name: "needs-info"
+  color: "fef2c0"
+  description: "Waiting for more information from reporter"
+
+- name: "ready-for-review"
+  color: "0e8a16"
+  description: "PR is ready for maintainer review"
+
+- name: "wontfix"
+  color: "ffffff"
+  description: "This will not be worked on"
+
+- name: "duplicate"
+  color: "cfd3d7"
+  description: "This issue or PR already exists"
+
+# === AREA LABELS ===
+# Component/subsystem affected
+
+- name: "area:plugin"
+  color: "c5def5"
+  description: "Plugin hooks and pytest integration"
+
+- name: "area:timing"
+  color: "c5def5"
+  description: "Timing enforcement and validation"
+
+- name: "area:distribution"
+  color: "c5def5"
+  description: "Test distribution validation"
+
+- name: "area:reporting"
+  color: "c5def5"
+  description: "Test size reporting features"
+
+- name: "area:ci"
+  color: "c5def5"
+  description: "CI/CD pipeline and automation"
+
+- name: "area:types"
+  color: "c5def5"
+  description: "Type system and domain types"
+
+# === IMPACT LABELS ===
+# Scale and scope of changes
+
+- name: "breaking-change"
+  color: "d93f0b"
+  description: "Introduces breaking changes to public API"
+
+- name: "technical-debt"
+  color: "fbca04"
+  description: "Addresses technical debt or code quality"
+
+- name: "good-first-issue"
+  color: "7057ff"
+  description: "Good for newcomers to the project"
+
+- name: "help-wanted"
+  color: "008672"
+  description: "Extra attention or expertise needed"
+
+# === SIZE LABELS ===
+# PR size estimation (auto-applied by automation)
+
+- name: "size:XS"
+  color: "3CBF00"
+  description: "Extra small PR (< 10 lines changed)"
+
+- name: "size:S"
+  color: "5D9801"
+  description: "Small PR (10-99 lines changed)"
+
+- name: "size:M"
+  color: "DFBA02"
+  description: "Medium PR (100-499 lines changed)"
+
+- name: "size:L"
+  color: "FE6D01"
+  description: "Large PR (500-999 lines changed)"
+
+- name: "size:XL"
+  color: "D93F0B"
+  description: "Extra large PR (1000+ lines changed)"
+
+# === SPECIAL LABELS ===
+# Special workflow or automation tags
+
+- name: "automation"
+  color: "ededed"
+  description: "Automated issue or PR (e.g., dependabot)"
+
+- name: "release"
+  color: "0e8a16"
+  description: "Release-related issue or PR"
+
+- name: "question"
+  color: "d876e3"
+  description: "Further information is requested"
+
+- name: "invalid"
+  color: "e4e669"
+  description: "This doesn't seem right or is not applicable"
+
+- name: "stale"
+  color: "fef2c0"
+  description: "No activity for extended period"

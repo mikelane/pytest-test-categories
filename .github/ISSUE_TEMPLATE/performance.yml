@@ -1,0 +1,100 @@
+name: Performance Improvement
+description: Suggest a performance improvement
+title: "[Perf]: "
+labels: ["performance", "enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve performance! Please describe the improvement below.
+
+  - type: dropdown
+    id: perf-area
+    attributes:
+      label: Performance Area
+      description: Which area does this performance improvement target?
+      options:
+        - Test Collection
+        - Test Execution
+        - Timer Overhead
+        - Distribution Validation
+        - Reporting
+        - Memory Usage
+        - Startup Time
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-behavior
+    attributes:
+      label: Current Behavior
+      description: Describe the current performance characteristics
+      placeholder: |
+        When collecting 10,000 tests, the distribution validation takes 2 seconds
+    validations:
+      required: true
+
+  - type: textarea
+    id: performance-impact
+    attributes:
+      label: Performance Impact
+      description: What is the measurable impact of the current behavior?
+      placeholder: |
+        - Collection overhead: 2s for 10k tests
+        - Memory usage: 50MB additional
+        - User wait time: 5s total startup
+      value: |
+        - Metric:
+        - Baseline measurement:
+        - Target measurement:
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed Solution
+      description: How can performance be improved?
+      placeholder: |
+        Use a more efficient data structure for distribution counting:
+        - Current: Multiple iterations over test list
+        - Proposed: Single pass with Counter
+        - Expected improvement: 50% reduction in validation time
+    validations:
+      required: true
+
+  - type: textarea
+    id: benchmark
+    attributes:
+      label: Benchmark Data
+      description: Include any benchmark data or profiling results
+      render: shell
+      placeholder: |
+        python -m cProfile -s cumtime ...
+        # Results showing hotspots
+    validations:
+      required: false
+
+  - type: textarea
+    id: tradeoffs
+    attributes:
+      label: Tradeoffs
+      description: What are the tradeoffs of this optimization?
+      placeholder: |
+        - Code complexity may increase slightly
+        - May require additional dependencies
+        - May reduce readability
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Are you willing to contribute this improvement?
+      options:
+        - label: I'm willing to submit a PR to implement this performance improvement
+          required: false
+        - label: I have benchmark data to support this improvement
+          required: false

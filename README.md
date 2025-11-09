@@ -104,66 +104,43 @@ The plugin hooks into several pytest phases to:
 | Medium       | 15%               | 5%        |
 | Large/XLarge | 5%                | 3%        |
 
+## Project Resources
+
+### Documentation
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Comprehensive contribution guidelines
+- **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** - Community standards and expectations
+- **[SECURITY.md](SECURITY.md)** - Security policy and vulnerability reporting
+- **[ROADMAP.md](ROADMAP.md)** - Project vision, goals, and milestones
+- **[CLAUDE.md](CLAUDE.md)** - Architecture and development documentation
+
+### Community
+- **[GitHub Discussions](https://github.com/mikelane/pytest-test-categories/discussions)** - Ask questions and share ideas
+- **[Issue Templates](.github/ISSUE_TEMPLATE/)** - Report bugs, request features, suggest improvements
+- **[GitHub Projects](https://github.com/mikelane/pytest-test-categories/projects)** - Track development progress
+
 ## Contributing
 
-We welcome contributions from the community! Here are some ways you can contribute:
+We welcome contributions from the community! Please read our [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
-- **Report bugs:** If you find a bug, please open an issue.
-- **Submit patches:** Feel free to fork the repository and submit a pull request.
-- **Improve documentation:** Help us improve the documentation by making it clearer and more comprehensive.
+### Quick Start for Contributors
 
-### Recommended Fork Workflow
+1. **Fork and clone** the repository
+2. **Create an issue** describing what you plan to work on
+3. **Create a feature branch** from main
+4. **Make your changes** following our coding standards
+5. **Run pre-commit hooks** to ensure quality
+6. **Open a pull request** linking to your issue
 
-To contribute to this project, follow these steps:
+For detailed instructions, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-1. **Fork the repository using GitHub CLI:**
-   - Use the following command to fork the repository, clone it to your local machine, and set the remote:
+### Ways to Contribute
 
-   ```bash
-   gh repo fork mikelane/pytest-test-categories --clone --remote
-   cd pytest-test-categories
-   ```
-
-2. **Create a new branch:**
-   - It is recommended to create a new branch for each feature or bug fix:
-
-   ```bash
-   git checkout -b your-feature-branch
-   ```
-
-3. **Make your changes:**
-   - Implement your feature or bug fix in your local repository.
-
-4. **Run pre-commit hooks:**
-   - Use pre-commit to ensure your changes pass all checks:
-
-   ```bash
-   poetry run pre-commit run --all-files
-   ```
-
-5. **Commit your changes:**
-   - Use descriptive commit messages:
-
-   ```bash
-   git add .
-   git commit -m "Add feature X to improve Y"
-   ```
-
-6. **Push your branch to your fork:**
-
-   ```bash
-   git push origin your-feature-branch
-   ```
-
-7. **Open a Pull Request (PR):**
-   - Use the GitHub CLI to open a pull request:
-
-   ```bash
-   gh pr create --title "Add feature X" --body "Description of the changes."
-   ```
-
-8. **Address feedback:**
-   - Be responsive to feedback from maintainers and make any necessary changes.
+- **Report bugs** using the [bug report template](.github/ISSUE_TEMPLATE/bug_report.yml)
+- **Request features** using the [feature request template](.github/ISSUE_TEMPLATE/feature_request.yml)
+- **Improve documentation** using the [documentation template](.github/ISSUE_TEMPLATE/documentation.yml)
+- **Submit code** following our development workflow
+- **Review pull requests** and provide constructive feedback
+- **Help others** in GitHub Discussions
 
 ## License
 
