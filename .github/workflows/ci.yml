@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
 
     steps:
     - uses: actions/checkout@v5
@@ -29,7 +29,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        poetry install --no-root --all-groups
+        poetry install --all-groups
 
     - name: Run tests with coverage
       run: |
@@ -66,7 +66,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        poetry install --no-root --all-groups
+        poetry install --all-groups
 
     - name: Run isort
       run: |

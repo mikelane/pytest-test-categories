@@ -40,12 +40,8 @@ def main() -> int:
     current_coverage = read_coverage()
     stored_coverage = read_stored_coverage()
 
-    if current_coverage < MINIMUM_COVERAGE:
-        print(f'Coverage {current_coverage:.2f}% is below minimum {MINIMUM_COVERAGE}%')
-        return 1
-
     if current_coverage < stored_coverage:
-        print(f'Coverage has decreased from {stored_coverage:.2f}% to {current_coverage:.2f}%')
+        print(f'Coverage {current_coverage:.2f}% is below target {stored_coverage:.2f}%')
         return 1
 
     if current_coverage > stored_coverage:
