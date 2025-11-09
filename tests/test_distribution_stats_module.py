@@ -13,6 +13,7 @@ from pytest_test_categories.distribution.stats import (
 from pytest_test_categories.types import TestSize
 
 
+@pytest.mark.small
 class DescribeDistributionRange:
     """Test the DistributionRange class."""
 
@@ -67,6 +68,7 @@ class DescribeDistributionRange:
             range_obj.target = 90.0
 
 
+@pytest.mark.small
 class DescribeTestCounts:
     """Test the TestCounts class."""
 
@@ -98,6 +100,7 @@ class DescribeTestCounts:
             counts.small = 20
 
 
+@pytest.mark.small
 class DescribeTestPercentages:
     """Test the TestPercentages class."""
 
@@ -157,6 +160,7 @@ class DescribeTestPercentages:
             TestPercentages(small=101.0, medium=0.0, large=0.0, xlarge=0.0)
 
 
+@pytest.mark.small
 class DescribeDistributionStats:
     """Test the DistributionStats class."""
 

@@ -5,6 +5,11 @@ from __future__ import annotations
 import pytest
 
 from pytest_test_categories.timing import (
+    LARGE_LIMIT,
+    MEDIUM_LIMIT,
+    SMALL_LIMIT,
+    TIME_LIMITS,
+    XLARGE_LIMIT,
     TimeLimit,
     get_limit,
     validate,
@@ -15,6 +20,40 @@ from pytest_test_categories.types import (
 )
 
 
+@pytest.mark.small
+class DescribeModuleLevelConstants:
+    """Test that module-level constants are defined correctly."""
+
+    def it_has_small_limit_constant(self) -> None:
+        """Test that SMALL_LIMIT is defined."""
+        assert SMALL_LIMIT.limit == 1.0
+        assert isinstance(SMALL_LIMIT, TimeLimit)
+
+    def it_has_medium_limit_constant(self) -> None:
+        """Test that MEDIUM_LIMIT is defined."""
+        assert MEDIUM_LIMIT.limit == 300.0
+        assert isinstance(MEDIUM_LIMIT, TimeLimit)
+
+    def it_has_large_limit_constant(self) -> None:
+        """Test that LARGE_LIMIT is defined."""
+        assert LARGE_LIMIT.limit == 900.0
+        assert isinstance(LARGE_LIMIT, TimeLimit)
+
+    def it_has_xlarge_limit_constant(self) -> None:
+        """Test that XLARGE_LIMIT is defined."""
+        assert XLARGE_LIMIT.limit == 900.0
+        assert isinstance(XLARGE_LIMIT, TimeLimit)
+
+    def it_has_time_limits_mapping(self) -> None:
+        """Test that TIME_LIMITS dictionary is defined."""
+        assert len(TIME_LIMITS) == 4
+        assert TIME_LIMITS[TestSize.SMALL] == SMALL_LIMIT
+        assert TIME_LIMITS[TestSize.MEDIUM] == MEDIUM_LIMIT
+        assert TIME_LIMITS[TestSize.LARGE] == LARGE_LIMIT
+        assert TIME_LIMITS[TestSize.XLARGE] == XLARGE_LIMIT
+
+
+@pytest.mark.small
 class DescribeTimeLimit:
     """Test the TimeLimit model."""
 
@@ -40,6 +79,7 @@ class DescribeTimeLimit:
             limit.limit = 10.0
 
 
+@pytest.mark.small
 class DescribeGetLimit:
     """Test the get_limit function."""
 
@@ -57,6 +97,7 @@ class DescribeGetLimit:
             assert isinstance(limit, TimeLimit)
 
 
+@pytest.mark.small
 class DescribeValidate:
     """Test the validate function."""
 

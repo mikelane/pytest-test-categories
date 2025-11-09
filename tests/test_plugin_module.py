@@ -40,6 +40,7 @@ from pytest_test_categories.types import (
 )
 
 
+@pytest.mark.small
 class DescribePluginState:
     """Test the PluginState class."""
 
@@ -75,6 +76,7 @@ class DescribePluginState:
         assert state.test_size_report is custom_report
 
 
+@pytest.mark.small
 class DescribeGetSessionState:
     """Test the _get_session_state function."""
 
@@ -99,6 +101,7 @@ class DescribeGetSessionState:
         assert hasattr(config, '_test_categories_state')
 
 
+@pytest.mark.small
 class DescribeIterSizedItems:
     """Test the _iter_sized_items function."""
 
@@ -172,6 +175,7 @@ class DescribeIterSizedItems:
             list(_iter_sized_items(items, state))
 
 
+@pytest.mark.small
 class DescribeCountTestsBySize:
     """Test the _count_tests_by_size function."""
 
@@ -201,6 +205,7 @@ class DescribeCountTestsBySize:
         assert counts['xlarge'] == 0
 
 
+@pytest.mark.small
 class DescribePluralizeTest:
     """Test the _pluralize_test function."""
 
@@ -215,6 +220,7 @@ class DescribePluralizeTest:
         assert _pluralize_test(10) == 'tests'
 
 
+@pytest.mark.small
 class DescribeFormatDistributionRow:
     """Test the _format_distribution_row function."""
 
@@ -231,6 +237,7 @@ class DescribeFormatDistributionRow:
         assert row == expected
 
 
+@pytest.mark.small
 class DescribeGetStatusMessage:
     """Test the _get_status_message function."""
 
@@ -271,6 +278,7 @@ class DescribeGetStatusMessage:
         assert 'Distribution needs improvement' in '\n'.join(message)
 
 
+@pytest.mark.small
 class DescribePytestAddoption:
     """Test the pytest_addoption hook."""
 
@@ -289,6 +297,7 @@ class DescribePytestAddoption:
         assert call_args[1]['choices'] == [None, 'basic', 'detailed']
 
 
+@pytest.mark.small
 class DescribePytestConfigure:
     """Test the pytest_configure hook."""
 
@@ -325,6 +334,7 @@ class DescribePytestConfigure:
             mock_state.test_size_report.assert_not_called()
 
 
+@pytest.mark.small
 class DescribePytestCollectionModifyitems:
     """Test the pytest_collection_modifyitems hook."""
 
@@ -348,6 +358,7 @@ class DescribePytestCollectionModifyitems:
             assert item1._nodeid == 'test1 [SMALL]'  # noqa: SLF001
 
 
+@pytest.mark.small
 class DescribePytestCollectionFinish:
     """Test the pytest_collection_finish hook."""
 
@@ -371,6 +382,7 @@ class DescribePytestCollectionFinish:
         assert len(warning_list) == 0
 
 
+@pytest.mark.small
 class DescribePytestRuntestProtocol:
     """Test the pytest_runtest_protocol hook."""
 
@@ -428,6 +440,7 @@ class DescribePytestRuntestProtocol:
             mock_state.test_size_report.add_test.assert_called_once_with('test_example', None)
 
 
+@pytest.mark.small
 class DescribePytestRuntestMakereport:
     """Test the pytest_runtest_makereport hook."""
 
@@ -516,6 +529,7 @@ class DescribePytestRuntestMakereport:
                 assert report.outcome == 'failed'
 
 
+@pytest.mark.small
 class DescribePytestTerminalSummary:
     """Test the pytest_terminal_summary hook."""
 

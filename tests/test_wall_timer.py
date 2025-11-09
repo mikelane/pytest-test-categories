@@ -10,6 +10,7 @@ from pytest_test_categories.timers import WallTimer
 from pytest_test_categories.types import TimerState
 
 
+@pytest.mark.small
 class DescribeWallTimer:
     def it_measures_elapsed_time(self) -> None:
         """Verify that the timer measures actual elapsed time."""

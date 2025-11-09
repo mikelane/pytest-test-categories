@@ -4,10 +4,13 @@ from __future__ import annotations
 
 from unittest.mock import Mock
 
+import pytest
+
 from pytest_test_categories.reporting import TestSizeReport
 from pytest_test_categories.types import TestSize
 
 
+@pytest.mark.small
 class DescribeTestSizeReport:
     """Test the TestSizeReport class."""
 

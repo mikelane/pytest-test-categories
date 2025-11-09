@@ -14,6 +14,7 @@ from pytest_test_categories.types import (
 )
 
 
+@pytest.mark.small
 class DescribeWallTimer:
     """Test the WallTimer class."""
 

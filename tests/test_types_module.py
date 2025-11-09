@@ -12,6 +12,7 @@ from pytest_test_categories.types import (
 )
 
 
+@pytest.mark.small
 class DescribeTestSize:
     """Test the TestSize enum."""
 
@@ -44,6 +45,7 @@ class DescribeTestSize:
         assert TestSize.XLARGE.label == '[XLARGE]'
 
 
+@pytest.mark.small
 class DescribeTimerState:
     """Test the TimerState enum."""
 
@@ -54,6 +56,7 @@ class DescribeTimerState:
         assert TimerState.STOPPED == 'stopped'
 
 
+@pytest.mark.small
 class DescribeTimingViolationError:
     """Test the TimingViolationError exception."""
 
@@ -68,6 +71,7 @@ class DescribeTimingViolationError:
         assert issubclass(TimingViolationError, Exception)
 
 
+@pytest.mark.small
 class DescribeTestTimer:
     """Test the TestTimer abstract base class."""
 
