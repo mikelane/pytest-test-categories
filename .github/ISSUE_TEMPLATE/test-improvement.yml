@@ -1,0 +1,122 @@
+name: Test Improvement
+description: Suggest improvements to the test suite
+title: "[Test]: "
+labels: ["testing", "quality", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve our test suite! Please describe the improvement below.
+
+  - type: dropdown
+    id: test-type
+    attributes:
+      label: Test Improvement Type
+      description: What type of test improvement is this?
+      options:
+        - Missing Test Coverage
+        - Flaky Test Fix
+        - Test Clarity/Readability
+        - Test Performance
+        - Test Organization
+        - Test Fixture Improvement
+        - Parameterization
+        - Edge Case Coverage
+        - Integration Test
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-state
+    attributes:
+      label: Current Test State
+      description: What is the current state of testing for this area?
+      placeholder: |
+        The timing validation logic in plugin.py has 85% coverage.
+        Missing tests for:
+        - Edge case when timer state is corrupted
+        - Behavior when test duration exactly equals time limit
+        - Concurrent test execution scenarios
+    validations:
+      required: true
+
+  - type: textarea
+    id: coverage-gap
+    attributes:
+      label: Coverage Gap / Test Weakness
+      description: What specific gap or weakness exists in the tests?
+      placeholder: |
+        No tests verify behavior when:
+        1. Timer fails to start
+        2. Timer reports negative duration
+        3. Multiple tests share timer state (race condition)
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-tests
+    attributes:
+      label: Proposed Tests
+      description: What tests should be added or improved?
+      placeholder: |
+        Add test cases:
+
+        1. test_timer_corruption_handling():
+           - Verify plugin gracefully handles timer state corruption
+           - Should not crash test run
+
+        2. test_exact_time_limit_boundary():
+           - Test duration exactly equals limit
+           - Should pass (not fail due to rounding)
+
+        3. test_parallel_execution_isolation():
+           - Run multiple tests concurrently
+           - Verify timers don't interfere
+    validations:
+      required: true
+
+  - type: textarea
+    id: test-data
+    attributes:
+      label: Test Data / Examples
+      description: Provide specific test data or examples
+      placeholder: |
+        Example test case:
+
+        ```python
+        def test_exact_boundary():
+            # Test that takes exactly 1.000s should pass for @pytest.mark.small
+            @pytest.mark.small
+            def test_example():
+                time.sleep(1.0)
+
+            result = testdir.runpytest()
+            result.assert_outcomes(passed=1)
+        ```
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      description: How will we know the tests are sufficient?
+      placeholder: |
+        - Coverage increases to 100% for timing validation module
+        - All edge cases documented in code comments are tested
+        - Tests are deterministic (no flakiness)
+        - Test execution time remains under 5s total
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Are you willing to contribute these tests?
+      options:
+        - label: I'm willing to submit a PR to add these tests
+          required: false
+        - label: I have failing test cases that demonstrate the gap
+          required: false
