@@ -40,18 +40,16 @@ This is a pytest plugin that enforces test timing constraints and validates test
 ### Installation
 ```bash
 # Install all dependencies (development and production)
-poetry install --no-root --all-groups
+uv sync --all-groups
 ```
-
-**Important**: The `--no-root` flag is required to avoid installing the package itself, which can result in plugin double-registration when running pytest.
 
 ### Pre-commit Setup
 ```bash
 # Install pre-commit hooks
-poetry run pre-commit install
+uv run pre-commit install
 
 # Run all pre-commit hooks manually
-poetry run pre-commit run --all-files
+uv run pre-commit run --all-files
 ```
 
 ### Testing Commands
@@ -60,49 +58,49 @@ poetry run pre-commit run --all-files
 
 ```bash
 # Run all tests with coverage
-poetry run coverage run -m pytest
+uv run coverage run -m pytest
 
 # View coverage report in terminal
-poetry run coverage report
+uv run coverage report
 
 # View detailed coverage with missing lines
-poetry run coverage report --show-missing
+uv run coverage report --show-missing
 
 # Generate XML coverage report (for codecov)
-poetry run coverage xml
+uv run coverage xml
 
 # Generate HTML coverage report for local viewing
-poetry run coverage html
+uv run coverage html
 
 # Run a single test file (without coverage)
-poetry run pytest tests/test_plugin_module.py
+uv run pytest tests/test_plugin_module.py
 
 # Run a single test function (without coverage)
-poetry run pytest tests/test_plugin_module.py::test_function_name
+uv run pytest tests/test_plugin_module.py::test_function_name
 
 # Run a specific test class (without coverage)
-poetry run pytest tests/test_plugin_module.py::DescribeClass
+uv run pytest tests/test_plugin_module.py::DescribeClass
 
 # Run tests with detailed output (without coverage)
-poetry run pytest -vv
+uv run pytest -vv
 ```
 
 ### Code Quality
 ```bash
 # Run isort (import sorting)
-poetry run isort .
+uv run isort .
 
 # Run ruff check with auto-fix
-poetry run ruff check --fix .
+uv run ruff check --fix .
 
 # Run ruff format
-poetry run ruff format .
+uv run ruff format .
 ```
 
 ### Coverage Validation
 ```bash
 # Check that coverage meets the target (100% by default)
-poetry run python tests/_utils/check_coverage.py
+uv run python tests/_utils/check_coverage.py
 ```
 
 The coverage target is stored in `coverage_target.txt` (currently 100.0).

@@ -11,28 +11,28 @@ repos:
     hooks:
       - id: isort
         name: isort
-        entry: poetry run isort .
+        entry: uv run isort .
         language: system
         types: [python]
         pass_filenames: false
 
       - id: ruff-check
         name: ruff check
-        entry: poetry run ruff check --fix .
+        entry: uv run ruff check --fix .
         language: system
         types: [python]
         pass_filenames: false
 
       - id: ruff-format
         name: ruff format
-        entry: poetry run ruff format .
+        entry: uv run ruff format .
         language: system
         types: [python]
         pass_filenames: false
 
       - id: pytest-coverage
         name: pytest with coverage
-        entry: bash -c 'poetry run coverage run -m pytest && poetry run coverage report && poetry run python tests/_utils/check_coverage.py'
+        entry: bash -c 'uv run coverage run -m pytest && uv run coverage report && uv run python tests/_utils/check_coverage.py'
         language: system
         types: [python]
         pass_filenames: false
