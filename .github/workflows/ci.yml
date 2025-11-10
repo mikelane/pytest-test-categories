@@ -148,7 +148,7 @@ jobs:
         run: poetry install --all-groups
 
       - name: Run pre-commit hooks
-        uses: pre-commit/action@v3.0.1
+        run: poetry run pre-commit run --all-files
 
   build:
     name: Build Package
