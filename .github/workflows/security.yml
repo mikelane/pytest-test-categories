@@ -13,6 +13,7 @@ on:
 permissions:
   contents: read
   security-events: write
+  pull-requests: write  # Required for dependency review to comment on PRs
 
 jobs:
   dependency-security:
@@ -33,6 +34,9 @@ jobs:
         uses: snok/install-poetry@v1
         with:
           version: 2.1.0
+
+      - name: Install poetry-plugin-export
+        run: poetry self add poetry-plugin-export
 
       - name: Export dependencies
         run: |
