@@ -7,3 +7,5 @@ from __future__ import annotations
 
 from .plugin import *  # noqa: F403
 from .reporting import *  # noqa: F403
+
+__version__ = '0.3.0'

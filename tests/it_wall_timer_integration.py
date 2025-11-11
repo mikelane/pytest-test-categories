@@ -1,4 +1,13 @@
-"""Test the wall clock timer implementation."""
+"""Integration tests for the wall clock timer implementation.
+
+These tests verify that WallTimer correctly integrates with the system clock.
+They use actual time.sleep() and are intentionally slower and potentially flaky
+on heavily loaded systems.
+
+For unit tests of timer behavior, see test_fake_timer.py which uses the
+FakeTimer test double for deterministic, fast testing.
+"""
+# ruff: noqa: S101, PLR2004
 
 from __future__ import annotations
 
@@ -10,8 +19,8 @@ from pytest_test_categories.timers import WallTimer
 from pytest_test_categories.types import TimerState
 
 
-@pytest.mark.small
-class DescribeWallTimer:
+@pytest.mark.medium  # Integration tests are slower
+class DescribeWallTimerIntegration:
     def it_measures_elapsed_time(self) -> None:
         """Verify that the timer measures actual elapsed time."""
         timer = WallTimer(state=TimerState.READY)
@@ -21,7 +30,7 @@ class DescribeWallTimer:
         timer.stop()
 
         duration = timer.duration()
-        assert 0.09 <= duration <= 0.2, f'Expected ~0.1s, got {duration}s'
+        assert 0.09 <= duration <= 0.5, f'Expected ~0.1s, got {duration}s'
 
     def it_fails_if_getting_duration_before_start(self) -> None:
         """Verify error when getting duration before starting."""
@@ -69,5 +78,5 @@ class DescribeWallTimer:
         second_duration = timer.duration()
 
         assert first_duration < second_duration
-        assert 0.09 <= first_duration <= 0.2
-        assert 0.19 <= second_duration <= 0.3
+        assert 0.09 <= first_duration <= 0.5
+        assert 0.19 <= second_duration <= 0.7

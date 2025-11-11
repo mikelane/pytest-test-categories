@@ -242,7 +242,7 @@ class DescribeDistributionStats:
         counts = TestCounts(small=60, medium=30, large=8, xlarge=2)
         stats = DistributionStats(counts=counts)
 
-        with pytest.raises(ValueError, match='Small test percentage.*outside target range'):
+        with pytest.raises(ValueError, match=r'Small test percentage.*outside target range'):
             stats.validate_distribution()
 
     def it_validates_small_above_range(self) -> None:
@@ -251,7 +251,7 @@ class DescribeDistributionStats:
         counts = TestCounts(small=90, medium=5, large=3, xlarge=2)
         stats = DistributionStats(counts=counts)
 
-        with pytest.raises(ValueError, match='Small test percentage.*outside target range'):
+        with pytest.raises(ValueError, match=r'Small test percentage.*outside target range'):
             stats.validate_distribution()
 
     def it_validates_medium_below_range(self) -> None:
@@ -260,7 +260,7 @@ class DescribeDistributionStats:
         counts = TestCounts(small=85, medium=5, large=8, xlarge=2)
         stats = DistributionStats(counts=counts)
 
-        with pytest.raises(ValueError, match='Medium test percentage.*outside target range'):
+        with pytest.raises(ValueError, match=r'Medium test percentage.*outside target range'):
             stats.validate_distribution()
 
     def it_validates_medium_above_range(self) -> None:
@@ -269,7 +269,7 @@ class DescribeDistributionStats:
         counts = TestCounts(small=70, medium=25, large=3, xlarge=2)
         stats = DistributionStats(counts=counts)
 
-        with pytest.raises(ValueError, match='Small test percentage.*outside target range'):
+        with pytest.raises(ValueError, match=r'Small test percentage.*outside target range'):
             stats.validate_distribution()
 
     def it_validates_large_xlarge_below_range(self) -> None:
@@ -278,7 +278,7 @@ class DescribeDistributionStats:
         counts = TestCounts(small=80, medium=19, large=1, xlarge=0)
         stats = DistributionStats(counts=counts)
 
-        with pytest.raises(ValueError, match='Large/XLarge test percentage.*outside target range'):
+        with pytest.raises(ValueError, match=r'Large/XLarge test percentage.*outside target range'):
             stats.validate_distribution()
 
     def it_validates_large_xlarge_above_range(self) -> None:
@@ -287,7 +287,7 @@ class DescribeDistributionStats:
         counts = TestCounts(small=75, medium=15, large=8, xlarge=2)
         stats = DistributionStats(counts=counts)
 
-        with pytest.raises(ValueError, match='Large/XLarge test percentage.*outside target range'):
+        with pytest.raises(ValueError, match=r'Large/XLarge test percentage.*outside target range'):
             stats.validate_distribution()
 
     def it_is_frozen(self) -> None:

@@ -40,69 +40,87 @@ This is a pytest plugin that enforces test timing constraints and validates test
 ### Installation
 ```bash
 # Install all dependencies (development and production)
-poetry install --no-root --all-groups
+uv sync --all-groups
 ```
-
-**Important**: The `--no-root` flag is required to avoid installing the package itself, which can result in plugin double-registration when running pytest.
 
 ### Pre-commit Setup
 ```bash
 # Install pre-commit hooks
-poetry run pre-commit install
+uv run pre-commit install
 
 # Run all pre-commit hooks manually
-poetry run pre-commit run --all-files
+uv run pre-commit run --all-files
 ```
 
 ### Testing Commands
 
 **Coverage Note**: This project uses `coverage run` instead of `pytest --cov` because pytest loads plugins before coverage tracking starts. Using `coverage run -m pytest` ensures all module-level code (imports, class definitions, decorators) is tracked correctly.
 
+**Tox for Multi-Version Testing**: Use tox to test against all supported Python versions (3.11, 3.12, 3.13, 3.14) in isolated environments.
+
 ```bash
-# Run all tests with coverage
-poetry run coverage run -m pytest
+# Run tests across all Python versions with tox (full output, verbose)
+uv run tox
+
+# Run tests for a specific Python version
+uv run tox -e py312
+
+# Run tests in parallel across all versions (fast, minimal output)
+uv run tox run-parallel
+
+# Run fast parallel tests (used by pre-commit, with pytest-xdist)
+uv run tox run-parallel -e py311-fast,py312-fast,py313-fast,py314-fast
+
+# List all available tox environments
+uv run tox list
+
+# Run all tests with coverage (single version)
+uv run coverage run -m pytest
+
+# Run tests in parallel with pytest-xdist (single version)
+uv run pytest -n auto
 
 # View coverage report in terminal
-poetry run coverage report
+uv run coverage report
 
 # View detailed coverage with missing lines
-poetry run coverage report --show-missing
+uv run coverage report --show-missing
 
 # Generate XML coverage report (for codecov)
-poetry run coverage xml
+uv run coverage xml
 
 # Generate HTML coverage report for local viewing
-poetry run coverage html
+uv run coverage html
 
 # Run a single test file (without coverage)
-poetry run pytest tests/test_plugin_module.py
+uv run pytest tests/test_plugin_module.py
 
 # Run a single test function (without coverage)
-poetry run pytest tests/test_plugin_module.py::test_function_name
+uv run pytest tests/test_plugin_module.py::test_function_name
 
 # Run a specific test class (without coverage)
-poetry run pytest tests/test_plugin_module.py::DescribeClass
+uv run pytest tests/test_plugin_module.py::DescribeClass
 
 # Run tests with detailed output (without coverage)
-poetry run pytest -vv
+uv run pytest -vv
 ```
 
 ### Code Quality
 ```bash
 # Run isort (import sorting)
-poetry run isort .
+uv run isort .
 
 # Run ruff check with auto-fix
-poetry run ruff check --fix .
+uv run ruff check --fix .
 
 # Run ruff format
-poetry run ruff format .
+uv run ruff format .
 ```
 
 ### Coverage Validation
 ```bash
 # Check that coverage meets the target (100% by default)
-poetry run python tests/_utils/check_coverage.py
+uv run python tests/_utils/check_coverage.py
 ```
 
 The coverage target is stored in `coverage_target.txt` (currently 100.0).
@@ -133,8 +151,13 @@ The coverage target is stored in `coverage_target.txt` (currently 100.0).
 - `validate()`: Raises `TimingViolationError` if test exceeds its size's limit
 
 **Timer Implementation** (`src/pytest_test_categories/timers.py`)
-- `WallTimer`: Concrete implementation using wall-clock time
-- Enforces state transitions through contracts
+- Implements **Hexagonal Architecture** (Ports and Adapters pattern) for testability
+- `TestTimer` (Port): Abstract interface defining timer contract with state machine
+- `WallTimer` (Production Adapter): Real implementation using `time.perf_counter()` for high-resolution wall-clock timing
+- `FakeTimer` (Test Adapter): Controllable test double with explicit time advancement via `advance()` method
+- Dependency injection via `PluginState.timer_factory` allows tests to inject `FakeTimer` while production uses `WallTimer`
+- Eliminates flaky tests by removing system clock dependencies in unit tests
+- Integration tests (`it_wall_timer_integration.py`) marked as `@pytest.mark.medium` use real `WallTimer` with lenient assertions
 
 **Distribution Validation** (`src/pytest_test_categories/distribution/stats.py`)
 - `DistributionStats`: Tracks test counts and calculates percentages
@@ -163,11 +186,22 @@ The coverage target is stored in `coverage_target.txt` (currently 100.0).
 - Uses `@pytest.hookimpl` decorators with `tryfirst=True` for priority hooks
 - Hook wrappers (`hookwrapper=True`) allow pre/post processing around pytest operations
 
+**Hexagonal Architecture (Ports and Adapters)**
+- **Port**: `TestTimer` abstract base class defines the interface for all timer implementations
+- **Production Adapter**: `WallTimer` uses system clock (`time.perf_counter()`) for real timing
+- **Test Adapter**: `FakeTimer` provides controllable time via `advance()` method
+- **Dependency Injection**: `PluginState.timer_factory` allows runtime selection of timer implementation
+- **Benefits**:
+  - Unit tests are fast and deterministic (no `time.sleep()`, no flaky timing)
+  - Integration tests validate real timing behavior with actual system clock
+  - Easy to test timing logic without implementation details
+  - Clear separation between domain logic (timer behavior) and infrastructure (system clock)
+
 **Separation of Concerns**
 - `plugin.py`: Pytest integration and orchestration
-- `types.py`: Core domain types and abstractions
+- `types.py`: Core domain types and abstractions (includes `TestTimer` port)
 - `timing.py`: Time limit configuration and validation logic
-- `timers.py`: Timing implementations
+- `timers.py`: Timer adapters (`WallTimer` for production, `FakeTimer` for tests)
 - `distribution/`: Distribution analysis and validation
 - `reporting.py`: Test size reporting
 
@@ -178,6 +212,8 @@ The coverage target is stored in `coverage_target.txt` (currently 100.0).
 - Feature tests validate end-to-end behavior
 - Module tests validate individual components
 - Uses pytest's `pytester` fixture for testing the plugin itself
+- **Unit tests** (`test_fake_timer.py`): Fast, deterministic tests using `FakeTimer` adapter marked `@pytest.mark.small`
+- **Integration tests** (`it_wall_timer_integration.py`): Real timing tests using `WallTimer` adapter marked `@pytest.mark.medium`
 
 **Test Configuration** (`pyproject.toml`)
 - Test discovery: Files matching `it_*.py` or `test_*.py`

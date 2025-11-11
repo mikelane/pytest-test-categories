@@ -1,26 +1,20 @@
-# CODEOWNERS - Defines individuals or teams responsible for code in this repository
-# More info: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+# Code Owners for pytest-test-categories
+#
+# These owners will be requested for review when someone opens a pull request
+# that modifies code in matching paths.
 
-# Default owners for everything in the repo
+# Default owner for everything in the repo
 * @mikelane
 
-# Core plugin code requires special attention
-/src/pytest_test_categories/plugin.py @mikelane
-/src/pytest_test_categories/types.py @mikelane
-/src/pytest_test_categories/timing.py @mikelane
-/src/pytest_test_categories/timers.py @mikelane
-
-# Documentation changes
-*.md @mikelane
-/docs/ @mikelane
-
-# GitHub infrastructure
-/.github/ @mikelane
-
-# CI/CD configuration
+# CI/CD infrastructure requires SRE review
 /.github/workflows/ @mikelane
-/.pre-commit-config.yaml @mikelane
+/.github/dependabot.yml @mikelane
+/docs/DEPLOYMENT.md @mikelane
+/docs/MONITORING.md @mikelane
 
-# Project configuration
+# Package configuration and dependencies
 /pyproject.toml @mikelane
 /poetry.lock @mikelane
+
+# Core plugin code
+/src/pytest_test_categories/ @mikelane
