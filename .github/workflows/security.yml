@@ -96,27 +96,6 @@ jobs:
           deny-licenses: GPL-3.0, AGPL-3.0
           comment-summary-in-pr: always
 
-  secret-scanning:
-    name: Secret Scanning
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    # Only run on schedule and manual triggers to avoid AGPL license in PR checks
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: TruffleHog OSS
-        uses: trufflesecurity/trufflehog@main
-        with:
-          path: ./
-          base: ${{ github.event.repository.default_branch }}
-          head: HEAD
-          extra_args: --debug --only-verified
-
   security-scorecard:
     name: OpenSSF Scorecard
     runs-on: ubuntu-latest
