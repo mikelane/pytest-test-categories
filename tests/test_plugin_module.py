@@ -29,11 +29,9 @@ from pytest_test_categories import (
     pytest_terminal_summary,
 )
 from pytest_test_categories.plugin import (
-    _count_tests_by_size,
     _format_distribution_row,
     _get_session_state,
     _get_status_message,
-    _iter_sized_items,
     _pluralize_test,
 )
 
@@ -97,110 +95,6 @@ class DescribeGetSessionState:
 
         assert isinstance(state, PluginState)
         assert hasattr(config, '_test_categories_state')
-
-
-@pytest.mark.small
-class DescribeIterSizedItems:
-    """Test the _iter_sized_items function."""
-
-    def it_yields_items_with_size_markers(self) -> None:
-        """Test that _iter_sized_items yields items with size markers."""
-        # Create mock items with different size markers
-        item1 = Mock()
-        item1.nodeid = 'test1'
-        item1.get_closest_marker.side_effect = lambda name: name == 'small'
-
-        item2 = Mock()
-        item2.nodeid = 'test2'
-        item2.get_closest_marker.side_effect = lambda name: name == 'medium'
-
-        item3 = Mock()
-        item3.nodeid = 'test3'
-        item3.get_closest_marker.side_effect = lambda _name: False
-
-        items = [item1, item2, item3]
-        state = PluginState()
-
-        sized_items = list(_iter_sized_items(items, state))
-
-        assert len(sized_items) == 2
-        assert sized_items[0].size == TestSize.SMALL
-        assert sized_items[0].item is item1
-        assert sized_items[1].size == TestSize.MEDIUM
-        assert sized_items[1].item is item2
-
-    def it_warns_for_items_without_size_markers(self) -> None:
-        """Test that _iter_sized_items warns for items without size markers."""
-        item = Mock()
-        item.nodeid = 'test_without_marker'
-        item.get_closest_marker.return_value = None
-
-        items = [item]
-        state = PluginState()
-
-        with pytest.warns(pytest.PytestWarning, match='Test has no size marker'):
-            list(_iter_sized_items(items, state))
-
-        assert 'test_without_marker' in state.warned_tests
-
-    def it_does_not_warn_twice_for_same_item(self) -> None:
-        """Test that _iter_sized_items doesn't warn twice for the same item."""
-        item = Mock()
-        item.nodeid = 'test_without_marker'
-        item.get_closest_marker.return_value = None
-
-        items = [item]
-        state = PluginState()
-        state.warned_tests.add('test_without_marker')
-
-        # Should not warn since already warned
-        with warnings.catch_warnings(record=True) as warning_list:
-            warnings.simplefilter('always')
-            list(_iter_sized_items(items, state))
-
-        assert len(warning_list) == 0
-
-    def it_raises_error_for_multiple_size_markers(self) -> None:
-        """Test that _iter_sized_items raises error for multiple size markers."""
-        item = Mock()
-        item.nodeid = 'test_with_multiple_markers'
-        item.get_closest_marker.side_effect = lambda name: name in ['small', 'medium']
-
-        items = [item]
-        state = PluginState()
-
-        with pytest.raises(pytest.UsageError, match='Test cannot have multiple size markers'):
-            list(_iter_sized_items(items, state))
-
-
-@pytest.mark.small
-class DescribeCountTestsBySize:
-    """Test the _count_tests_by_size function."""
-
-    def it_counts_tests_by_size_correctly(self) -> None:
-        """Test that _count_tests_by_size counts tests correctly."""
-        # Create mock items with different size markers
-        item1 = Mock()
-        item1.get_closest_marker.side_effect = lambda name: name == 'small'
-
-        item2 = Mock()
-        item2.get_closest_marker.side_effect = lambda name: name == 'small'
-
-        item3 = Mock()
-        item3.get_closest_marker.side_effect = lambda name: name == 'medium'
-
-        item4 = Mock()
-        item4.get_closest_marker.side_effect = lambda _name: False  # No marker
-
-        items = [item1, item2, item3, item4]
-        state = PluginState()
-
-        counts = _count_tests_by_size(items, state)
-
-        assert counts['small'] == 2
-        assert counts['medium'] == 1
-        assert counts['large'] == 0
-        assert counts['xlarge'] == 0
 
 
 @pytest.mark.small
@@ -340,12 +234,19 @@ class DescribePytestCollectionModifyitems:
         """Test that pytest_collection_modifyitems counts tests and updates stats."""
         config = Mock()
         item1 = Mock()
-        item1.get_closest_marker.side_effect = lambda name: name == 'small'
+        item1.nodeid = 'test1'
         item1._nodeid = 'test1'  # noqa: SLF001
+        item1.get_closest_marker.side_effect = lambda name: name == 'small'
         items = [item1]
 
         with patch('pytest_test_categories.plugin._get_session_state') as mock_get_state:
             mock_state = Mock()
+            # Mock the test discovery service to return TestSize.SMALL
+            from pytest_test_categories.types import TestSize
+
+            mock_discovery_service = Mock()
+            mock_discovery_service.find_test_size.return_value = TestSize.SMALL
+            mock_state.test_discovery_service = mock_discovery_service
             mock_get_state.return_value = mock_state
 
             pytest_collection_modifyitems(config, items)
@@ -395,6 +296,10 @@ class DescribePytestRuntestProtocol:
             mock_state = Mock()
             mock_state.timers = {}
             mock_state.test_size_report = Mock()
+            # Mock the test discovery service to return TestSize.SMALL
+            mock_discovery_service = Mock()
+            mock_discovery_service.find_test_size.return_value = TestSize.SMALL
+            mock_state.test_discovery_service = mock_discovery_service
             mock_get_state.return_value = mock_state
 
             # Mock the hookwrapper behavior
@@ -422,6 +327,10 @@ class DescribePytestRuntestProtocol:
             mock_state = Mock()
             mock_state.timers = {}
             mock_state.test_size_report = Mock()
+            # Mock the test discovery service to return None (no size marker found)
+            mock_discovery_service = Mock()
+            mock_discovery_service.find_test_size.return_value = None
+            mock_state.test_discovery_service = mock_discovery_service
             mock_get_state.return_value = mock_state
 
             # Mock the hookwrapper behavior
@@ -465,6 +374,10 @@ class DescribePytestRuntestMakereport:
             mock_state.timers = {'test_example': mock_timer}
             mock_state.test_size_report = TestSizeReport()
             mock_state.warned_tests = set()
+            # Mock the test discovery service to return TestSize.SMALL
+            mock_discovery_service = Mock()
+            mock_discovery_service.find_test_size.return_value = TestSize.SMALL
+            mock_state.test_discovery_service = mock_discovery_service
             mock_get_state.return_value = mock_state
 
             # Mock the hookwrapper behavior

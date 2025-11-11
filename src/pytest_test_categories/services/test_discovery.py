@@ -41,7 +41,7 @@ from pytest_test_categories.types import (
 )
 
 # Error message for multiple size markers
-MULTIPLE_MARKERS_ERROR = 'Test has multiple size markers: {}'
+MULTIPLE_MARKERS_ERROR = 'Test cannot have multiple size markers: {}'
 
 
 class TestDiscoveryService:
