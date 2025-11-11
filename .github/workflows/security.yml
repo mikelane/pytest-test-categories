@@ -100,6 +100,8 @@ jobs:
     name: Secret Scanning
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # Only run on schedule and manual triggers to avoid AGPL license in PR checks
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Checkout code
