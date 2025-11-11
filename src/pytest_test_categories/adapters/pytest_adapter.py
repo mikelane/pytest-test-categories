@@ -9,11 +9,13 @@ rather than directly depending on pytest's internal implementation.
 
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING
 
 from pytest_test_categories.types import (
     OutputWriterPort,
     TestItemPort,
+    WarningSystemPort,
 )
 
 if TYPE_CHECKING:
@@ -153,3 +155,38 @@ class TerminalReporterAdapter(OutputWriterPort):
 
         """
         self._reporter.write_sep(sep=sep)
+
+
+class PytestWarningAdapter(WarningSystemPort):
+    """Production adapter that wraps Python's warnings module.
+
+    This adapter implements the WarningSystemPort interface by delegating to
+    warnings.warn(). It's used in production (real pytest runs) to emit actual
+    warnings through Python's warnings system.
+
+    This follows the hexagonal architecture pattern where:
+    - WarningSystemPort is the Port (abstract interface)
+    - PytestWarningAdapter is the Production Adapter (real implementation)
+    - FakeWarningSystem is the Test Adapter (test double)
+
+    The adapter uses stacklevel=3 to point warnings to the caller's caller,
+    which provides better context in warning messages.
+
+    Example:
+        >>> adapter = PytestWarningAdapter()
+        >>> adapter.warn('This feature is deprecated', category=DeprecationWarning)
+
+    """
+
+    def warn(self, message: str, category: type[Warning]) -> None:
+        """Emit a warning through Python's warnings system.
+
+        Delegates to warnings.warn() with stacklevel=3 to point to the
+        caller's caller for better warning context.
+
+        Args:
+            message: The warning message to emit.
+            category: The warning category (e.g., UserWarning, DeprecationWarning).
+
+        """
+        warnings.warn(message, category=category, stacklevel=3)

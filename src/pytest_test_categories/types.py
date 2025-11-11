@@ -192,3 +192,33 @@ class OutputWriterPort(ABC):
             sep: The separator character to use (default: '-').
 
         """
+
+
+class WarningSystemPort(ABC):
+    """Abstract base class defining the warning system interface.
+
+    This port (interface) abstracts Python's warnings module to enable hexagonal architecture.
+    It allows testing code that emits warnings without depending on the warnings module's
+    implementation or causing actual warnings to be emitted during tests.
+
+    Implementations:
+    - PytestWarningAdapter: Production adapter that wraps warnings.warn
+    - FakeWarningSystem: Test adapter providing controllable warning recording
+
+    This follows the same pattern as TestTimer/WallTimer/FakeTimer, TestItemPort, and OutputWriterPort.
+
+    Example:
+        >>> warning_system = PytestWarningAdapter()
+        >>> warning_system.warn('This feature is deprecated', category=DeprecationWarning)
+
+    """
+
+    @abstractmethod
+    def warn(self, message: str, category: type[Warning]) -> None:
+        """Emit a warning with the specified message and category.
+
+        Args:
+            message: The warning message to emit.
+            category: The warning category (e.g., UserWarning, DeprecationWarning).
+
+        """
