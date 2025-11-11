@@ -19,7 +19,9 @@ from pytest_test_categories.distribution.stats import (
     TestPercentages,
 )
 from pytest_test_categories.reporting import TestSizeReport
-from pytest_test_categories.timers import WallTimer
+from pytest_test_categories.timers import (
+    WallTimer,
+)
 from pytest_test_categories.types import (
     TestSize,
     TestTimer,
@@ -50,7 +52,14 @@ CRITICAL_SMALL_PCT: Final[float] = 50.0  # Threshold for severe warning
 
 
 class PluginState(BaseModel):
-    """Plugin state for a test session."""
+    """Plugin state for a test session.
+
+    This class manages the state for the entire test session and supports
+    hexagonal architecture through dependency injection of the timer factory.
+
+    The timer_factory allows tests to inject FakeTimer for deterministic
+    testing while production uses WallTimer for actual timing.
+    """
 
     active: bool = True
     distribution_stats: DistributionStats = DistributionStats()
@@ -58,6 +67,8 @@ class PluginState(BaseModel):
     test_size_report: TestSizeReport | None = None
     # Store timers per test item to avoid race conditions in parallel execution
     timers: dict[str, TestTimer] = {}
+    # Timer factory for dependency injection (hexagonal architecture port)
+    timer_factory: type[TestTimer] = WallTimer
 
 
 def _get_session_state(config: pytest.Config) -> PluginState:
@@ -179,8 +190,9 @@ def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None) -> 
 
     # Create a unique timer for this test item to avoid race conditions
     # Only create if one doesn't already exist (allows test mocking)
+    # Uses injected timer_factory for hexagonal architecture (production: WallTimer, tests: FakeTimer)
     if item.nodeid not in session_state.timers:
-        timer = WallTimer(state=TimerState.READY)
+        timer = session_state.timer_factory(state=TimerState.READY)
         session_state.timers[item.nodeid] = timer
     else:
         timer = session_state.timers[item.nodeid]

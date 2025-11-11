@@ -151,8 +151,13 @@ The coverage target is stored in `coverage_target.txt` (currently 100.0).
 - `validate()`: Raises `TimingViolationError` if test exceeds its size's limit
 
 **Timer Implementation** (`src/pytest_test_categories/timers.py`)
-- `WallTimer`: Concrete implementation using wall-clock time
-- Enforces state transitions through contracts
+- Implements **Hexagonal Architecture** (Ports and Adapters pattern) for testability
+- `TestTimer` (Port): Abstract interface defining timer contract with state machine
+- `WallTimer` (Production Adapter): Real implementation using `time.perf_counter()` for high-resolution wall-clock timing
+- `FakeTimer` (Test Adapter): Controllable test double with explicit time advancement via `advance()` method
+- Dependency injection via `PluginState.timer_factory` allows tests to inject `FakeTimer` while production uses `WallTimer`
+- Eliminates flaky tests by removing system clock dependencies in unit tests
+- Integration tests (`it_wall_timer_integration.py`) marked as `@pytest.mark.medium` use real `WallTimer` with lenient assertions
 
 **Distribution Validation** (`src/pytest_test_categories/distribution/stats.py`)
 - `DistributionStats`: Tracks test counts and calculates percentages
@@ -181,11 +186,22 @@ The coverage target is stored in `coverage_target.txt` (currently 100.0).
 - Uses `@pytest.hookimpl` decorators with `tryfirst=True` for priority hooks
 - Hook wrappers (`hookwrapper=True`) allow pre/post processing around pytest operations
 
+**Hexagonal Architecture (Ports and Adapters)**
+- **Port**: `TestTimer` abstract base class defines the interface for all timer implementations
+- **Production Adapter**: `WallTimer` uses system clock (`time.perf_counter()`) for real timing
+- **Test Adapter**: `FakeTimer` provides controllable time via `advance()` method
+- **Dependency Injection**: `PluginState.timer_factory` allows runtime selection of timer implementation
+- **Benefits**:
+  - Unit tests are fast and deterministic (no `time.sleep()`, no flaky timing)
+  - Integration tests validate real timing behavior with actual system clock
+  - Easy to test timing logic without implementation details
+  - Clear separation between domain logic (timer behavior) and infrastructure (system clock)
+
 **Separation of Concerns**
 - `plugin.py`: Pytest integration and orchestration
-- `types.py`: Core domain types and abstractions
+- `types.py`: Core domain types and abstractions (includes `TestTimer` port)
 - `timing.py`: Time limit configuration and validation logic
-- `timers.py`: Timing implementations
+- `timers.py`: Timer adapters (`WallTimer` for production, `FakeTimer` for tests)
 - `distribution/`: Distribution analysis and validation
 - `reporting.py`: Test size reporting
 
@@ -196,6 +212,8 @@ The coverage target is stored in `coverage_target.txt` (currently 100.0).
 - Feature tests validate end-to-end behavior
 - Module tests validate individual components
 - Uses pytest's `pytester` fixture for testing the plugin itself
+- **Unit tests** (`test_fake_timer.py`): Fast, deterministic tests using `FakeTimer` adapter marked `@pytest.mark.small`
+- **Integration tests** (`it_wall_timer_integration.py`): Real timing tests using `WallTimer` adapter marked `@pytest.mark.medium`
 
 **Test Configuration** (`pyproject.toml`)
 - Test discovery: Files matching `it_*.py` or `test_*.py`

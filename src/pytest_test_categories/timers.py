@@ -17,6 +17,8 @@ class WallTimer(TestTimer):
 
     This timer uses time.perf_counter() for high-resolution timing
     that is not affected by system clock updates.
+
+    This is the production adapter that should be used in real pytest runs.
     """
 
     start_time: float | None = Field(None, description='Start time in seconds')
@@ -46,6 +48,81 @@ class WallTimer(TestTimer):
 
         Returns:
             The duration in seconds with microsecond precision.
+
+        Raises:
+            RuntimeError: If called before both start and stop.
+
+        """
+        if self.start_time is None:
+            msg = 'Timer was never started'
+            raise RuntimeError(msg)
+        if self.end_time is None:
+            msg = 'Timer was never stopped'
+            raise RuntimeError(msg)
+
+        return self.end_time - self.start_time
+
+
+class FakeTimer(TestTimer):
+    """Controllable timer adapter for testing.
+
+    This is a test double that allows tests to control time explicitly
+    rather than depending on the system clock. This eliminates flaky
+    tests caused by timing variations and makes tests deterministic.
+
+    The FakeTimer follows hexagonal architecture principles:
+    - Implements the TestTimer port (interface)
+    - Provides controllable time advancement via advance()
+    - Used in tests as a substitute for WallTimer
+    - Enables testing behavior without implementation details
+
+    Example:
+        >>> timer = FakeTimer()
+        >>> timer.start()
+        >>> timer.advance(0.5)  # Simulate 0.5 seconds
+        >>> timer.stop()
+        >>> assert timer.duration() == 0.5  # Exact, deterministic
+
+    """
+
+    current_time: float = Field(0.0, description='Simulated current time in seconds')
+    start_time: float | None = Field(None, description='Simulated start time')
+    end_time: float | None = Field(None, description='Simulated end time')
+
+    def reset(self) -> None:
+        """Reset the timer to initial state."""
+        self.state = TimerState.READY
+        self.start_time = None
+        self.end_time = None
+        self.current_time = 0.0
+
+    def advance(self, seconds: float) -> None:
+        """Advance the simulated clock by the specified duration.
+
+        Args:
+            seconds: Number of seconds to advance the clock.
+
+        """
+        self.current_time += seconds
+
+    def start(self) -> None:
+        """Start timing, recording the simulated current time."""
+        if self.state != TimerState.READY:
+            self.reset()  # Reset if not in ready state
+        super().start()  # Parent handles state transition and contracts
+        self.start_time = self.current_time
+        self.end_time = None
+
+    def stop(self) -> None:
+        """Stop timing, recording the simulated end time."""
+        self.end_time = self.current_time
+        super().stop()  # Parent handles state transition and contracts
+
+    def duration(self) -> float:
+        """Calculate the simulated duration in seconds.
+
+        Returns:
+            The simulated duration in seconds.
 
         Raises:
             RuntimeError: If called before both start and stop.
