@@ -1,9 +1,9 @@
-"""Production adapter for pytest.Item following hexagonal architecture.
+"""Production adapters for pytest following hexagonal architecture.
 
-This module provides the PytestItemAdapter which wraps pytest.Item and implements
-the TestItemPort interface. This is the production adapter used in real pytest runs.
+This module provides production adapters that wrap pytest objects and implement
+the port interfaces. These adapters are used in real pytest runs.
 
-The adapter pattern allows code to work with test items through an abstract interface
+The adapter pattern allows code to work with pytest objects through abstract interfaces
 rather than directly depending on pytest's internal implementation.
 """
 
@@ -11,7 +11,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from pytest_test_categories.types import TestItemPort
+from pytest_test_categories.types import (
+    OutputWriterPort,
+    TestItemPort,
+)
 
 if TYPE_CHECKING:
     import pytest
@@ -82,3 +85,71 @@ class PytestItemAdapter(TestItemPort):
 
         """
         self._item._nodeid = nodeid  # noqa: SLF001
+
+
+class TerminalReporterAdapter(OutputWriterPort):
+    """Production adapter that wraps pytest.TerminalReporter.
+
+    This adapter implements the OutputWriterPort interface by delegating to a real
+    pytest.TerminalReporter object. It's used in production (real pytest runs) to provide
+    an abstraction layer over pytest's terminal reporter implementation.
+
+    This follows the hexagonal architecture pattern where:
+    - OutputWriterPort is the Port (abstract interface)
+    - TerminalReporterAdapter is the Production Adapter (real implementation)
+    - StringBufferWriter is the Test Adapter (test double)
+
+    Example:
+        >>> adapter = TerminalReporterAdapter(terminalreporter)
+        >>> adapter.write_section('Test Report', sep='=')
+        >>> adapter.write_line('Total: 10 tests')
+        >>> adapter.write_separator()
+
+    """
+
+    def __init__(self, reporter: pytest.TerminalReporter) -> None:
+        """Initialize adapter with a pytest.TerminalReporter.
+
+        Args:
+            reporter: The pytest.TerminalReporter to wrap.
+
+        """
+        self._reporter = reporter
+
+    def write_section(self, title: str, sep: str = '=') -> None:
+        """Write a section header with title and separator.
+
+        Delegates to pytest.TerminalReporter.section() to write a section header
+        with appropriate formatting.
+
+        Args:
+            title: The section title to display.
+            sep: The separator character to use (default: '=').
+
+        """
+        self._reporter.section(title, sep=sep)
+
+    def write_line(self, message: str, **kwargs: object) -> None:
+        """Write a single line of text.
+
+        Delegates to pytest.TerminalReporter.write_line() to write a line of text
+        with optional styling arguments (e.g., red=True, bold=True).
+
+        Args:
+            message: The message to write.
+            **kwargs: Additional styling arguments forwarded to write_line.
+
+        """
+        self._reporter.write_line(message, **kwargs)
+
+    def write_separator(self, sep: str = '-') -> None:
+        """Write a separator line.
+
+        Delegates to pytest.TerminalReporter.write_sep() to write a separator line
+        using the specified character.
+
+        Args:
+            sep: The separator character to use (default: '-').
+
+        """
+        self._reporter.write_sep(sep=sep)

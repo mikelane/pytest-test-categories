@@ -17,12 +17,12 @@ def it_covers_main_package_init() -> None:
     """Reload main package __init__.py to ensure coverage tracking."""
     # Reload the main package __init__.py to execute it under coverage
     if 'pytest_test_categories' in sys.modules:
-        import pytest_test_categories  # noqa: PLC0415
+        import pytest_test_categories
 
         importlib.reload(pytest_test_categories)
 
     # Import public exports to verify they're accessible
-    from pytest_test_categories import (  # noqa: PLC0415
+    from pytest_test_categories import (
         DistributionStats,
         PluginState,
         TestPercentages,
@@ -65,12 +65,12 @@ def it_covers_distribution_subpackage_init() -> None:
     """Reload distribution subpackage __init__.py to ensure coverage tracking."""
     # Reload the distribution subpackage __init__.py to execute it under coverage
     if 'pytest_test_categories.distribution' in sys.modules:
-        import pytest_test_categories.distribution  # noqa: PLC0415
+        import pytest_test_categories.distribution
 
         importlib.reload(pytest_test_categories.distribution)
 
     # Import public exports to verify they're accessible
-    from pytest_test_categories.distribution import (  # noqa: PLC0415
+    from pytest_test_categories.distribution import (
         DistributionRange,
         DistributionStats,
         TestCounts,

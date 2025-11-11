@@ -141,3 +141,54 @@ class TestItemPort(ABC):
             nodeid: The new node ID to assign.
 
         """
+
+
+class OutputWriterPort(ABC):
+    """Abstract base class defining the output writer interface.
+
+    This port (interface) abstracts pytest.TerminalReporter to enable hexagonal architecture.
+    It allows testing report formatting code without depending on pytest's terminal
+    reporter implementation.
+
+    Implementations:
+    - TerminalReporterAdapter: Production adapter that wraps pytest.TerminalReporter
+    - StringBufferWriter: Test adapter providing controllable output capture
+
+    This follows the same pattern as TestTimer/WallTimer/FakeTimer and TestItemPort.
+
+    Example:
+        >>> writer = TerminalReporterAdapter(terminalreporter)
+        >>> writer.write_section('Test Report', sep='=')
+        >>> writer.write_line('Total tests: 10')
+        >>> writer.write_separator(sep='-')
+
+    """
+
+    @abstractmethod
+    def write_section(self, title: str, sep: str = '=') -> None:
+        """Write a section header with title and separator.
+
+        Args:
+            title: The section title to display.
+            sep: The separator character to use (default: '=').
+
+        """
+
+    @abstractmethod
+    def write_line(self, message: str, **kwargs: object) -> None:
+        """Write a single line of text.
+
+        Args:
+            message: The message to write.
+            **kwargs: Additional styling arguments (e.g., red=True, bold=True).
+
+        """
+
+    @abstractmethod
+    def write_separator(self, sep: str = '-') -> None:
+        """Write a separator line.
+
+        Args:
+            sep: The separator character to use (default: '-').
+
+        """
