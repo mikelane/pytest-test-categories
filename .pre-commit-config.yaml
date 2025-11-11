@@ -18,7 +18,7 @@ repos:
 
       - id: ruff-check
         name: ruff check
-        entry: uv run ruff check --fix .
+        entry: uv run ruff check --fix --unsafe-fixes .
         language: system
         types: [python]
         pass_filenames: false
@@ -30,9 +30,9 @@ repos:
         types: [python]
         pass_filenames: false
 
-      - id: pytest-coverage
-        name: pytest with coverage
-        entry: bash -c 'uv run coverage run -m pytest && uv run coverage report && uv run python tests/_utils/check_coverage.py'
+      - id: tox-parallel
+        name: tox parallel tests
+        entry: uv run tox run-parallel --parallel-no-spinner -e py311-fast,py312-fast,py313-fast,py314-fast
         language: system
         types: [python]
         pass_filenames: false

@@ -33,11 +33,16 @@ test_categories = "pytest_test_categories.plugin"
 test = [
     "pytest-cov>=7.0.0",
     "pytest-mock>=3.15.1",
+    "pytest-xdist>=3.8.0",
 ]
 lint = [
     "isort>=6.0.1",
     "pre-commit>=4.4.0",
     "ruff>=0.14.4",
+]
+dev = [
+    "tox>=4.32.0",
+    "tox-uv>=1.29.0",
 ]
 
 

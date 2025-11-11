@@ -56,9 +56,29 @@ uv run pre-commit run --all-files
 
 **Coverage Note**: This project uses `coverage run` instead of `pytest --cov` because pytest loads plugins before coverage tracking starts. Using `coverage run -m pytest` ensures all module-level code (imports, class definitions, decorators) is tracked correctly.
 
+**Tox for Multi-Version Testing**: Use tox to test against all supported Python versions (3.11, 3.12, 3.13, 3.14) in isolated environments.
+
 ```bash
-# Run all tests with coverage
+# Run tests across all Python versions with tox (full output, verbose)
+uv run tox
+
+# Run tests for a specific Python version
+uv run tox -e py312
+
+# Run tests in parallel across all versions (fast, minimal output)
+uv run tox run-parallel
+
+# Run fast parallel tests (used by pre-commit, with pytest-xdist)
+uv run tox run-parallel -e py311-fast,py312-fast,py313-fast,py314-fast
+
+# List all available tox environments
+uv run tox list
+
+# Run all tests with coverage (single version)
 uv run coverage run -m pytest
+
+# Run tests in parallel with pytest-xdist (single version)
+uv run pytest -n auto
 
 # View coverage report in terminal
 uv run coverage report

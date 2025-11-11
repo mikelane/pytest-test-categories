@@ -61,44 +61,10 @@ jobs:
           name: pytest-test-categories
           fail_ci_if_error: true
 
-  lint:
-    name: Lint and Format Check
+  quality-checks:
+    name: Code Quality Checks
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read  # Read repository code
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-
-      - name: Install dependencies
-        run: uv sync --group lint
-
-      - name: Check import sorting (isort)
-        run: uv run isort --check-only .
-
-      - name: Check code formatting (ruff format)
-        run: uv run ruff format --check .
-
-      - name: Run linter (ruff check)
-        run: uv run ruff check .
-
-  pre-commit:
-    name: Pre-commit Hooks
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     permissions:
       contents: read  # Read repository code
 
@@ -120,8 +86,23 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-groups
 
-      - name: Run pre-commit hooks
-        run: uv run pre-commit run --all-files
+      - name: Check import sorting (isort)
+        run: uv run isort --check-only .
+
+      - name: Check code formatting (ruff format)
+        run: uv run ruff format --check .
+
+      - name: Run linter (ruff check)
+        run: uv run ruff check .
+
+      - name: Run tests with coverage
+        run: uv run coverage run -m pytest
+
+      - name: Generate coverage report
+        run: uv run coverage report
+
+      - name: Validate coverage target
+        run: uv run python tests/_utils/check_coverage.py
 
   build:
     name: Build Package
@@ -160,7 +141,7 @@ jobs:
 
   all-checks-pass:
     name: All CI checks pass
-    needs: [test, lint, pre-commit, build]
+    needs: [test, quality-checks, build]
     runs-on: ubuntu-latest
     if: always()
     permissions:

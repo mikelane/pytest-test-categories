@@ -119,21 +119,21 @@ class DescribeValidate:
 
     def it_raises_timing_violation_error_when_exceeding_limit(self) -> None:
         """Test that validate raises TimingViolationError when exceeding limit."""
-        with pytest.raises(TimingViolationError, match='SMALL test exceeded time limit of 1.0 seconds'):
+        with pytest.raises(TimingViolationError, match=r'SMALL test exceeded time limit of 1\.0 seconds'):
             validate(TestSize.SMALL, 1.1)  # 1.1 > 1.0
 
-        with pytest.raises(TimingViolationError, match='MEDIUM test exceeded time limit of 300.0 seconds'):
+        with pytest.raises(TimingViolationError, match=r'MEDIUM test exceeded time limit of 300\.0 seconds'):
             validate(TestSize.MEDIUM, 301.0)  # 301.0 > 300.0
 
-        with pytest.raises(TimingViolationError, match='LARGE test exceeded time limit of 900.0 seconds'):
+        with pytest.raises(TimingViolationError, match=r'LARGE test exceeded time limit of 900\.0 seconds'):
             validate(TestSize.LARGE, 901.0)  # 901.0 > 900.0
 
-        with pytest.raises(TimingViolationError, match='XLARGE test exceeded time limit of 900.0 seconds'):
+        with pytest.raises(TimingViolationError, match=r'XLARGE test exceeded time limit of 900\.0 seconds'):
             validate(TestSize.XLARGE, 901.0)  # 901.0 > 900.0
 
     def it_includes_actual_duration_in_error_message(self) -> None:
         """Test that error message includes the actual duration."""
-        with pytest.raises(TimingViolationError, match='took 1.5 seconds'):
+        with pytest.raises(TimingViolationError, match=r'took 1\.5 seconds'):
             validate(TestSize.SMALL, 1.5)
 
     def it_handles_all_test_sizes(self) -> None:
