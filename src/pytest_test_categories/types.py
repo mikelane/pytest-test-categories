@@ -95,3 +95,49 @@ class TestTimer(BaseModel, ABC):
             RuntimeError: If the timer is not in STOPPED state.
 
         """
+
+
+class TestItemPort(ABC):
+    """Abstract base class defining the test item interface.
+
+    This port (interface) abstracts pytest.Item to enable hexagonal architecture.
+    It allows testing code that interacts with test items without depending on
+    pytest's internal implementation details.
+
+    Implementations:
+    - PytestItemAdapter: Production adapter that wraps pytest.Item
+    - FakeTestItem: Test adapter providing controllable test double
+
+    This follows the same pattern as TestTimer/WallTimer/FakeTimer.
+    """
+
+    @property
+    @abstractmethod
+    def nodeid(self) -> str:
+        """Get the test item's node ID.
+
+        Returns:
+            The unique identifier for this test item.
+
+        """
+
+    @abstractmethod
+    def get_marker(self, name: str) -> object | None:
+        """Get a marker by name from this test item.
+
+        Args:
+            name: The marker name to retrieve.
+
+        Returns:
+            The marker object if found, None otherwise.
+
+        """
+
+    @abstractmethod
+    def set_nodeid(self, nodeid: str) -> None:
+        """Set the test item's node ID.
+
+        Args:
+            nodeid: The new node ID to assign.
+
+        """
