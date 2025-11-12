@@ -7,16 +7,12 @@ from abc import (
     abstractmethod,
 )
 from enum import StrEnum
-from typing import TYPE_CHECKING
 
 from icontract import (
     ensure,
     require,
 )
 from pydantic import BaseModel
-
-if TYPE_CHECKING:
-    import pytest
 
 
 class TimingViolationError(Exception):
@@ -224,72 +220,5 @@ class WarningSystemPort(ABC):
         Args:
             message: The warning message to emit.
             category: The warning category (e.g., UserWarning, DeprecationWarning).
-
-        """
-
-
-class CoverageReaderPort(ABC):
-    """Abstract base class defining the coverage reader interface.
-
-    This port defines the interface for reading coverage data from various sources.
-    Following hexagonal architecture, concrete implementations (adapters) provide
-    the actual mechanism for reading coverage data.
-
-    Production adapter: CoveragePyReader - reads from coverage.py .coverage file
-    Test adapter: FakeCoverageReader - provides controllable coverage data for testing
-    """
-
-    @abstractmethod
-    def get_total_coverage(self) -> float:
-        """Get the total coverage percentage.
-
-        Returns:
-            Coverage percentage as a float (0.0 to 100.0).
-
-        """
-
-
-class StateStoragePort(ABC):
-    """Abstract base class defining the interface for plugin state storage.
-
-    This port defines how plugin state is stored and retrieved from pytest.Config.
-    Following hexagonal architecture, this allows:
-    - Production adapter (PytestConfigStorage) to use real pytest.Config attributes
-    - Test adapter (FakeStateStorage) to use in-memory dict for fast, deterministic tests
-
-    Implementations must handle storage and retrieval of PluginState objects.
-    """
-
-    @abstractmethod
-    def get_state(self, config: pytest.Config) -> object | None:
-        """Retrieve plugin state from config.
-
-        Args:
-            config: The pytest Config object (or mock in tests).
-
-        Returns:
-            The stored PluginState object, or None if no state exists.
-
-        """
-
-    @abstractmethod
-    def set_state(self, config: pytest.Config, state: object) -> None:
-        """Store plugin state in config.
-
-        Args:
-            config: The pytest Config object (or mock in tests).
-            state: The PluginState object to store.
-
-        """
-
-    @abstractmethod
-    def has_state(self, config: pytest.Config) -> bool:
-        """Check if state exists for config.
-
-        Args:
-            config: The pytest Config object (or mock in tests).
-
-        Returns:
-            True if state exists, False otherwise.
 
         """

@@ -170,7 +170,7 @@ class DescribeTestCountingService:
 
         # Create item with multiple markers
         item = FakeTestItem('test_multiple', TestSize.SMALL)
-        item._markers[TestSize.MEDIUM.marker_name] = True  # noqa: SLF001  # Add second marker
+        item._markers[TestSize.MEDIUM.marker_name] = True  # Add second marker
 
         with pytest.raises(ValueError, match='multiple size markers'):
             service.count_tests([item], warning_system)

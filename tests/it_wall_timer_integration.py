@@ -7,7 +7,6 @@ on heavily loaded systems.
 For unit tests of timer behavior, see test_fake_timer.py which uses the
 FakeTimer test double for deterministic, fast testing.
 """
-# ruff: noqa: S101, PLR2004
 
 from __future__ import annotations
 

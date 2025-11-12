@@ -61,7 +61,7 @@ class DescribeTerminalReporterAdapter:
         adapter = TerminalReporterAdapter(mock_reporter)
 
         # Adapter should store the wrapped reporter
-        assert adapter._reporter is mock_reporter  # noqa: SLF001
+        assert adapter._reporter is mock_reporter
 
     def it_delegates_write_section_to_reporter_section(self) -> None:
         """It delegates write_section to TerminalReporter.section()."""
