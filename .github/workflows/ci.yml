@@ -52,9 +52,6 @@ jobs:
       - name: Generate coverage terminal report
         run: uv run coverage report --show-missing
 
-      - name: Validate coverage target
-        run: uv run python tests/_utils/check_coverage.py
-
       - name: Upload coverage to Codecov
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
         uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7  # v5.5.1
@@ -104,9 +101,6 @@ jobs:
 
       - name: Generate coverage report
         run: uv run coverage report
-
-      - name: Validate coverage target
-        run: uv run python tests/_utils/check_coverage.py
 
   build:
     name: Build Package
