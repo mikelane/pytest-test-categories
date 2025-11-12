@@ -108,6 +108,7 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
     "PLR2004", # Don't prevent magic values in tests
     "PLC0415", # Allow imports in functions for test isolation
     "S101", # Don't prevent asserts
+    "SLF001", # Allow private member access in tests (for verification)
 ]
 "tests/*" = [
     "D100", # Don't require module docstrings in tests
@@ -118,6 +119,7 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
     "D401", # Allow "It" pattern in test docstrings
     "PLC0415", # Allow imports in functions for test isolation
     "ARG002", # Allow unused kwargs in test fixtures
+    "SLF001", # Allow private member access in tests (for verification)
 ]
 "tests/_utils/check_coverage.py" = ["T201"] # allow print function in the scripts
 "scripts/*" = ["T201"] # allow print function in the scripts

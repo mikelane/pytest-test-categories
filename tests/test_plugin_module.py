@@ -80,7 +80,7 @@ class DescribeGetSessionState:
         """Test that _get_session_state returns existing state."""
         config = Mock()
         existing_state = PluginState()
-        config._test_categories_state = existing_state  # noqa: SLF001
+        config._test_categories_state = existing_state
 
         state = _get_session_state(config)
 
@@ -89,7 +89,7 @@ class DescribeGetSessionState:
     def it_creates_state_when_attribute_does_not_exist(self) -> None:
         """Test that _get_session_state creates state when attribute doesn't exist."""
         config = Mock()
-        del config._test_categories_state  # noqa: SLF001
+        del config._test_categories_state
 
         state = _get_session_state(config)
 
@@ -254,7 +254,7 @@ class DescribePytestCollectionModifyitems:
             # Should update distribution stats
             assert config.distribution_stats is not None
             # Should modify nodeid
-            assert item1._nodeid == 'test1 [SMALL]'  # noqa: SLF001
+            assert item1._nodeid == 'test1 [SMALL]'
 
 
 @pytest.mark.small
