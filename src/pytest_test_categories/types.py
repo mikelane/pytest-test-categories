@@ -222,3 +222,24 @@ class WarningSystemPort(ABC):
             category: The warning category (e.g., UserWarning, DeprecationWarning).
 
         """
+
+
+class CoverageReaderPort(ABC):
+    """Abstract base class defining the coverage reader interface.
+
+    This port defines the interface for reading coverage data from various sources.
+    Following hexagonal architecture, concrete implementations (adapters) provide
+    the actual mechanism for reading coverage data.
+
+    Production adapter: CoveragePyReader - reads from coverage.py .coverage file
+    Test adapter: FakeCoverageReader - provides controllable coverage data for testing
+    """
+
+    @abstractmethod
+    def get_total_coverage(self) -> float:
+        """Get the total coverage percentage.
+
+        Returns:
+            Coverage percentage as a float (0.0 to 100.0).
+
+        """
