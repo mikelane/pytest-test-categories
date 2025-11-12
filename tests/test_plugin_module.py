@@ -235,7 +235,7 @@ class DescribePytestCollectionModifyitems:
         config = Mock()
         item1 = Mock()
         item1.nodeid = 'test1'
-        item1._nodeid = 'test1'  # noqa: SLF001
+        item1._nodeid = 'test1'
         item1.get_closest_marker.side_effect = lambda name: name == 'small'
         items = [item1]
 
