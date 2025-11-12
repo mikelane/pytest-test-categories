@@ -95,3 +95,130 @@ class TestTimer(BaseModel, ABC):
             RuntimeError: If the timer is not in STOPPED state.
 
         """
+
+
+class TestItemPort(ABC):
+    """Abstract base class defining the test item interface.
+
+    This port (interface) abstracts pytest.Item to enable hexagonal architecture.
+    It allows testing code that interacts with test items without depending on
+    pytest's internal implementation details.
+
+    Implementations:
+    - PytestItemAdapter: Production adapter that wraps pytest.Item
+    - FakeTestItem: Test adapter providing controllable test double
+
+    This follows the same pattern as TestTimer/WallTimer/FakeTimer.
+    """
+
+    @property
+    @abstractmethod
+    def nodeid(self) -> str:
+        """Get the test item's node ID.
+
+        Returns:
+            The unique identifier for this test item.
+
+        """
+
+    @abstractmethod
+    def get_marker(self, name: str) -> object | None:
+        """Get a marker by name from this test item.
+
+        Args:
+            name: The marker name to retrieve.
+
+        Returns:
+            The marker object if found, None otherwise.
+
+        """
+
+    @abstractmethod
+    def set_nodeid(self, nodeid: str) -> None:
+        """Set the test item's node ID.
+
+        Args:
+            nodeid: The new node ID to assign.
+
+        """
+
+
+class OutputWriterPort(ABC):
+    """Abstract base class defining the output writer interface.
+
+    This port (interface) abstracts pytest.TerminalReporter to enable hexagonal architecture.
+    It allows testing report formatting code without depending on pytest's terminal
+    reporter implementation.
+
+    Implementations:
+    - TerminalReporterAdapter: Production adapter that wraps pytest.TerminalReporter
+    - StringBufferWriter: Test adapter providing controllable output capture
+
+    This follows the same pattern as TestTimer/WallTimer/FakeTimer and TestItemPort.
+
+    Example:
+        >>> writer = TerminalReporterAdapter(terminalreporter)
+        >>> writer.write_section('Test Report', sep='=')
+        >>> writer.write_line('Total tests: 10')
+        >>> writer.write_separator(sep='-')
+
+    """
+
+    @abstractmethod
+    def write_section(self, title: str, sep: str = '=') -> None:
+        """Write a section header with title and separator.
+
+        Args:
+            title: The section title to display.
+            sep: The separator character to use (default: '=').
+
+        """
+
+    @abstractmethod
+    def write_line(self, message: str, **kwargs: object) -> None:
+        """Write a single line of text.
+
+        Args:
+            message: The message to write.
+            **kwargs: Additional styling arguments (e.g., red=True, bold=True).
+
+        """
+
+    @abstractmethod
+    def write_separator(self, sep: str = '-') -> None:
+        """Write a separator line.
+
+        Args:
+            sep: The separator character to use (default: '-').
+
+        """
+
+
+class WarningSystemPort(ABC):
+    """Abstract base class defining the warning system interface.
+
+    This port (interface) abstracts Python's warnings module to enable hexagonal architecture.
+    It allows testing code that emits warnings without depending on the warnings module's
+    implementation or causing actual warnings to be emitted during tests.
+
+    Implementations:
+    - PytestWarningAdapter: Production adapter that wraps warnings.warn
+    - FakeWarningSystem: Test adapter providing controllable warning recording
+
+    This follows the same pattern as TestTimer/WallTimer/FakeTimer, TestItemPort, and OutputWriterPort.
+
+    Example:
+        >>> warning_system = PytestWarningAdapter()
+        >>> warning_system.warn('This feature is deprecated', category=DeprecationWarning)
+
+    """
+
+    @abstractmethod
+    def warn(self, message: str, category: type[Warning]) -> None:
+        """Emit a warning with the specified message and category.
+
+        Args:
+            message: The warning message to emit.
+            category: The warning category (e.g., UserWarning, DeprecationWarning).
+
+        """
