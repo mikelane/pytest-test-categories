@@ -64,7 +64,7 @@ class DescribePytestItemAdapter:
         marker = adapter.get_marker('small')
 
         assert marker is not None
-        assert marker.name == 'small'
+        assert marker.name == 'small'  # type: ignore[attr-defined]
 
     def it_returns_none_for_missing_marker(self, request: pytest.FixtureRequest) -> None:
         """Verify that adapter returns None for non-existent markers."""
@@ -110,7 +110,7 @@ class DescribeFakeTestItem:
 
         marker = item.get_marker('small')
         assert marker is not None
-        assert marker.name == 'small'
+        assert marker.name == 'small'  # type: ignore[attr-defined]
 
     def it_returns_none_for_undefined_markers(self) -> None:
         """Verify that FakeTestItem returns None for markers not configured."""

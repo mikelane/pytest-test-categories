@@ -23,7 +23,6 @@ from pydantic import (
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
-    from numbers import Number
 
     from pytest_test_categories.types import TestSize
 
@@ -80,7 +79,7 @@ class TestPercentages(BaseModel):
 
     @field_validator('small', 'medium', 'large', 'xlarge', mode='before')
     @classmethod
-    def round_to_two_decimals(cls: type[TestPercentages], v: Number) -> float:
+    def round_to_two_decimals(cls: type[TestPercentages], v: float) -> float:
         """Round percentage values to two decimal places."""
         return round(float(v), 2)
 

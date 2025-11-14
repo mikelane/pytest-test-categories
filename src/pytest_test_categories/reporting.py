@@ -28,10 +28,15 @@ if TYPE_CHECKING:
     import pytest
 
 
+def _default_sized_tests() -> defaultdict[TestSize, list[str]]:
+    """Create a defaultdict for sized_tests field."""
+    return defaultdict(list)
+
+
 class TestSizeReport(BaseModel):
     """Generator for test size reports."""
 
-    sized_tests: defaultdict[TestSize, list[str]] = Field(default_factory=lambda: defaultdict(list))
+    sized_tests: defaultdict[TestSize, list[str]] = Field(default_factory=_default_sized_tests)
     unsized_tests: list[str] = Field(default_factory=list)
     test_durations: dict[str, float] = Field(default_factory=dict)
     test_outcomes: dict[str, str] = Field(default_factory=dict)

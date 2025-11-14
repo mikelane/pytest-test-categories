@@ -18,10 +18,10 @@ class DescribeTestSize:
 
     def it_has_correct_values(self) -> None:
         """Test that TestSize has the expected values."""
-        assert TestSize.SMALL == 'small'
-        assert TestSize.MEDIUM == 'medium'
-        assert TestSize.LARGE == 'large'
-        assert TestSize.XLARGE == 'xlarge'
+        assert TestSize.SMALL.value == 'small'
+        assert TestSize.MEDIUM.value == 'medium'
+        assert TestSize.LARGE.value == 'large'
+        assert TestSize.XLARGE.value == 'xlarge'
 
     def it_provides_marker_names(self) -> None:
         """Test that marker_name property returns correct values."""
@@ -51,9 +51,9 @@ class DescribeTimerState:
 
     def it_has_correct_values(self) -> None:
         """Test that TimerState has the expected values."""
-        assert TimerState.READY == 'ready'
-        assert TimerState.RUNNING == 'running'
-        assert TimerState.STOPPED == 'stopped'
+        assert TimerState.READY.value == 'ready'
+        assert TimerState.RUNNING.value == 'running'
+        assert TimerState.STOPPED.value == 'stopped'
 
 
 @pytest.mark.small

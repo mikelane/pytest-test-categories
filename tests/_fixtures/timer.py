@@ -16,7 +16,7 @@ from pytest_test_categories.types import (
 class MockTimer(TestTimer):
     """A mock timer implementation for testing with predefined durations."""
 
-    desired_duration: float = Annotated[float, Field(gt=0, default=1.0)]
+    desired_duration: Annotated[float, Field(gt=0)] = 1.0
 
     def start(self) -> None:
         """Start the mock timer."""

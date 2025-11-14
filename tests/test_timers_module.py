@@ -36,7 +36,7 @@ class DescribeWallTimer:
 
         assert timer.state == TimerState.READY
         assert timer.start_time is None
-        assert timer.end_time is None
+        assert timer.end_time is None  # type: ignore[unreachable]
 
     def it_can_start_timing(self) -> None:
         """Test that start() begins timing."""

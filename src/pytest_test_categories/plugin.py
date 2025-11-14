@@ -77,8 +77,8 @@ class PluginState(BaseModel):
 def _get_session_state(config: pytest.Config) -> PluginState:
     """Get or create plugin state for the current session."""
     if not hasattr(config, '_test_categories_state'):
-        config._test_categories_state = PluginState()  # noqa: SLF001
-    return config._test_categories_state  # noqa: SLF001
+        config._test_categories_state = PluginState()  # type: ignore[attr-defined]  # noqa: SLF001
+    return config._test_categories_state  # type: ignore[attr-defined,no-any-return]  # noqa: SLF001
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -101,7 +101,7 @@ def pytest_configure(config: pytest.Config) -> None:
     session_state = _get_session_state(config)
 
     if not hasattr(config, 'distribution_stats'):
-        config.distribution_stats = session_state.distribution_stats
+        config.distribution_stats = session_state.distribution_stats  # type: ignore[attr-defined]
 
     for size in TestSize:
         config.addinivalue_line('markers', f'{size.marker_name}: {size.description}')
@@ -135,7 +135,7 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
         session_state.test_discovery_service = discovery_service
 
     # Count tests by size using the discovery service
-    counts = defaultdict(int)
+    counts: dict[str, int] = defaultdict(int)
     for item in items:
         item_adapter = PytestItemAdapter(item)
         test_size = discovery_service.find_test_size(item_adapter)
@@ -145,14 +145,14 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
             item_adapter.set_nodeid(f'{item_adapter.nodeid} {test_size.label}')
 
     # Update distribution stats with the counts
-    config.distribution_stats = DistributionStats.update_counts(counts=counts)
+    config.distribution_stats = DistributionStats.update_counts(counts=counts)  # type: ignore[attr-defined,arg-type]
 
 
 @pytest.hookimpl
 def pytest_collection_finish(session: pytest.Session) -> None:
     """Validate test distribution after collection."""
     try:
-        session.config.distribution_stats.validate_distribution()
+        session.config.distribution_stats.validate_distribution()  # type: ignore[attr-defined]
     except ValueError as e:
         warnings.warn(DISTRIBUTION_WARNING.format(e), pytest.PytestWarning, stacklevel=2)
 
@@ -223,7 +223,7 @@ def pytest_runtest_makereport(item: pytest.Item) -> Generator[None, None, None]:
     test_size = discovery_service.find_test_size(item_adapter)
 
     outcome = yield
-    report = outcome.get_result()
+    report = outcome.get_result()  # type: ignore[attr-defined]
 
     # Only validate timing for tests in the call phase
     if test_size and report.when == 'call':
@@ -360,7 +360,7 @@ def pytest_terminal_summary(terminalreporter: pytest.TerminalReporter) -> None:
     abstractions rather than concrete pytest implementations.
     """
     session_state = _get_session_state(terminalreporter.config)
-    distribution_stats = terminalreporter.config.distribution_stats
+    distribution_stats = terminalreporter.config.distribution_stats  # type: ignore[attr-defined]
     counts = distribution_stats.counts
     percentages = distribution_stats.calculate_percentages()
 

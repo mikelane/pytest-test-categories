@@ -96,6 +96,9 @@ jobs:
       - name: Run linter (ruff check)
         run: uv run ruff check .
 
+      - name: Run type checker (mypy)
+        run: uv run mypy .
+
       - name: Run tests with coverage
         run: uv run coverage run -m pytest
 
