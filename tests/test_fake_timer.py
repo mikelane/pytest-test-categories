@@ -24,7 +24,7 @@ class DescribeFakeTimer:
 
     def it_measures_simulated_elapsed_time(self) -> None:
         """Verify that the timer tracks simulated time advancement."""
-        timer = FakeTimer(state=TimerState.READY)
+        timer = FakeTimer()
 
         timer.start()
         timer.advance(0.5)  # Simulate 0.5 seconds
@@ -35,7 +35,7 @@ class DescribeFakeTimer:
 
     def it_advances_time_incrementally(self) -> None:
         """Verify that multiple advance() calls accumulate."""
-        timer = FakeTimer(state=TimerState.READY)
+        timer = FakeTimer()
 
         timer.start()
         timer.advance(0.1)
@@ -48,14 +48,14 @@ class DescribeFakeTimer:
 
     def it_fails_if_getting_duration_before_start(self) -> None:
         """Verify error when getting duration before starting."""
-        timer = FakeTimer(state=TimerState.READY)
+        timer = FakeTimer()
 
         with pytest.raises(RuntimeError, match='Timer was never started'):
             timer.duration()
 
     def it_fails_if_getting_duration_before_stop(self) -> None:
         """Verify error when getting duration before stopping."""
-        timer = FakeTimer(state=TimerState.READY)
+        timer = FakeTimer()
         timer.start()
 
         with pytest.raises(RuntimeError, match='Timer was never stopped'):
@@ -63,13 +63,13 @@ class DescribeFakeTimer:
 
     def it_maintains_correct_state(self) -> None:
         """Verify that timer state transitions work correctly."""
-        timer = FakeTimer(state=TimerState.READY)
+        timer = FakeTimer()
         assert timer.state == TimerState.READY
 
         timer.start()
-        assert timer.state == TimerState.RUNNING
+        assert timer.state == TimerState.RUNNING  # type: ignore[comparison-overlap]
 
-        timer.stop()
+        timer.stop()  # type: ignore[unreachable]
         assert timer.state == TimerState.STOPPED
 
     def it_can_be_reused_after_reset(self) -> None:

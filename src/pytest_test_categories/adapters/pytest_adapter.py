@@ -142,7 +142,7 @@ class TerminalReporterAdapter(OutputWriterPort):
             **kwargs: Additional styling arguments forwarded to write_line.
 
         """
-        self._reporter.write_line(message, **kwargs)
+        self._reporter.write_line(message, **kwargs)  # type: ignore[arg-type]
 
     def write_separator(self, sep: str = '-') -> None:
         """Write a separator line.

@@ -21,8 +21,8 @@ class WallTimer(TestTimer):
     This is the production adapter that should be used in real pytest runs.
     """
 
-    start_time: float | None = Field(None, description='Start time in seconds')
-    end_time: float | None = Field(None, description='End time in seconds')
+    start_time: float | None = Field(default=None, description='Start time in seconds')
+    end_time: float | None = Field(default=None, description='End time in seconds')
 
     def reset(self) -> None:
         """Reset the timer to initial state."""
@@ -85,9 +85,9 @@ class FakeTimer(TestTimer):
 
     """
 
-    current_time: float = Field(0.0, description='Simulated current time in seconds')
-    start_time: float | None = Field(None, description='Simulated start time')
-    end_time: float | None = Field(None, description='Simulated end time')
+    current_time: float = Field(default=0.0, description='Simulated current time in seconds')
+    start_time: float | None = Field(default=None, description='Simulated start time')
+    end_time: float | None = Field(default=None, description='Simulated end time')
 
     def reset(self) -> None:
         """Reset the timer to initial state."""

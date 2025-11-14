@@ -166,10 +166,10 @@ class DescribeTestTimerStateMachine:
 
         # Start transition
         timer.start()
-        assert timer.state == TimerState.RUNNING
+        assert timer.state == TimerState.RUNNING  # type: ignore[comparison-overlap]
 
         # Stop transition
-        timer.stop()
+        timer.stop()  # type: ignore[unreachable]
         assert timer.state == TimerState.STOPPED
 
         # Reset transition

@@ -4,6 +4,10 @@ from __future__ import annotations
 
 import contextlib
 import warnings
+from typing import (
+    Any,
+    cast,
+)
 from unittest.mock import (
     Mock,
     patch,
@@ -59,7 +63,7 @@ class DescribePluginState:
 
         state = PluginState(
             active=False,
-            timers=custom_timers,
+            timers=custom_timers,  # type: ignore[arg-type]
             distribution_stats=custom_stats,
             warned_tests=custom_warned,
             test_size_report=custom_report,
@@ -249,7 +253,7 @@ class DescribePytestCollectionModifyitems:
             mock_state.test_discovery_service = mock_discovery_service
             mock_get_state.return_value = mock_state
 
-            pytest_collection_modifyitems(config, items)
+            pytest_collection_modifyitems(config, cast('Any', items))
 
             # Should update distribution stats
             assert config.distribution_stats is not None
@@ -380,15 +384,13 @@ class DescribePytestRuntestMakereport:
             mock_state.test_discovery_service = mock_discovery_service
             mock_get_state.return_value = mock_state
 
-            # Mock the hookwrapper behavior
-            with patch('pytest_test_categories.plugin.pytest_runtest_makereport') as mock_hook:
-                mock_hook.side_effect = pytest_runtest_makereport
-
-                gen = pytest_runtest_makereport(item)
-                next(gen)  # Start the generator
-                with contextlib.suppress(StopIteration):
-                    gen.send(outcome)  # Send the outcome
-                gen.close()  # Clean up
+            # Directly test the hookwrapper
+            gen = pytest_runtest_makereport(item)
+            next(gen)  # Start the generator, it yields
+            # In a real hookwrapper, pytest's plugin manager sets the result after yield
+            # We need to simulate that by sending the outcome into the generator
+            with contextlib.suppress(StopIteration):
+                gen.send(outcome)  # type: ignore[arg-type]
 
             # Should update report with duration and outcome
             assert mock_state.test_size_report.test_durations['test_example'] == 0.5
@@ -421,23 +423,25 @@ class DescribePytestRuntestMakereport:
             mock_state.warned_tests = set()
             mock_get_state.return_value = mock_state
 
+            # Mock the test discovery service
+            mock_discovery_service = Mock()
+            mock_discovery_service.find_test_size.return_value = TestSize.SMALL
+            mock_state.test_discovery_service = mock_discovery_service
+
             # Mock timing.validate to raise TimingViolationError
             with patch('pytest_test_categories.plugin.timing.validate') as mock_validate:
                 mock_validate.side_effect = TimingViolationError('Test exceeded time limit')
 
-                # Mock the hookwrapper behavior
-                with patch('pytest_test_categories.plugin.pytest_runtest_makereport') as mock_hook:
-                    mock_hook.side_effect = pytest_runtest_makereport
+                # Directly test the hookwrapper
+                gen = pytest_runtest_makereport(item)
+                next(gen)  # Start the generator, it yields
+                # Simulate pytest's plugin manager sending the outcome
+                with contextlib.suppress(StopIteration):
+                    gen.send(outcome)  # type: ignore[arg-type]
 
-                    gen = pytest_runtest_makereport(item)
-                    next(gen)  # Start the generator
-                    with contextlib.suppress(StopIteration):
-                        gen.send(outcome)  # Send the outcome
-                    gen.close()  # Clean up
-
-                # Should set report to failed with error message
-                assert report.longrepr == 'Test exceeded time limit'
-                assert report.outcome == 'failed'
+            # Should set report to failed with error message
+            assert report.longrepr == 'Test exceeded time limit'
+            assert report.outcome == 'failed'
 
 
 @pytest.mark.small

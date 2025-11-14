@@ -52,9 +52,9 @@ class DescribeWallTimerIntegration:
         assert timer.state == TimerState.READY
 
         timer.start()
-        assert timer.state == TimerState.RUNNING
+        assert timer.state == TimerState.RUNNING  # type: ignore[comparison-overlap]
 
-        timer.stop()
+        timer.stop()  # type: ignore[unreachable]
         assert timer.state == TimerState.STOPPED
 
     def it_can_be_reused(self) -> None:
