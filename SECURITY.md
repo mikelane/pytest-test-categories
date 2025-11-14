@@ -61,8 +61,8 @@ We appreciate responsible disclosure of security vulnerabilities. **Please do no
 # Always verify package integrity
 pip install pytest-test-categories --require-hashes
 
-# Or use poetry with lock file
-poetry install  # Uses poetry.lock for reproducible builds
+# Or use uv with lock file
+uv sync  # Uses uv.lock for reproducible builds
 ```
 
 ### Configuration
@@ -190,13 +190,13 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Run Bandit security scan
-        run: poetry run bandit -r src/
+        run: uv run bandit -r src/
 
       - name: Check for known vulnerabilities
-        run: poetry run safety check
+        run: uv run safety check
 
-      - name: Verify poetry.lock is up to date
-        run: poetry lock --check
+      - name: Verify uv.lock is up to date
+        run: uv lock --check
 ```
 
 ## Compliance
