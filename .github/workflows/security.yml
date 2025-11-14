@@ -56,6 +56,48 @@ jobs:
           path: safety-report.json
           retention-days: 30
 
+  # CodeQL Advanced Setup - REQUIRES MANUAL CONFIGURATION
+  #
+  # IMPORTANT: This job will fail if GitHub's "CodeQL default setup" is enabled.
+  # Before this workflow can run successfully, you MUST disable the default setup:
+  #
+  # 1. Go to: Settings → Code security and analysis
+  # 2. Find: "CodeQL analysis" under "Code scanning"
+  # 3. Click: Configure or three dots menu (⋯)
+  # 4. Select: "Disable CodeQL"
+  #
+  # GitHub does not allow both default and advanced configurations simultaneously.
+  # See .github/CODEQL_SETUP.md for detailed instructions and troubleshooting.
+  #
+  # Why Advanced Setup?
+  # - Extended security queries (security-extended, security-and-quality)
+  # - Custom language configurations with proper build steps
+  # - Integration with our CI/CD pipeline
+  # - Consistent scanning across all branches
+  codeql-analysis:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: python
+          queries: security-extended,security-and-quality
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:python"
+
   dependency-review:
     name: Dependency Review
     runs-on: ubuntu-latest

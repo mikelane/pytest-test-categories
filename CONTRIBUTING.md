@@ -28,6 +28,21 @@ This project adheres to a Code of Conduct that all contributors are expected to 
 - Git
 - GitHub CLI (`gh`) recommended for workflow automation
 
+### Repository Security Configuration
+
+**For maintainers with admin access**: This repository uses **CodeQL Advanced Setup** for security scanning, which requires manual configuration in GitHub settings.
+
+**IMPORTANT**: Before the security workflow can run successfully, you must disable GitHub's default CodeQL setup:
+
+1. Go to: **Settings → Code security and analysis**
+2. Find: **"CodeQL analysis"** under "Code scanning"
+3. Click: **Configure** or the three dots menu (⋯)
+4. Select: **"Disable CodeQL"**
+
+For detailed instructions and troubleshooting, see [`.github/CODEQL_SETUP.md`](.github/CODEQL_SETUP.md).
+
+**Why this matters**: GitHub does not allow both default and advanced CodeQL configurations to run simultaneously. Our advanced setup provides extended security queries and integration with our CI/CD pipeline, but will fail with the error "CodeQL analyses from advanced configurations cannot be processed when the default setup is enabled" if default setup is still active.
+
 ### Fork and Clone
 
 1. Fork the repository using GitHub CLI:
