@@ -30,7 +30,7 @@ Fixes #<!-- issue number -->
 
 <!-- Describe the testing you've done -->
 
-- [ ] All existing tests pass (`poetry run pytest`)
+- [ ] All existing tests pass (`uv run pytest`)
 - [ ] New tests added for new functionality
 - [ ] Tests achieve 100% coverage
 - [ ] Manual testing performed
@@ -46,7 +46,7 @@ Fixes #<!-- issue number -->
 ## Checklist
 
 - [ ] Code follows the project's style guidelines (ruff, isort)
-- [ ] Pre-commit hooks pass (`poetry run pre-commit run --all-files`)
+- [ ] Pre-commit hooks pass (`uv run pre-commit run --all-files`)
 - [ ] Documentation updated (README, CLAUDE.md, docstrings, CHANGELOG.md)
 - [ ] Type annotations added where applicable
 - [ ] Commit messages follow conventional commit format

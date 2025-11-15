@@ -14,7 +14,7 @@
 
 # Package configuration and dependencies
 /pyproject.toml @mikelane
-/poetry.lock @mikelane
+/uv.lock @mikelane
 
 # Core plugin code
 /src/pytest_test_categories/ @mikelane

@@ -293,7 +293,7 @@ class MetricsPlugin:
 # GitHub Actions example
 - name: Run tests with metrics
   run: |
-    poetry run pytest \
+    uv run pytest \
       --project-name=pytest-test-categories \
       --metrics-pushgateway=http://prometheus-pushgateway:9091
   env:
@@ -553,12 +553,12 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install poetry prometheus-client
-          poetry install --no-root --all-groups
+          pip install prometheus-client
+          uv sync --all-groups
 
       - name: Run tests with metrics export
         run: |
-          poetry run pytest \
+          uv run pytest \
             --project-name=pytest-test-categories \
             --metrics-pushgateway=${{ secrets.PROMETHEUS_PUSHGATEWAY_URL }}
         env:

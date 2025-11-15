@@ -247,7 +247,7 @@ Configure in **Settings → Code security and analysis**:
    # Edit the version line in pyproject.toml: version = "X.Y.Z"
 
    # Get current version
-   VERSION=$(grep -oP 'version = "\K[^"]+' pyproject.toml)
+   VERSION=$(grep '^version = ' pyproject.toml | grep -oP '"\K[^"]+')
    echo "New version: $VERSION"
    ```
 
@@ -306,6 +306,7 @@ Configure in **Settings → Code security and analysis**:
    ```bash
    # Wait ~2 minutes for PyPI index
    pip install --upgrade pytest-test-categories
+   VERSION=$(grep '^version = ' pyproject.toml | grep -oP '"\K[^"]+')
    python -c "import pytest_test_categories; print(pytest_test_categories.__version__)"
    ```
 
@@ -385,14 +386,14 @@ If a release has critical issues:
 
 ```bash
 # Export dependencies with uv
-uv pip compile pyproject.toml -o requirements.txt
+uv export --format requirements-txt > requirements.txt
 
 # Run Safety
 pip install safety
 safety check --file requirements.txt --json
 
 # Check for outdated packages
-uv pip list --outdated
+uv run pip list --outdated
 ```
 
 ### Secret Management
@@ -413,7 +414,7 @@ Generate SBOM for supply chain security:
 
 ```bash
 # Export dependencies with uv
-uv pip compile pyproject.toml -o requirements.txt
+uv export --format requirements-txt > requirements.txt
 
 # Generate SBOM
 pip install cyclonedx-bom
@@ -461,10 +462,10 @@ uv run pre-commit autoupdate
 
 ```bash
 # Check version
-grep -oP 'version = "\K[^"]+' pyproject.toml
+grep '^version = ' pyproject.toml | grep -oP '"\K[^"]+'
 
 # Create correct tag
-VERSION=$(grep -oP 'version = "\K[^"]+' pyproject.toml)
+VERSION=$(grep '^version = ' pyproject.toml | grep -oP '"\K[^"]+')
 git tag -a "v$VERSION" -m "Release v$VERSION"
 ```
 
