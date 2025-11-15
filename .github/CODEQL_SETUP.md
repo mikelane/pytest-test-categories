@@ -6,9 +6,9 @@ This repository uses **CodeQL Advanced Setup** for code security scanning, which
 
 Our advanced CodeQL configuration provides:
 
-- **Extended security queries**: Includes both `security-extended` and `security-and-quality` query suites for comprehensive vulnerability detection
-- **Custom language configurations**: Fine-tuned analysis for Python code with specific build steps
-- **CI/CD integration**: Runs as part of our security workflow with proper dependency management
+- **Extended security queries**: Uses the `security-and-quality` query suite for comprehensive vulnerability detection
+- **Custom language configurations**: Fine-tuned analysis for Python 3.14 with explicit dependency installation
+- **CI/CD integration**: Runs as part of our security workflow with uv-based dependency management
 - **Consistent scanning**: Controlled execution across all branches and pull requests
 - **Custom scheduling**: Daily security scans at 2 AM UTC via cron schedule
 
@@ -27,11 +27,12 @@ Our advanced CodeQL configuration provides:
 
 3. **Disable CodeQL default setup**
    - Find the **Code scanning** section
-   - Locate **CodeQL analysis** with the "Set up" or "Configuration" button
-   - If default setup is enabled, you'll see "Default" with a configuration option
-   - Click **Configure** or the three dots menu (⋯)
-   - Select **Disable CodeQL**
-   - Confirm the action
+   - Look for **CodeQL analysis** - it will show "Default" if default setup is enabled
+   - Click the **⋯** (three dots menu) next to "Default"
+   - Select **Disable CodeQL default setup**
+   - Confirm the action in the dialog
+
+   **Note**: If you see a "Set up" button instead of "Default", the default setup is not currently enabled, and you can skip this step.
 
 4. **Verify advanced setup is active**
    - After disabling default setup, our workflow in `.github/workflows/security.yml` will automatically run
@@ -61,7 +62,7 @@ permissions:
 
 **Cause**: CodeQL needs to understand how to build Python dependencies.
 
-**Solution**: Our workflow includes proper `uv` setup and dependency installation. If you see build errors, check that `pyproject.toml` is correctly configured.
+**Solution**: Our workflow includes explicit Python 3.14 setup, `uv` installation, and dependency installation (`uv sync --all-groups`). If you see build errors, check that `pyproject.toml` is correctly configured.
 
 ## Workflow Configuration
 
@@ -85,7 +86,18 @@ codeql-analysis:
       uses: github/codeql-action/init@v3
       with:
         languages: python
-        queries: security-extended,security-and-quality
+        queries: security-and-quality
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.14'
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v7
+
+    - name: Install dependencies
+      run: uv sync --all-groups
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
