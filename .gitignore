@@ -1,3 +1,4 @@
+.claude/
 __pycache__/
 *.py[cod]
 *$py.class
@@ -20,7 +21,11 @@ wheels/
 *.egg
 .pytest_cache/
 .coverage
+.coverage.*
 htmlcov/
+cov_annotate/
+*.cover
+coverage.json
 .env
 .venv
 .idea/

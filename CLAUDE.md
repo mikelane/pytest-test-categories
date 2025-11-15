@@ -286,3 +286,5 @@ When modifying the plugin:
 - Timer state must be reset between tests
 - Distribution validation happens after collection, not during execution
 - do not add attribution or co-authored lines to commits.
+- all import statements must be at the top of the file unless there is literally no way around it.
+- You will never import anything from unittest. If you need something like unittest.Mock, fetch it from the pytest-mock mocker fixture.
