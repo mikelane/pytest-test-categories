@@ -67,8 +67,8 @@ class DescribeWallTimerIntegration:
         timer.stop()
         first_duration = timer.duration()
 
-        # Reset state
-        timer.state = TimerState.READY
+        # Reset timer for reuse
+        timer.reset()
 
         # Second timing
         timer.start()

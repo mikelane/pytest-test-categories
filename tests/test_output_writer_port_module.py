@@ -16,6 +16,7 @@ from unittest.mock import (
 import pytest
 
 from pytest_test_categories.adapters.pytest_adapter import TerminalReporterAdapter
+from pytest_test_categories.types import OutputWriterPort
 from tests._fixtures.output_writer import StringBufferWriter
 
 
@@ -47,8 +48,6 @@ class DescribeTerminalReporterAdapter:
 
     def it_implements_output_writer_port(self) -> None:
         """It implements the OutputWriterPort interface."""
-        from pytest_test_categories.types import OutputWriterPort
-
         mock_reporter = Mock()
         adapter = TerminalReporterAdapter(mock_reporter)
 

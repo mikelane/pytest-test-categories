@@ -159,6 +159,8 @@ We welcome contributions from the community! Please read our [CONTRIBUTING.md](C
 
 For detailed instructions, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
+**Note for maintainers**: This repository requires [CodeQL Advanced Setup](.github/CODEQL_SETUP.md) configuration. GitHub's default CodeQL setup must be disabled in repository settings for the security workflow to function correctly.
+
 ### Ways to Contribute
 
 - **Report bugs** using the [bug report template](.github/ISSUE_TEMPLATE/bug_report.yml)
