@@ -105,7 +105,7 @@ The project uses GitHub Actions for continuous integration and continuous deploy
 **Jobs**:
 
 1. **Dependency Security Scan**
-   - Exports dependencies via Poetry
+   - Exports dependencies via uv
    - Runs Safety check on production and dev dependencies
    - Generates security report artifact
 
@@ -222,7 +222,7 @@ Create `.github/CODEOWNERS`:
 
 # Package configuration
 /pyproject.toml @mikelane
-/poetry.lock @mikelane
+/uv.lock @mikelane
 ```
 
 ### Security Settings
@@ -243,11 +243,11 @@ Configure in **Settings → Code security and analysis**:
 1. **Update Version**
 
    ```bash
-   # Bump version using Poetry
-   poetry version patch  # or minor, major, prepatch, etc.
+   # Update version in pyproject.toml manually
+   # Edit the version line in pyproject.toml: version = "X.Y.Z"
 
-   # Get new version
-   VERSION=$(poetry version -s)
+   # Get current version
+   VERSION=$(grep '^version = ' pyproject.toml | grep -oP '"\K[^"]+')
    echo "New version: $VERSION"
    ```
 
@@ -306,6 +306,7 @@ Configure in **Settings → Code security and analysis**:
    ```bash
    # Wait ~2 minutes for PyPI index
    pip install --upgrade pytest-test-categories
+   VERSION=$(grep '^version = ' pyproject.toml | grep -oP '"\K[^"]+')
    python -c "import pytest_test_categories; print(pytest_test_categories.__version__)"
    ```
 
@@ -349,8 +350,8 @@ If a release has critical issues:
    # Make fixes...
    git commit -m "fix: critical issue description"
 
-   # Bump patch version
-   poetry version patch
+   # Bump patch version (edit pyproject.toml manually)
+   # Update version in pyproject.toml
    git add pyproject.toml
    git commit -m "chore: bump version for hotfix"
 
@@ -384,15 +385,15 @@ If a release has critical issues:
 **Manual Security Audit**:
 
 ```bash
-# Export dependencies
-poetry export -f requirements.txt --output requirements.txt --without-hashes
+# Export dependencies with uv
+uv export --format requirements-txt > requirements.txt
 
 # Run Safety
 pip install safety
 safety check --file requirements.txt --json
 
 # Check for outdated packages
-poetry show --outdated
+uv run pip list --outdated
 ```
 
 ### Secret Management
@@ -412,13 +413,16 @@ poetry show --outdated
 Generate SBOM for supply chain security:
 
 ```bash
-# Using Poetry plugin
-poetry export -f requirements.txt | pip-audit --format cyclonedx-json
+# Export dependencies with uv
+uv export --format requirements-txt > requirements.txt
 
-# Or manually
-poetry export -f requirements.txt --output requirements.txt
+# Generate SBOM
 pip install cyclonedx-bom
 cyclonedx-py --requirements requirements.txt --output sbom.json
+
+# Or use pip-audit
+pip install pip-audit
+pip-audit --format cyclonedx-json
 ```
 
 ## Troubleshooting
@@ -428,14 +432,14 @@ cyclonedx-py --requirements requirements.txt --output sbom.json
 **Tests Fail in CI but Pass Locally**:
 
 1. Check Python version matrix - might be version-specific
-2. Review dependency cache - clear cache by updating `poetry.lock`
+2. Review dependency cache - clear cache by updating `uv.lock`
 3. Check for timing-sensitive tests or race conditions
-4. Ensure `--no-root` flag is used in Poetry install
+4. Ensure dependencies are synced correctly with `uv sync --all-groups`
 
 **Coverage Validation Fails**:
 
 1. Check `coverage_target.txt` value (should be 100.0)
-2. Run locally: `poetry run pytest && poetry run python tests/_utils/check_coverage.py`
+2. Run locally: `uv run pytest && uv run python tests/_utils/check_coverage.py`
 3. Review coverage report for missing lines
 4. Update tests to achieve 100% coverage
 
@@ -443,10 +447,10 @@ cyclonedx-py --requirements requirements.txt --output sbom.json
 
 ```bash
 # Run pre-commit locally
-poetry run pre-commit run --all-files
+uv run pre-commit run --all-files
 
 # Update pre-commit hooks
-poetry run pre-commit autoupdate
+uv run pre-commit autoupdate
 ```
 
 ### CD Failures
@@ -458,10 +462,10 @@ poetry run pre-commit autoupdate
 
 ```bash
 # Check version
-poetry version -s
+grep '^version = ' pyproject.toml | grep -oP '"\K[^"]+'
 
 # Create correct tag
-VERSION=$(poetry version -s)
+VERSION=$(grep '^version = ' pyproject.toml | grep -oP '"\K[^"]+')
 git tag -a "v$VERSION" -m "Release v$VERSION"
 ```
 
@@ -478,7 +482,7 @@ git tag -a "v$VERSION" -m "Release v$VERSION"
    - Cannot delete versions from PyPI (can only yank)
 
 3. **Package Validation Error**:
-   - Check package metadata: `poetry check`
+   - Validate package structure and metadata in `pyproject.toml`
    - Ensure all required classifiers are present
    - Validate README renders correctly on PyPI
 
@@ -493,7 +497,7 @@ git tag -a "v$VERSION" -m "Release v$VERSION"
 **Safety Check Finds Vulnerability**:
 
 1. Review the CVE details in the safety report
-2. Check if update is available: `poetry update {package}`
+2. Check if update is available: `uv lock --upgrade-package {package}`
 3. If no fix available, assess risk and consider alternatives
 4. Document decision in security advisory if accepting risk
 
@@ -518,7 +522,7 @@ See [MONITORING.md](./MONITORING.md) for production observability recommendation
 ## Additional Resources
 
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)
-- [Poetry Publishing Guide](https://python-poetry.org/docs/repositories/#publishable-repositories)
+- [uv Documentation](https://github.com/astral-sh/uv)
 - [PyPI Publishing Guide](https://packaging.python.org/en/latest/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/)
 - [OpenSSF Best Practices](https://bestpractices.coreinfrastructure.org/)
 - [Python Security Guide](https://python.readthedocs.io/en/latest/library/security.html)

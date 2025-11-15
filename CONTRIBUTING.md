@@ -24,7 +24,7 @@ This project adheres to a Code of Conduct that all contributors are expected to 
 ### Prerequisites
 
 - Python 3.11 or higher (3.12 recommended)
-- [Poetry](https://python-poetry.org/) 2.0 or higher
+- [uv](https://github.com/astral-sh/uv) for fast dependency management
 - Git
 - GitHub CLI (`gh`) recommended for workflow automation
 
@@ -38,18 +38,16 @@ This project adheres to a Code of Conduct that all contributors are expected to 
 
 2. Set up your development environment:
    ```bash
-   poetry install --no-root --all-groups
-   poetry run pre-commit install
+   uv sync --all-groups
+   uv run pre-commit install
    ```
-
-   **Important**: The `--no-root` flag prevents installing the package itself, which avoids plugin double-registration issues when running pytest.
 
 ### Verify Installation
 
 Run the test suite to ensure everything is set up correctly:
 
 ```bash
-poetry run pytest
+uv run pytest
 ```
 
 All tests should pass, and coverage should be at 100%.
@@ -111,19 +109,38 @@ Follow these guidelines:
 - Follow the coding standards (see below)
 - Run pre-commit hooks before committing
 
-### 5. Run Pre-commit Hooks
+### 5. Run Tests and Quality Checks
+
+This project uses [tox](https://tox.wiki/) for multi-version testing:
+
+```bash
+# Run fast parallel tests (used by pre-commit)
+uv run tox run-parallel -e py311-fast,py312-fast,py313-fast,py314-fast
+
+# Run full test suite across all Python versions
+uv run tox
+
+# Test a specific Python version
+uv run tox -e py312
+
+# Run tests directly with pytest
+uv run pytest
+
+# Run with coverage
+uv run coverage run -m pytest
+uv run coverage report
+```
 
 Pre-commit hooks ensure code quality:
 
 ```bash
 # Run all hooks manually
-poetry run pre-commit run --all-files
+uv run pre-commit run --all-files
 
 # Individual checks
-poetry run isort .
-poetry run ruff check --fix .
-poetry run ruff format .
-poetry run pytest
+uv run isort .
+uv run ruff check --fix .
+uv run ruff format .
 ```
 
 ### 6. Commit Your Changes
@@ -381,9 +398,9 @@ in pyproject.toml and pytest.ini.
 
 ### Before Opening a PR
 
-1. Ensure all tests pass: `poetry run pytest`
-2. Ensure all pre-commit hooks pass: `poetry run pre-commit run --all-files`
-3. Verify 100% coverage: `poetry run python tests/_utils/check_coverage.py`
+1. Ensure all tests pass: `uv run tox` or `uv run pytest`
+2. Ensure all pre-commit hooks pass: `uv run pre-commit run --all-files`
+3. Verify 100% coverage: `uv run python tests/_utils/check_coverage.py`
 4. Update CHANGELOG.md with your changes
 5. Ensure documentation is synchronized with code changes
 

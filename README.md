@@ -24,10 +24,10 @@ The test size categories and their time limits are based on recommendations from
 
 ## Installation
 
-This project uses [Poetry](https://python-poetry.org/) for dependency management. You can install the project by running:
+This project uses [uv](https://github.com/astral-sh/uv) for fast, reliable dependency management. You can install the project by running:
 
 ```bash
-poetry install
+uv sync --all-groups
 ```
 
 ## Usage
@@ -49,7 +49,7 @@ def test_moderate_function():
 Run pytest as usual:
 
 ```bash
-poetry run pytest
+uv run pytest
 ```
 
 ## Development
@@ -59,25 +59,51 @@ This project follows best practices for testing, linting, and code quality.
 ### Install Development Dependencies
 
 ```bash
-poetry install --no-root --all-groups
+uv sync --all-groups
 ```
-
-`--no-root` is required to avoid installing the package itself, which can result in plugin double-registration when running pytest.
 
 ### Setup Pre-commit Hooks
 
 To ensure code quality, set up pre-commit hooks:
 
 ```bash
-poetry run pre-commit install
+uv run pre-commit install
 ```
 
-### Running Tests and Linting
+### Running Tests
 
-Use pre-commit to automatically run tests, check coverage, and format code. Pre-commit hooks ensure that these steps are performed consistently and that your code adheres to the project's style guidelines.
+This project uses [tox](https://tox.wiki/) for testing across multiple Python versions (3.11, 3.12, 3.13, 3.14).
 
 ```bash
-poetry run pre-commit run --all-files
+# Test all Python versions in parallel (fast mode, used by pre-commit)
+uv run tox run-parallel -e py311-fast,py312-fast,py313-fast,py314-fast
+
+# Test all Python versions sequentially (full output)
+uv run tox
+
+# Test a specific Python version
+uv run tox -e py312
+
+# Run tests directly with pytest (single version)
+uv run pytest
+
+# Run tests with coverage
+uv run coverage run -m pytest
+uv run coverage report
+```
+
+### Code Quality
+
+Run pre-commit hooks to automatically format and lint code:
+
+```bash
+# Run all pre-commit hooks
+uv run pre-commit run --all-files
+
+# Run individual tools
+uv run ruff check --fix .
+uv run ruff format .
+uv run isort .
 ```
 
 ## How It Works

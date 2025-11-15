@@ -1,6 +1,6 @@
 version: 2
 updates:
-  # Python dependencies via Poetry
+  # Python dependencies via uv
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
