@@ -22,17 +22,17 @@ Our advanced CodeQL configuration provides:
    - Go to your repository on GitHub
    - Click **Settings** (requires admin access)
 
-2. **Access Code Security settings**
-   - In the left sidebar, click **Code security and analysis**
+2. **Access Advanced Security settings**
+   - In the left sidebar under the "Security" section, click **Advanced Security**
 
 3. **Disable CodeQL default setup**
-   - Find the **Code scanning** section
-   - Look for **CodeQL analysis** - it will show "Default" if default setup is enabled
-   - Click the **⋯** (three dots menu) next to "Default"
+   - Look for **CodeQL analysis** under the Code Security area
+   - If default setup is enabled, you'll see a configuration option with "Default"
+   - Click the **⋯** (three dots menu) or configuration option
    - Select **Disable CodeQL default setup**
    - Confirm the action in the dialog
 
-   **Note**: If you see a "Set up" button instead of "Default", the default setup is not currently enabled, and you can skip this step.
+   **Note**: If you don't see a "Default" configuration or the default setup option, it may not be currently enabled, and you can skip this step.
 
 4. **Verify advanced setup is active**
    - After disabling default setup, our workflow in `.github/workflows/security.yml` will automatically run
@@ -109,7 +109,7 @@ codeql-analysis:
 
 ### To switch from Advanced → Default:
 1. Remove or comment out the `codeql-analysis` job in `.github/workflows/security.yml`
-2. Go to Settings → Code security and analysis
+2. Go to Settings → Advanced Security (in the Security section)
 3. Enable CodeQL default setup
 
 ### To switch from Default → Advanced:

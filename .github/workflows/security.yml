@@ -61,10 +61,10 @@ jobs:
   # IMPORTANT: This job will fail if GitHub's "CodeQL default setup" is enabled.
   # Before this workflow can run successfully, you MUST disable the default setup:
   #
-  # 1. Go to: Settings → Code security and analysis
-  # 2. Find: "CodeQL analysis" under "Code scanning"
-  # 3. Click: Configure or three dots menu (⋯)
-  # 4. Select: "Disable CodeQL"
+  # 1. Go to: Settings → Advanced Security (in the Security section of the sidebar)
+  # 2. Look for: "CodeQL analysis" under the Code Security area
+  # 3. Click: Configuration option or three dots menu (⋯)
+  # 4. Select: "Disable CodeQL default setup"
   #
   # GitHub does not allow both default and advanced configurations simultaneously.
   # See .github/CODEQL_SETUP.md for detailed instructions and troubleshooting.
