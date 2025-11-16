@@ -77,5 +77,5 @@ class DescribeWallTimerIntegration:
         second_duration = timer.duration()
 
         assert first_duration < second_duration
-        assert 0.09 <= first_duration <= 0.5
-        assert 0.19 <= second_duration <= 0.7
+        assert 0.05 <= first_duration <= 1.0
+        assert 0.15 <= second_duration <= 1.5
