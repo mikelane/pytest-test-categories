@@ -185,10 +185,10 @@ class DescribeWriteDistributionSummary:
         writer = StringBufferWriter()
         stats = DistributionStats.update_counts(
             {
-                'small': 80,
-                'medium': 15,
-                'large': 5,
-                'xlarge': 0,
+                TestSize.SMALL: 80,
+                TestSize.MEDIUM: 15,
+                TestSize.LARGE: 5,
+                TestSize.XLARGE: 0,
             }
         )
 
@@ -203,10 +203,10 @@ class DescribeWriteDistributionSummary:
         writer = StringBufferWriter()
         stats = DistributionStats.update_counts(
             {
-                'small': 80,
-                'medium': 15,
-                'large': 5,
-                'xlarge': 0,
+                TestSize.SMALL: 80,
+                TestSize.MEDIUM: 15,
+                TestSize.LARGE: 5,
+                TestSize.XLARGE: 0,
             }
         )
 
@@ -225,10 +225,10 @@ class DescribeWriteDistributionSummary:
         writer = StringBufferWriter()
         stats = DistributionStats.update_counts(
             {
-                'small': 80,
-                'medium': 15,
-                'large': 5,
-                'xlarge': 0,
+                TestSize.SMALL: 80,
+                TestSize.MEDIUM: 15,
+                TestSize.LARGE: 5,
+                TestSize.XLARGE: 0,
             }
         )
 
@@ -244,10 +244,10 @@ class DescribeWriteDistributionSummary:
         writer = StringBufferWriter()
         stats = DistributionStats.update_counts(
             {
-                'small': 80,
-                'medium': 15,
-                'large': 5,
-                'xlarge': 0,
+                TestSize.SMALL: 80,
+                TestSize.MEDIUM: 15,
+                TestSize.LARGE: 5,
+                TestSize.XLARGE: 0,
             }
         )
 
@@ -262,10 +262,10 @@ class DescribeWriteDistributionSummary:
         writer = StringBufferWriter()
         stats = DistributionStats.update_counts(
             {
-                'small': 80,
-                'medium': 15,
-                'large': 5,
-                'xlarge': 0,
+                TestSize.SMALL: 80,
+                TestSize.MEDIUM: 15,
+                TestSize.LARGE: 5,
+                TestSize.XLARGE: 0,
             }
         )
 
@@ -284,10 +284,10 @@ class DescribeWriteDistributionSummary:
         writer = StringBufferWriter()
         stats = DistributionStats.update_counts(
             {
-                'small': 50,
-                'medium': 30,
-                'large': 20,
-                'xlarge': 0,
+                TestSize.SMALL: 50,
+                TestSize.MEDIUM: 30,
+                TestSize.LARGE: 20,
+                TestSize.XLARGE: 0,
             }
         )
 
@@ -303,10 +303,10 @@ class DescribeWriteDistributionSummary:
         writer = StringBufferWriter()
         stats = DistributionStats.update_counts(
             {
-                'small': 80,
-                'medium': 15,
-                'large': 5,
-                'xlarge': 0,
+                TestSize.SMALL: 80,
+                TestSize.MEDIUM: 15,
+                TestSize.LARGE: 5,
+                TestSize.XLARGE: 0,
             }
         )
 
@@ -329,10 +329,10 @@ class DescribeWriteDistributionSummary:
         writer = StringBufferWriter()
         stats = DistributionStats.update_counts(
             {
-                'small': 0,
-                'medium': 0,
-                'large': 0,
-                'xlarge': 0,
+                TestSize.SMALL: 0,
+                TestSize.MEDIUM: 0,
+                TestSize.LARGE: 0,
+                TestSize.XLARGE: 0,
             }
         )
 

@@ -13,6 +13,7 @@ from pytest_test_categories.services.distribution_validation import (
     DISTRIBUTION_WARNING_PREFIX,
     DistributionValidationService,
 )
+from pytest_test_categories.types import TestSize
 from tests._fixtures.warning_system import FakeWarningSystem
 
 
@@ -26,10 +27,10 @@ class DescribeDistributionValidationService:
         warning_system = FakeWarningSystem()
         stats = DistributionStats.update_counts(
             {
-                'small': 80,
-                'medium': 15,
-                'large': 5,
-                'xlarge': 0,
+                TestSize.SMALL: 80,
+                TestSize.MEDIUM: 15,
+                TestSize.LARGE: 5,
+                TestSize.XLARGE: 0,
             }
         )
 
@@ -44,10 +45,10 @@ class DescribeDistributionValidationService:
         warning_system = FakeWarningSystem()
         stats = DistributionStats.update_counts(
             {
-                'small': 70,
-                'medium': 20,
-                'large': 10,
-                'xlarge': 0,
+                TestSize.SMALL: 70,
+                TestSize.MEDIUM: 20,
+                TestSize.LARGE: 10,
+                TestSize.XLARGE: 0,
             }
         )
 
@@ -65,10 +66,10 @@ class DescribeDistributionValidationService:
         warning_system = FakeWarningSystem()
         stats = DistributionStats.update_counts(
             {
-                'small': 90,
-                'medium': 5,
-                'large': 5,
-                'xlarge': 0,
+                TestSize.SMALL: 90,
+                TestSize.MEDIUM: 5,
+                TestSize.LARGE: 5,
+                TestSize.XLARGE: 0,
             }
         )
 
@@ -86,10 +87,10 @@ class DescribeDistributionValidationService:
         warning_system = FakeWarningSystem()
         stats = DistributionStats.update_counts(
             {
-                'small': 80,
-                'medium': 5,
-                'large': 15,
-                'xlarge': 0,
+                TestSize.SMALL: 80,
+                TestSize.MEDIUM: 5,
+                TestSize.LARGE: 15,
+                TestSize.XLARGE: 0,
             }
         )
 
@@ -107,10 +108,10 @@ class DescribeDistributionValidationService:
         warning_system = FakeWarningSystem()
         stats = DistributionStats.update_counts(
             {
-                'small': 75,
-                'medium': 25,
-                'large': 0,
-                'xlarge': 0,
+                TestSize.SMALL: 75,
+                TestSize.MEDIUM: 25,
+                TestSize.LARGE: 0,
+                TestSize.XLARGE: 0,
             }
         )
 
@@ -128,10 +129,10 @@ class DescribeDistributionValidationService:
         warning_system = FakeWarningSystem()
         stats = DistributionStats.update_counts(
             {
-                'small': 80,
-                'medium': 19,
-                'large': 1,
-                'xlarge': 0,
+                TestSize.SMALL: 80,
+                TestSize.MEDIUM: 19,
+                TestSize.LARGE: 1,
+                TestSize.XLARGE: 0,
             }
         )
 
@@ -149,10 +150,10 @@ class DescribeDistributionValidationService:
         warning_system = FakeWarningSystem()
         stats = DistributionStats.update_counts(
             {
-                'small': 75,
-                'medium': 15,
-                'large': 10,
-                'xlarge': 0,
+                TestSize.SMALL: 75,
+                TestSize.MEDIUM: 15,
+                TestSize.LARGE: 10,
+                TestSize.XLARGE: 0,
             }
         )
 
@@ -170,10 +171,10 @@ class DescribeDistributionValidationService:
         warning_system = FakeWarningSystem()
         stats = DistributionStats.update_counts(
             {
-                'small': 0,
-                'medium': 0,
-                'large': 0,
-                'xlarge': 0,
+                TestSize.SMALL: 0,
+                TestSize.MEDIUM: 0,
+                TestSize.LARGE: 0,
+                TestSize.XLARGE: 0,
             }
         )
 
@@ -189,10 +190,10 @@ class DescribeDistributionValidationService:
         warning_system = FakeWarningSystem()
         stats = DistributionStats.update_counts(
             {
-                'small': 50,
-                'medium': 30,
-                'large': 20,
-                'xlarge': 0,
+                TestSize.SMALL: 50,
+                TestSize.MEDIUM: 30,
+                TestSize.LARGE: 20,
+                TestSize.XLARGE: 0,
             }
         )
 
@@ -213,10 +214,10 @@ class DescribeDistributionValidationService:
         # Distribution with multiple issues
         stats = DistributionStats.update_counts(
             {
-                'small': 50,  # Too low
-                'medium': 30,  # Too high
-                'large': 20,  # Too high
-                'xlarge': 0,
+                TestSize.SMALL: 50,  # Too low
+                TestSize.MEDIUM: 30,  # Too high
+                TestSize.LARGE: 20,  # Too high
+                TestSize.XLARGE: 0,
             }
         )
 
@@ -232,10 +233,10 @@ class DescribeDistributionValidationService:
         warning_system = FakeWarningSystem()
         stats = DistributionStats.update_counts(
             {
-                'small': 75,  # Exactly at lower bound
-                'medium': 10,  # Exactly at lower bound
-                'large': 2,  # Exactly at lower bound (combined with xlarge)
-                'xlarge': 0,
+                TestSize.SMALL: 75,  # Exactly at lower bound
+                TestSize.MEDIUM: 10,  # Exactly at lower bound
+                TestSize.LARGE: 2,  # Exactly at lower bound (combined with xlarge)
+                TestSize.XLARGE: 0,
             }
         )
 
@@ -253,10 +254,10 @@ class DescribeDistributionValidationService:
         warning_system = FakeWarningSystem()
         stats = DistributionStats.update_counts(
             {
-                'small': 85,  # Exactly at upper bound
-                'medium': 20,  # Exactly at upper bound
-                'large': 8,  # Exactly at upper bound (combined with xlarge)
-                'xlarge': 0,
+                TestSize.SMALL: 85,  # Exactly at upper bound
+                TestSize.MEDIUM: 20,  # Exactly at upper bound
+                TestSize.LARGE: 8,  # Exactly at upper bound (combined with xlarge)
+                TestSize.XLARGE: 0,
             }
         )
 
