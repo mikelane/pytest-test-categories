@@ -80,62 +80,39 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 @pytest.hookimpl(tryfirst=True)
 def pytest_configure(config: pytest.Config) -> None:
-    """Register the plugin and markers.
-
-    This hook:
-    1. Initializes plugin state through ConfigStatePort
-    2. Registers size markers dynamically from TestSize enum
-    3. Initializes TestDiscoveryService with WarningSystemPort
-    4. Creates TestSizeReport if requested
+    """Register markers and initialize plugin state.
 
     Args:
         config: The pytest configuration object.
 
     """
-    # Wrap config in adapter to access state through port
     config_adapter = PytestConfigAdapter(config)
     session_state = config_adapter.get_plugin_state()
 
-    # Initialize defaults if not set
+    # Initialize defaults
     if session_state.distribution_stats is None:
         session_state.distribution_stats = DistributionStats()
     if session_state.timer_factory is None:
         session_state.timer_factory = WallTimer
-
-    # Initialize distribution stats on config if not present
     if not hasattr(config, 'distribution_stats'):
         config.distribution_stats = session_state.distribution_stats  # type: ignore[attr-defined]
 
-    # Register size markers dynamically
+    # Register size markers
     for size in TestSize:
         config_adapter.add_marker(f'{size.marker_name}: {size.description}')
 
-    # Initialize test discovery service with warning system
+    # Initialize discovery service
     if session_state.test_discovery_service is None:
-        warning_system = PytestWarningAdapter()
-        session_state.test_discovery_service = TestDiscoveryService(warning_system=warning_system)
+        session_state.test_discovery_service = TestDiscoveryService(PytestWarningAdapter())
 
-    # Initialize test size report if requested
-    reporting_service = TestReportingService()
+    # Initialize reporting if requested
     report_option = config_adapter.get_option('--test-size-report')
-    session_state.test_size_report = reporting_service.create_report_if_requested(report_option)
+    session_state.test_size_report = TestReportingService().create_report_if_requested(report_option)
 
 
 @pytest.hookimpl(tryfirst=True)
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
-    """Count tests by size during collection and append size labels to test IDs.
-
-    This hook:
-    1. Uses TestDiscoveryService to find test size markers
-    2. Counts tests by size category
-    3. Appends size labels to test node IDs (e.g., [SMALL])
-    4. Updates distribution stats on config
-
-    Args:
-        config: The pytest configuration object.
-        items: List of collected test items.
-
-    """
+    """Count tests by size and append size labels to test IDs."""
     config_adapter = PytestConfigAdapter(config)
     session_state = config_adapter.get_plugin_state()
     discovery_service = _ensure_discovery_service(session_state)
@@ -156,15 +133,7 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
 
 @pytest.hookimpl
 def pytest_collection_finish(session: pytest.Session) -> None:
-    """Validate test distribution after collection.
-
-    This hook uses DistributionValidationService to validate that the
-    test suite distribution meets target percentages.
-
-    Args:
-        session: The pytest session object.
-
-    """
+    """Validate test distribution after collection."""
     config_adapter = PytestConfigAdapter(session.config)
     stats = config_adapter.get_distribution_stats()
     warning_system = PytestWarningAdapter()
@@ -174,21 +143,7 @@ def pytest_collection_finish(session: pytest.Session) -> None:
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None) -> Generator[None, None, None]:  # noqa: ARG001
-    """Track test timing and collect report data.
-
-    This hook:
-    1. Adds test to report if reporting is enabled
-    2. Creates and starts a timer for the test
-    3. Ensures timer is stopped in finally block
-
-    Args:
-        item: The test item to run.
-        nextitem: The next test item (unused).
-
-    Yields:
-        Control to pytest to run the test.
-
-    """
+    """Track test timing during execution."""
     config_adapter = PytestConfigAdapter(item.config)
     session_state = config_adapter.get_plugin_state()
     discovery_service = _ensure_discovery_service(session_state)
@@ -218,13 +173,7 @@ def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None) -> 
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item: pytest.Item) -> Generator[None, None, None]:
-    """Modify test report to show size category and validate timing.
-
-    This hook:
-    1. Uses TestDiscoveryService to find test size
-    2. Validates timing using TimingValidationService
-    3. Updates test report with timing violations
-    4. Updates test size report with outcome and duration
+    """Validate timing and update test reports.
 
     Args:
         item: The test item that ran.
@@ -236,61 +185,46 @@ def pytest_runtest_makereport(item: pytest.Item) -> Generator[None, None, None]:
     config_adapter = PytestConfigAdapter(item.config)
     session_state = config_adapter.get_plugin_state()
     discovery_service = _ensure_discovery_service(session_state)
-
-    # Find test size
     item_adapter = PytestItemAdapter(item)
     test_size = discovery_service.find_test_size(item_adapter)
 
     outcome = yield
     report = outcome.get_result()  # type: ignore[attr-defined]
 
-    # Only validate timing for tests in the call phase
-    if test_size and report.when == 'call':
-        timer = session_state.timers.get(item.nodeid)
-        timing_service = TimingValidationService()
-        duration = timing_service.get_test_duration(
-            timer,
-            report.duration if hasattr(report, 'duration') else None,
-        )
-        if duration is not None:
-            try:
-                timing_service.validate_timing(test_size, duration)
-            except TimingViolationError as e:
-                report.longrepr = str(e)
-                report.outcome = 'failed'
+    # Only process call phase reports
+    if report.when != 'call':
+        return
 
-    # Update test report data if we're generating a report
-    if session_state.test_size_report is not None and report.when == 'call':
-        timer = session_state.timers.get(item.nodeid)
-        timing_service = TimingValidationService()
-        duration = timing_service.get_test_duration(
-            timer,
-            report.duration if hasattr(report, 'duration') else None,
-        )
-        reporting_service = TestReportingService()
-        reporting_service.update_test_result(
+    # Get duration once for both validation and reporting
+    timer = session_state.timers.get(item.nodeid)
+    timing_service = TimingValidationService()
+    duration = timing_service.get_test_duration(
+        timer,
+        report.duration if hasattr(report, 'duration') else None,
+    )
+
+    # Validate timing if test has a size marker
+    if test_size and duration is not None:
+        try:
+            timing_service.validate_timing(test_size, duration)
+        except TimingViolationError as e:
+            report.longrepr = str(e)
+            report.outcome = 'failed'
+
+    # Update test size report if enabled
+    if session_state.test_size_report is not None:
+        TestReportingService().update_test_result(
             session_state.test_size_report,
             item.nodeid,
             report.outcome,
             duration,
         )
-
-        # Clean up the timer after use to prevent memory leaks
         timing_service.cleanup_timer(session_state.timers, item.nodeid)
 
 
 @pytest.hookimpl
 def pytest_terminal_summary(terminalreporter: pytest.TerminalReporter) -> None:
-    """Add test size distribution summary to the terminal report.
-
-    This hook:
-    1. Uses TestReportingService to write distribution summary
-    2. Writes optional test size report (basic or detailed)
-
-    Args:
-        terminalreporter: The pytest terminal reporter.
-
-    """
+    """Write distribution summary and optional size report."""
     config_adapter = PytestConfigAdapter(terminalreporter.config)
     session_state = config_adapter.get_plugin_state()
     stats = config_adapter.get_distribution_stats()
