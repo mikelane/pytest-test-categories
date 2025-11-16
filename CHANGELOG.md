@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Test coverage for failed unsized tests in detailed reports (#13)
+
 ### Fixed
 - Include pre-commit in lint reqs
 
