@@ -7,6 +7,7 @@ from abc import (
     abstractmethod,
 )
 from enum import StrEnum
+from typing import TYPE_CHECKING
 
 from icontract import (
     ensure,
@@ -222,3 +223,133 @@ class WarningSystemPort(ABC):
             category: The warning category (e.g., UserWarning, DeprecationWarning).
 
         """
+
+
+class ConfigStatePort(ABC):
+    """Abstract base class defining the config state interface.
+
+    This port (interface) abstracts pytest.Config state management to enable hexagonal architecture.
+    It allows testing code that accesses plugin state without depending on pytest's internal
+    implementation details or using private attributes.
+
+    This eliminates the need for noqa: SLF001 comments by encapsulating state access
+    behind a well-defined interface.
+
+    Implementations:
+    - PytestConfigAdapter: Production adapter that wraps pytest.Config
+    - FakeConfig: Test adapter providing controllable configuration
+
+    Example:
+        >>> config = PytestConfigAdapter(pytest_config)
+        >>> state = config.get_plugin_state()
+        >>> config.set_plugin_state(new_state)
+
+    """
+
+    @abstractmethod
+    def get_plugin_state(self) -> PluginState:
+        """Get the plugin state for the current session.
+
+        Returns:
+            The PluginState object containing all plugin session data.
+
+        """
+
+    @abstractmethod
+    def set_plugin_state(self, state: PluginState) -> None:
+        """Set the plugin state for the current session.
+
+        Args:
+            state: The PluginState object to store.
+
+        """
+
+    @abstractmethod
+    def get_distribution_stats(self) -> DistributionStats:
+        """Get the distribution statistics for the current session.
+
+        Returns:
+            The DistributionStats object.
+
+        """
+
+    @abstractmethod
+    def set_distribution_stats(self, stats: DistributionStats) -> None:
+        """Set the distribution statistics for the current session.
+
+        Args:
+            stats: The DistributionStats object to store.
+
+        """
+
+    @abstractmethod
+    def add_marker(self, marker_definition: str) -> None:
+        """Add a marker definition to the configuration.
+
+        Args:
+            marker_definition: The marker definition string (e.g., 'small: mark test as small size').
+
+        """
+
+    @abstractmethod
+    def get_option(self, name: str) -> object:
+        """Get a command-line option value.
+
+        Args:
+            name: The option name (e.g., '--test-size-report').
+
+        Returns:
+            The option value, or None if not set.
+
+        """
+
+
+# Import DistributionStats for ConfigStatePort
+if not TYPE_CHECKING:
+    from pytest_test_categories.distribution.stats import DistributionStats
+
+
+class PluginState(BaseModel):
+    """Plugin state for a test session.
+
+    This class manages the state for the entire test session and supports
+    hexagonal architecture through dependency injection of the timer factory
+    and test discovery service.
+
+    The timer_factory allows tests to inject FakeTimer for deterministic
+    testing while production uses WallTimer for actual timing.
+
+    The test_discovery_service is created during pytest_configure and uses
+    dependency injection to provide the warning system adapter.
+    """
+
+    model_config = {'arbitrary_types_allowed': True}
+
+    active: bool = True
+    distribution_stats: object | None = None  # Will be DistributionStats
+    warned_tests: set[str] = set()
+    test_size_report: object | None = None  # Will be TestSizeReport
+    # Store timers per test item to avoid race conditions in parallel execution
+    timers: dict[str, TestTimer] = {}
+    # Timer factory for dependency injection (hexagonal architecture port)
+    timer_factory: type[TestTimer] | None = None
+    # Test discovery service for finding size markers (hexagonal architecture)
+    test_discovery_service: object | None = None
+
+    def __init__(self, **data: object) -> None:
+        """Initialize PluginState with defaults for circular import fields."""
+        super().__init__(**data)
+        # Set defaults after initialization to avoid circular imports at module load time
+        if self.distribution_stats is None:
+            from pytest_test_categories.distribution.stats import DistributionStats  # noqa: PLC0415
+
+            self.distribution_stats = DistributionStats()
+        if self.timer_factory is None:
+            from pytest_test_categories.timers import WallTimer  # noqa: PLC0415
+
+            self.timer_factory = WallTimer
+
+
+# Add proper type hints for TYPE_CHECKING
+if TYPE_CHECKING:
+    from pytest_test_categories.distribution.stats import DistributionStats

@@ -54,7 +54,7 @@ def plugin_conftest(pytester: pytest.Pytester, request: pytest.FixtureRequest) -
         test_categories_plugin=f"""
         from pydantic import Field
         from pytest_test_categories.types import TestTimer, TimerState, TimingViolationError, TestSize
-        from pytest_test_categories.plugin import _get_session_state
+        from pytest_test_categories.adapters.pytest_adapter import PytestConfigAdapter
         from pytest_test_categories import timing
         import pytest
 
@@ -87,7 +87,8 @@ def plugin_conftest(pytester: pytest.Pytester, request: pytest.FixtureRequest) -
 
         @pytest.hookimpl(hookwrapper=True, tryfirst=True)
         def pytest_runtest_protocol(item, nextitem):
-            session_state = _get_session_state(item.config)
+            config_adapter = PytestConfigAdapter(item.config)
+            session_state = config_adapter.get_plugin_state()
             # Create a unique timer for this test item - use tryfirst to run before the real plugin
             timer = TestMockTimer(state=TimerState.READY, duration=MOCK_DURATION)
             session_state.timers[item.nodeid] = timer
@@ -103,7 +104,8 @@ def plugin_conftest(pytester: pytest.Pytester, request: pytest.FixtureRequest) -
 
         @pytest.hookimpl(hookwrapper=True)
         def pytest_runtest_makereport(item, call):
-            session_state = _get_session_state(item.config)
+            config_adapter = PytestConfigAdapter(item.config)
+            session_state = config_adapter.get_plugin_state()
             timer = session_state.timers.get(item.nodeid)
 
             if call.when == 'call' and timer and timer.state == TimerState.RUNNING:

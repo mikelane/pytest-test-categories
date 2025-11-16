@@ -12,8 +12,11 @@ from __future__ import annotations
 import warnings
 from typing import TYPE_CHECKING
 
+from pytest_test_categories.distribution.stats import DistributionStats
 from pytest_test_categories.types import (
+    ConfigStatePort,
     OutputWriterPort,
+    PluginState,
     TestItemPort,
     WarningSystemPort,
 )
@@ -190,3 +193,97 @@ class PytestWarningAdapter(WarningSystemPort):
 
         """
         warnings.warn(message, category=category, stacklevel=3)
+
+
+class PytestConfigAdapter(ConfigStatePort):
+    """Production adapter that wraps pytest.Config.
+
+    This adapter implements the ConfigStatePort interface by managing state
+    on a pytest.Config object. It encapsulates access to private attributes
+    to eliminate noqa: SLF001 comments throughout the codebase.
+
+    This follows the hexagonal architecture pattern where:
+    - ConfigStatePort is the Port (abstract interface)
+    - PytestConfigAdapter is the Production Adapter (real implementation)
+    - FakeConfig is the Test Adapter (test double)
+
+    The adapter manages the plugin state and distribution stats as attributes
+    on the config object, providing a clean interface for state access.
+
+    Example:
+        >>> adapter = PytestConfigAdapter(config)
+        >>> state = adapter.get_plugin_state()
+        >>> adapter.set_distribution_stats(stats)
+        >>> report_type = adapter.get_option('--test-size-report')
+
+    """
+
+    def __init__(self, config: pytest.Config) -> None:
+        """Initialize adapter with a pytest.Config.
+
+        Args:
+            config: The pytest.Config to wrap.
+
+        """
+        self._config = config
+
+    def get_plugin_state(self) -> PluginState:
+        """Get or create the plugin state for the current session.
+
+        Returns:
+            The PluginState object containing all plugin session data.
+
+        """
+        if not hasattr(self._config, '_test_categories_state'):
+            self._config._test_categories_state = PluginState()  # noqa: SLF001
+        return self._config._test_categories_state  # noqa: SLF001
+
+    def set_plugin_state(self, state: PluginState) -> None:
+        """Set the plugin state for the current session.
+
+        Args:
+            state: The PluginState object to store.
+
+        """
+        self._config._test_categories_state = state  # noqa: SLF001
+
+    def get_distribution_stats(self) -> DistributionStats:
+        """Get the distribution statistics for the current session.
+
+        Returns:
+            The DistributionStats object, or creates a default one if not set.
+
+        """
+        if not hasattr(self._config, 'distribution_stats'):
+            self._config.distribution_stats = DistributionStats()
+        return self._config.distribution_stats
+
+    def set_distribution_stats(self, stats: DistributionStats) -> None:
+        """Set the distribution statistics for the current session.
+
+        Args:
+            stats: The DistributionStats object to store.
+
+        """
+        self._config.distribution_stats = stats
+
+    def add_marker(self, marker_definition: str) -> None:
+        """Add a marker definition to the configuration.
+
+        Args:
+            marker_definition: The marker definition string (e.g., 'small: mark test as small size').
+
+        """
+        self._config.addinivalue_line('markers', marker_definition)
+
+    def get_option(self, name: str) -> object:
+        """Get a command-line option value.
+
+        Args:
+            name: The option name (e.g., '--test-size-report').
+
+        Returns:
+            The option value, or None if not set.
+
+        """
+        return self._config.getoption(name)
