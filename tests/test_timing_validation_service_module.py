@@ -6,6 +6,8 @@ Uses FakeTimer for deterministic timing tests.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 
 from pytest_test_categories.services.timing_validation import TimingValidationService
@@ -13,8 +15,12 @@ from pytest_test_categories.timers import FakeTimer
 from pytest_test_categories.timing import TimingViolationError
 from pytest_test_categories.types import (
     TestSize,
+    TestTimer,
     TimerState,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import MutableMapping
 
 
 @pytest.mark.small
@@ -189,7 +195,7 @@ class DescribeCleanupTimer:
         """Remove timer from timers dictionary."""
         service = TimingValidationService()
         timer = FakeTimer()
-        timers = {'test.py::test_func': timer}
+        timers: MutableMapping[str, TestTimer] = {'test.py::test_func': timer}
 
         service.cleanup_timer(timers, 'test.py::test_func')
 
@@ -199,7 +205,7 @@ class DescribeCleanupTimer:
     def it_handles_missing_timer_gracefully(self) -> None:
         """Handle cleanup when timer is not in dictionary."""
         service = TimingValidationService()
-        timers: dict[str, FakeTimer] = {}
+        timers: MutableMapping[str, TestTimer] = {}
 
         # Should not raise exception
         service.cleanup_timer(timers, 'test.py::test_func')
@@ -211,7 +217,7 @@ class DescribeCleanupTimer:
         service = TimingValidationService()
         timer1 = FakeTimer()
         timer2 = FakeTimer()
-        timers = {
+        timers: MutableMapping[str, TestTimer] = {
             'test.py::test_one': timer1,
             'test.py::test_two': timer2,
         }
@@ -226,7 +232,7 @@ class DescribeCleanupTimer:
         """Modify the original timers dictionary in place."""
         service = TimingValidationService()
         timer = FakeTimer()
-        timers = {'test.py::test_func': timer}
+        timers: MutableMapping[str, TestTimer] = {'test.py::test_func': timer}
         original_dict_id = id(timers)
 
         service.cleanup_timer(timers, 'test.py::test_func')

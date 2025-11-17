@@ -28,7 +28,10 @@ that are easy to understand and maintain.
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import TYPE_CHECKING
+from typing import (
+    TYPE_CHECKING,
+    cast,
+)
 
 import pytest
 
@@ -54,6 +57,7 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
     import pytest_test_categories.types
+    from pytest_test_categories.reporting import TestSizeReport
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -118,17 +122,19 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
     discovery_service = _ensure_discovery_service(session_state)
 
     # Count tests by size using the discovery service
-    counts: dict[str, int] = defaultdict(int)
+    counts: dict[TestSize, int] = defaultdict(int)
     for item in items:
         item_adapter = PytestItemAdapter(item)
         test_size = discovery_service.find_test_size(item_adapter)
         if test_size:
-            counts[test_size.marker_name] += 1
+            counts[test_size] += 1
             # Append size label to test node ID
             item_adapter.set_nodeid(f'{item_adapter.nodeid} {test_size.label}')
 
     # Update distribution stats with the counts
-    config.distribution_stats = config.distribution_stats.update_counts(counts=counts)
+    current_stats = config_adapter.get_distribution_stats()
+    updated_stats = current_stats.update_counts(counts=counts)
+    config_adapter.set_distribution_stats(updated_stats)
 
 
 @pytest.hookimpl
@@ -153,10 +159,15 @@ def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None) -> 
         item_adapter = PytestItemAdapter(item)
         test_size = discovery_service.find_test_size(item_adapter)
         reporting_service = TestReportingService()
-        reporting_service.add_test_to_report(session_state.test_size_report, item.nodeid, test_size)
+        test_report = cast('TestSizeReport', session_state.test_size_report)
+        reporting_service.add_test_to_report(test_report, item.nodeid, test_size)
 
     # Create and start timer for this test
     if item.nodeid not in session_state.timers:
+        # Type narrowing: timer_factory is guaranteed to be set in pytest_configure
+        if session_state.timer_factory is None:
+            msg = 'timer_factory must be initialized in pytest_configure'
+            raise RuntimeError(msg)
         timer = session_state.timer_factory(state=TimerState.READY)
         session_state.timers[item.nodeid] = timer
     else:
@@ -213,8 +224,9 @@ def pytest_runtest_makereport(item: pytest.Item) -> Generator[None, None, None]:
 
     # Update test size report if enabled
     if session_state.test_size_report is not None:
+        test_report = cast('TestSizeReport', session_state.test_size_report)
         TestReportingService().update_test_result(
-            session_state.test_size_report,
+            test_report,
             item.nodeid,
             report.outcome,
             duration,
@@ -236,11 +248,12 @@ def pytest_terminal_summary(terminalreporter: pytest.TerminalReporter) -> None:
 
     # Add test size report if requested
     if session_state.test_size_report is not None:
+        test_report = cast('TestSizeReport', session_state.test_size_report)
         report_type = config_adapter.get_option('--test-size-report')
         if report_type == 'detailed':
-            session_state.test_size_report.write_detailed_report(terminalreporter)
+            test_report.write_detailed_report(terminalreporter)
         else:
-            session_state.test_size_report.write_basic_report(terminalreporter)
+            test_report.write_basic_report(terminalreporter)
 
 
 def _ensure_discovery_service(session_state: pytest_test_categories.types.PluginState) -> TestDiscoveryService:
@@ -260,7 +273,7 @@ def _ensure_discovery_service(session_state: pytest_test_categories.types.Plugin
     if session_state.test_discovery_service is None:
         warning_system = PytestWarningAdapter()
         session_state.test_discovery_service = TestDiscoveryService(warning_system=warning_system)
-    return session_state.test_discovery_service
+    return cast('TestDiscoveryService', session_state.test_discovery_service)
 
 
 # Import for type annotation in helper function

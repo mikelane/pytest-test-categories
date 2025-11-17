@@ -10,7 +10,10 @@ rather than directly depending on pytest's internal implementation.
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING
+from typing import (
+    TYPE_CHECKING,
+    cast,
+)
 
 from pytest_test_categories.distribution.stats import DistributionStats
 from pytest_test_categories.types import (
@@ -235,8 +238,8 @@ class PytestConfigAdapter(ConfigStatePort):
 
         """
         if not hasattr(self._config, '_test_categories_state'):
-            self._config._test_categories_state = PluginState()  # noqa: SLF001
-        return self._config._test_categories_state  # noqa: SLF001
+            self._config._test_categories_state = PluginState()  # type: ignore[attr-defined]  # noqa: SLF001
+        return cast('PluginState', self._config._test_categories_state)  # type: ignore[attr-defined]  # noqa: SLF001
 
     def set_plugin_state(self, state: PluginState) -> None:
         """Set the plugin state for the current session.
@@ -245,7 +248,7 @@ class PytestConfigAdapter(ConfigStatePort):
             state: The PluginState object to store.
 
         """
-        self._config._test_categories_state = state  # noqa: SLF001
+        self._config._test_categories_state = state  # type: ignore[attr-defined]  # noqa: SLF001
 
     def get_distribution_stats(self) -> DistributionStats:
         """Get the distribution statistics for the current session.
@@ -255,8 +258,8 @@ class PytestConfigAdapter(ConfigStatePort):
 
         """
         if not hasattr(self._config, 'distribution_stats'):
-            self._config.distribution_stats = DistributionStats()
-        return self._config.distribution_stats
+            self._config.distribution_stats = DistributionStats()  # type: ignore[attr-defined]
+        return cast('DistributionStats', self._config.distribution_stats)  # type: ignore[attr-defined]
 
     def set_distribution_stats(self, stats: DistributionStats) -> None:
         """Set the distribution statistics for the current session.
@@ -265,7 +268,7 @@ class PytestConfigAdapter(ConfigStatePort):
             stats: The DistributionStats object to store.
 
         """
-        self._config.distribution_stats = stats
+        self._config.distribution_stats = stats  # type: ignore[attr-defined]
 
     def add_marker(self, marker_definition: str) -> None:
         """Add a marker definition to the configuration.

@@ -55,7 +55,7 @@ class DescribePluginState:
 
         state = PluginState(
             active=False,
-            timers=custom_timers,  # type: ignore[arg-type]
+            timers=custom_timers,
             distribution_stats=custom_stats,
             warned_tests=custom_warned,
             test_size_report=custom_report,
@@ -240,7 +240,7 @@ class DescribePytestCollectionModifyitems:
         mock_discovery_service.find_test_size.return_value = TestSize.SMALL
         config._test_categories_state.test_discovery_service = mock_discovery_service
 
-        pytest_collection_modifyitems(config, items)
+        pytest_collection_modifyitems(config, items)  # type: ignore[arg-type]
 
         # Should update distribution stats
         assert config.distribution_stats is not None
@@ -379,7 +379,7 @@ class DescribePytestRuntestMakereport:
         gen = pytest_runtest_makereport(item)
         next(gen)  # Start the generator
         with contextlib.suppress(StopIteration):
-            gen.send(outcome)  # Send the outcome
+            gen.send(outcome)  # type: ignore[arg-type]  # Send the outcome
         gen.close()  # Clean up
 
         # Should update report with duration and outcome
@@ -421,7 +421,7 @@ class DescribePytestRuntestMakereport:
         gen = pytest_runtest_makereport(item)
         next(gen)  # Start the generator
         with contextlib.suppress(StopIteration):
-            gen.send(outcome)  # Send the outcome
+            gen.send(outcome)  # type: ignore[arg-type]  # Send the outcome
         gen.close()  # Clean up
 
         # Should set report to failed with error message

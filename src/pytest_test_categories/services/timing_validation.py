@@ -25,12 +25,17 @@ Example:
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from pytest_test_categories import timing
 from pytest_test_categories.types import (
     TestSize,
     TestTimer,
     TimerState,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import MutableMapping
 
 
 class TimingValidationService:
@@ -125,7 +130,7 @@ class TimingValidationService:
         # No duration available
         return None
 
-    def cleanup_timer(self, timers: dict[str, TestTimer], nodeid: str) -> None:
+    def cleanup_timer(self, timers: MutableMapping[str, TestTimer], nodeid: str) -> None:
         """Remove a timer from the timers dictionary to prevent memory leaks.
 
         This is a utility function for cleaning up timers after test execution.
