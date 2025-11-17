@@ -321,5 +321,5 @@ class DescribeDistributionAnalysis:
 
         # The pytester test itself should pass
         assert result.ret == 0
-        # But it should show a warning about distribution
+        # But it should show a warning about distribution (PytestWarning)
         result.stdout.fnmatch_lines(['*PytestWarning: Test distribution does not meet targets*'])

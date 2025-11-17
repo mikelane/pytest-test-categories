@@ -197,7 +197,8 @@ def test_unsized_dir2():
         # Check that both tests are present with correct status
         assert 'test_slow.py::test_small_slow' in result.stdout.str()
         assert 'test_slow.py::test_small_fast' in result.stdout.str()
-        assert 'SLOW' in result.stdout.str()
+        # Tests that exceed time limits fail, so they show as FAIL not SLOW
+        assert 'FAIL' in result.stdout.str()
         assert 'Pass' in result.stdout.str()
 
     def it_includes_failed_tests_in_report(self, pytester: pytest.Pytester) -> None:

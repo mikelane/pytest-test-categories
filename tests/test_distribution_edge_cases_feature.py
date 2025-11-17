@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 
-@pytest.mark.small
+@pytest.mark.medium  # pytester creates subprocesses which adds overhead
 class DescribeDistributionEdgeCases:
     """Test edge cases and boundary conditions for distribution validation."""
 

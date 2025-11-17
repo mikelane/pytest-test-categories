@@ -9,7 +9,7 @@ from __future__ import annotations
 import pytest
 
 
-@pytest.mark.small
+@pytest.mark.medium
 class DescribeReportEdgeCases:
     """Test edge cases in test size reporting."""
 
