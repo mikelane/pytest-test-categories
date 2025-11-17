@@ -215,12 +215,12 @@ class WarningSystemPort(ABC):
     """
 
     @abstractmethod
-    def warn(self, message: str, category: type[Warning]) -> None:
+    def warn(self, message: str, category: type[Warning] | None = None) -> None:
         """Emit a warning with the specified message and category.
 
         Args:
             message: The warning message to emit.
-            category: The warning category (e.g., UserWarning, DeprecationWarning).
+            category: The warning category (default: pytest.PytestWarning if None).
 
         """
 

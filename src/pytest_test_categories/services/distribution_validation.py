@@ -97,5 +97,6 @@ class DistributionValidationService:
             stats.validate_distribution()
         except ValueError as e:
             # Emit warning through the port interface
+            # Category defaults to pytest.PytestWarning in the adapter
             warning_message = f'{DISTRIBUTION_WARNING_PREFIX}{e}'
-            warning_system.warn(warning_message, category=UserWarning)
+            warning_system.warn(warning_message)

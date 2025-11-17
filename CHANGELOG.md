@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Test coverage for failed unsized tests in detailed reports (#13)
+
 ### Changed
 - Optimized plugin.py orchestration layer: reduced from 394 to 266 lines (32% reduction) by eliminating duplication and condensing docstrings (#45)
 - Switch license to MIT
@@ -14,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Fixed test_base_classes_feature.py regex pattern to use re.search instead of re.match for better output matching
 - Include pre-commit in lint reqs
+
+### Improved
+- Increased plugin.py test coverage from 72% to 93% through comprehensive edge case testing
 
 
 ## [0.1.0] - 2024-12-30

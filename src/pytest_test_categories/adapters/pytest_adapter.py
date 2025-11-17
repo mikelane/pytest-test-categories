@@ -11,9 +11,10 @@ from __future__ import annotations
 
 import warnings
 from typing import (
-    TYPE_CHECKING,
     cast,
 )
+
+import pytest
 
 from pytest_test_categories.distribution.stats import DistributionStats
 from pytest_test_categories.types import (
@@ -23,9 +24,6 @@ from pytest_test_categories.types import (
     TestItemPort,
     WarningSystemPort,
 )
-
-if TYPE_CHECKING:
-    import pytest
 
 
 class PytestItemAdapter(TestItemPort):
@@ -184,18 +182,20 @@ class PytestWarningAdapter(WarningSystemPort):
 
     """
 
-    def warn(self, message: str, category: type[Warning]) -> None:
+    def warn(self, message: str, category: type[Warning] | None = None) -> None:
         """Emit a warning through Python's warnings system.
 
-        Delegates to warnings.warn() with stacklevel=3 to point to the
-        caller's caller for better warning context.
+        Delegates to warnings.warn() with stacklevel=2 to point to the
+        caller for better warning context. Uses pytest.PytestWarning by default
+        to match pytest's warning system.
 
         Args:
             message: The warning message to emit.
-            category: The warning category (e.g., UserWarning, DeprecationWarning).
+            category: The warning category (default: pytest.PytestWarning if None).
 
         """
-        warnings.warn(message, category=category, stacklevel=3)
+        actual_category = category if category is not None else pytest.PytestWarning
+        warnings.warn(message, category=actual_category, stacklevel=2)
 
 
 class PytestConfigAdapter(ConfigStatePort):
