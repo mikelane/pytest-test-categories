@@ -10,9 +10,7 @@ rather than directly depending on pytest's internal implementation.
 from __future__ import annotations
 
 import warnings
-from typing import (
-    cast,
-)
+from typing import cast
 
 import pytest
 
