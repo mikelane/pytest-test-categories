@@ -140,16 +140,17 @@ class NetworkBlockerPort(BaseModel, ABC):
     - ACTIVE: Intercepting and potentially blocking connections
 
     State transitions are guarded by icontract preconditions/postconditions,
-    following the same pattern as TestTimer.
+    following the same pattern as TestTimer. The base class provides public
+    methods with contracts that delegate to abstract _do_* methods.
 
     Attributes:
         state: Current blocker state (INACTIVE or ACTIVE).
 
     Example:
         >>> class FakeNetworkBlocker(NetworkBlockerPort):
-        ...     def activate(self, test_size, enforcement_mode):
-        ...         self.state = BlockerState.ACTIVE
+        ...     def _do_activate(self, test_size, enforcement_mode):
         ...         # Record parameters for assertions
+        ...         pass
         ...
         >>> blocker = FakeNetworkBlocker()
         >>> assert blocker.state == BlockerState.INACTIVE
@@ -167,7 +168,6 @@ class NetworkBlockerPort(BaseModel, ABC):
 
     @require(lambda self: self.state == BlockerState.INACTIVE, 'Blocker must be INACTIVE to activate')
     @ensure(lambda self: self.state == BlockerState.ACTIVE, 'Blocker must be ACTIVE after activation')
-    @abstractmethod
     def activate(self, test_size: TestSize, enforcement_mode: EnforcementMode) -> None:
         """Activate network blocking for a test.
 
@@ -194,10 +194,24 @@ class NetworkBlockerPort(BaseModel, ABC):
             >>> # Now any socket.connect() call will be intercepted
 
         """
+        self._do_activate(test_size, enforcement_mode)
+        self.state = BlockerState.ACTIVE
+
+    @abstractmethod
+    def _do_activate(self, test_size: TestSize, enforcement_mode: EnforcementMode) -> None:
+        """Perform adapter-specific activation logic.
+
+        Subclasses implement this to perform adapter-specific activation.
+        State transition is handled by the base class.
+
+        Args:
+            test_size: The size category of the current test.
+            enforcement_mode: How to handle violations.
+
+        """
 
     @require(lambda self: self.state == BlockerState.ACTIVE, 'Blocker must be ACTIVE to deactivate')
     @ensure(lambda self: self.state == BlockerState.INACTIVE, 'Blocker must be INACTIVE after deactivation')
-    @abstractmethod
     def deactivate(self) -> None:
         """Deactivate network blocking, restoring normal socket behavior.
 
@@ -216,9 +230,19 @@ class NetworkBlockerPort(BaseModel, ABC):
             ...     blocker.deactivate()  # Always restore sockets
 
         """
+        self._do_deactivate()
+        self.state = BlockerState.INACTIVE
+
+    @abstractmethod
+    def _do_deactivate(self) -> None:
+        """Perform adapter-specific deactivation logic.
+
+        Subclasses implement this to perform adapter-specific deactivation.
+        State transition is handled by the base class.
+
+        """
 
     @require(lambda self: self.state == BlockerState.ACTIVE, 'Blocker must be ACTIVE to check connections')
-    @abstractmethod
     def check_connection_allowed(self, host: str, port: int) -> bool:
         """Check if a connection to host:port is allowed.
 
@@ -251,9 +275,24 @@ class NetworkBlockerPort(BaseModel, ABC):
             False  # Medium tests cannot access external hosts
 
         """
+        return self._do_check_connection_allowed(host, port)
+
+    @abstractmethod
+    def _do_check_connection_allowed(self, host: str, port: int) -> bool:
+        """Determine if a connection to host:port is allowed.
+
+        Subclasses implement this to determine if a connection is allowed.
+
+        Args:
+            host: The target hostname or IP address.
+            port: The target port number.
+
+        Returns:
+            True if the connection is allowed, False if it should be blocked.
+
+        """
 
     @require(lambda self: self.state == BlockerState.ACTIVE, 'Blocker must be ACTIVE to handle violations')
-    @abstractmethod
     def on_violation(self, host: str, port: int, test_nodeid: str) -> None:
         """Handle a network access violation.
 
@@ -278,6 +317,20 @@ class NetworkBlockerPort(BaseModel, ABC):
             >>> blocker.activate(TestSize.SMALL, EnforcementMode.STRICT)
             >>> blocker.on_violation('api.example.com', 443, 'test_mod::test_fn')
             HermeticityViolationError: Small tests cannot access the network...
+
+        """
+        self._do_on_violation(host, port, test_nodeid)
+
+    @abstractmethod
+    def _do_on_violation(self, host: str, port: int, test_nodeid: str) -> None:
+        """Handle violations according to enforcement mode.
+
+        Subclasses implement this to handle violations according to enforcement mode.
+
+        Args:
+            host: The attempted destination host.
+            port: The attempted destination port.
+            test_nodeid: The pytest node ID of the violating test.
 
         """
 
