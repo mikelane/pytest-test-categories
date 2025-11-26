@@ -35,6 +35,7 @@ from typing import (
 
 import pytest
 
+from pytest_test_categories.adapters.network import SocketPatchingNetworkBlocker
 from pytest_test_categories.adapters.pytest_adapter import (
     PytestConfigAdapter,
     PytestItemAdapter,
@@ -42,6 +43,7 @@ from pytest_test_categories.adapters.pytest_adapter import (
     TerminalReporterAdapter,
 )
 from pytest_test_categories.distribution.stats import DistributionStats
+from pytest_test_categories.ports.network import EnforcementMode
 from pytest_test_categories.services.distribution_validation import DistributionValidationService
 from pytest_test_categories.services.test_discovery import TestDiscoveryService
 from pytest_test_categories.services.test_reporting import TestReportingService
@@ -59,12 +61,16 @@ if TYPE_CHECKING:
     import pytest_test_categories.types
     from pytest_test_categories.reporting import TestSizeReport
 
+# Valid enforcement modes for ini option validation
+_VALID_ENFORCEMENT_MODES = {'off', 'warn', 'strict'}
+
 
 def pytest_addoption(parser: pytest.Parser) -> None:
     """Add plugin-specific command-line options.
 
     This hook registers the --test-size-report option that controls
-    whether and how test size reports are generated.
+    whether and how test size reports are generated, and the
+    --test-categories-enforcement option for network blocking control.
 
     Args:
         parser: The pytest command-line option parser.
@@ -79,6 +85,20 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         nargs='?',
         const='basic',
         help='Generate a report of test sizes (basic or detailed)',
+    )
+    group.addoption(
+        '--test-categories-enforcement',
+        action='store',
+        default=None,
+        choices=['off', 'warn', 'strict'],
+        help='Set enforcement mode for test hermeticity (off, warn, strict). Overrides ini option.',
+    )
+
+    # Register ini option for enforcement mode
+    parser.addini(
+        'test_categories_enforcement',
+        help='Enforcement mode for test hermeticity: off (default), warn, or strict',
+        default='off',
     )
 
 
@@ -183,6 +203,56 @@ def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None) -> 
 
 
 @pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_call(item: pytest.Item) -> Generator[None, None, None]:
+    """Block network access for small tests during execution.
+
+    This hook enforces network isolation for small tests based on the
+    enforcement configuration. When enforcement is enabled (strict or warn):
+    - Small tests will have network access blocked
+    - Medium/large/xlarge tests are not affected
+
+    The blocker uses socket patching to intercept connection attempts.
+
+    Args:
+        item: The test item being executed.
+
+    Yields:
+        Control to pytest to run the test.
+
+    """
+    enforcement_mode = _get_enforcement_mode(item.config)
+
+    # Skip blocking if enforcement is disabled
+    if enforcement_mode == EnforcementMode.OFF:
+        yield
+        return
+
+    # Get test size
+    config_adapter = PytestConfigAdapter(item.config)
+    session_state = config_adapter.get_plugin_state()
+    discovery_service = _ensure_discovery_service(session_state)
+    item_adapter = PytestItemAdapter(item)
+    test_size = discovery_service.find_test_size(item_adapter)
+
+    # Only block network for small tests
+    if test_size != TestSize.SMALL:
+        yield
+        return
+
+    # Create and activate network blocker
+    blocker = _get_network_blocker(item.config)
+    blocker.current_test_nodeid = item.nodeid
+
+    try:
+        blocker.activate(test_size, enforcement_mode)
+        yield
+    finally:
+        # Always deactivate to restore socket behavior
+        if blocker.state.value == 'active':
+            blocker.deactivate()
+
+
+@pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item: pytest.Item) -> Generator[None, None, None]:
     """Validate timing and update test reports.
 
@@ -276,4 +346,48 @@ def _ensure_discovery_service(session_state: pytest_test_categories.types.Plugin
     return cast('TestDiscoveryService', session_state.test_discovery_service)
 
 
-# Import for type annotation in helper function
+def _get_enforcement_mode(config: pytest.Config) -> EnforcementMode:
+    """Get the enforcement mode from configuration.
+
+    CLI option takes precedence over ini setting.
+
+    Args:
+        config: The pytest configuration object.
+
+    Returns:
+        The EnforcementMode enum value.
+
+    """
+    # CLI option takes precedence
+    cli_value = config.getoption('--test-categories-enforcement', default=None)
+    if cli_value is not None:
+        return EnforcementMode(cli_value)
+
+    # Fall back to ini setting
+    ini_value = config.getini('test_categories_enforcement')
+    if ini_value and ini_value in _VALID_ENFORCEMENT_MODES:
+        return EnforcementMode(ini_value)
+
+    # Default to OFF
+    return EnforcementMode.OFF
+
+
+def _get_network_blocker(config: pytest.Config) -> SocketPatchingNetworkBlocker:
+    """Get or create the network blocker instance.
+
+    The blocker is stored on the config object to ensure proper lifecycle
+    management across test execution.
+
+    Args:
+        config: The pytest configuration object.
+
+    Returns:
+        The SocketPatchingNetworkBlocker instance.
+
+    """
+    # Store blocker on config for lifecycle management
+    blocker_attr = '_test_categories_network_blocker'
+    if not hasattr(config, blocker_attr):
+        blocker = SocketPatchingNetworkBlocker()
+        setattr(config, blocker_attr, blocker)
+    return cast('SocketPatchingNetworkBlocker', getattr(config, blocker_attr))
