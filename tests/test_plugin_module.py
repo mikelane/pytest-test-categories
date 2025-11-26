@@ -30,6 +30,11 @@ from pytest_test_categories.formatting import (
     get_status_message,
     pluralize_test,
 )
+from pytest_test_categories.plugin import (
+    _get_enforcement_mode,
+    _get_network_blocker,
+)
+from pytest_test_categories.ports.network import EnforcementMode
 
 
 @pytest.mark.small
@@ -181,10 +186,47 @@ class DescribePytestAddoption:
         pytest_addoption(parser)
 
         parser.getgroup.assert_called_once_with('test-categories')
-        group.addoption.assert_called_once()
-        call_args = group.addoption.call_args
-        assert call_args[0][0] == '--test-size-report'
-        assert call_args[1]['choices'] == [None, 'basic', 'detailed']
+        # Now adds two options: --test-size-report and --test-categories-enforcement
+        assert group.addoption.call_count == 2
+        # Find the test-size-report call
+        test_size_report_call = None
+        for call in group.addoption.call_args_list:
+            if call[0][0] == '--test-size-report':
+                test_size_report_call = call
+                break
+        assert test_size_report_call is not None
+        assert test_size_report_call[1]['choices'] == [None, 'basic', 'detailed']
+
+    def it_adds_enforcement_cli_option(self) -> None:
+        """Test that pytest_addoption adds the enforcement CLI option."""
+        parser = Mock()
+        group = Mock()
+        parser.getgroup.return_value = group
+
+        pytest_addoption(parser)
+
+        # Find the enforcement call
+        enforcement_call = None
+        for call in group.addoption.call_args_list:
+            if call[0][0] == '--test-categories-enforcement':
+                enforcement_call = call
+                break
+        assert enforcement_call is not None
+        assert enforcement_call[1]['choices'] == ['off', 'warn', 'strict']
+
+    def it_registers_enforcement_ini_option(self) -> None:
+        """Test that pytest_addoption registers the enforcement ini option."""
+        parser = Mock()
+        group = Mock()
+        parser.getgroup.return_value = group
+
+        pytest_addoption(parser)
+
+        parser.addini.assert_called_once_with(
+            'test_categories_enforcement',
+            help='Enforcement mode for test hermeticity: off (default), warn, or strict',
+            default='off',
+        )
 
 
 @pytest.mark.small
@@ -474,3 +516,72 @@ class DescribePytestTerminalSummary:
 
         # Should call write_detailed_report
         mock_report.write_detailed_report.assert_called_once_with(terminalreporter)
+
+
+@pytest.mark.small
+class DescribeGetEnforcementMode:
+    """Test the _get_enforcement_mode helper function."""
+
+    def it_returns_cli_option_when_provided(self) -> None:
+        """CLI option takes precedence over ini setting."""
+        config = Mock()
+        config.getoption.return_value = 'strict'
+        config.getini.return_value = 'warn'  # Should be ignored
+
+        result = _get_enforcement_mode(config)
+
+        assert result == EnforcementMode.STRICT
+        config.getoption.assert_called_once_with('--test-categories-enforcement', default=None)
+
+    def it_returns_ini_value_when_cli_not_provided(self) -> None:
+        """Ini value used when CLI option not provided."""
+        config = Mock()
+        config.getoption.return_value = None  # No CLI option
+        config.getini.return_value = 'warn'
+
+        result = _get_enforcement_mode(config)
+
+        assert result == EnforcementMode.WARN
+
+    def it_returns_off_when_neither_cli_nor_ini_provided(self) -> None:
+        """Default is OFF when no configuration is provided."""
+        config = Mock()
+        config.getoption.return_value = None
+        config.getini.return_value = ''  # Empty string
+
+        result = _get_enforcement_mode(config)
+
+        assert result == EnforcementMode.OFF
+
+    def it_returns_off_for_invalid_ini_value(self) -> None:
+        """Invalid ini value falls back to OFF."""
+        config = Mock()
+        config.getoption.return_value = None
+        config.getini.return_value = 'invalid_mode'  # Not a valid enforcement mode
+
+        result = _get_enforcement_mode(config)
+
+        assert result == EnforcementMode.OFF
+
+
+@pytest.mark.small
+class DescribeGetNetworkBlocker:
+    """Test the _get_network_blocker helper function."""
+
+    def it_creates_blocker_on_first_call(self) -> None:
+        """New blocker is created on the first call."""
+        config = Mock(spec=[])  # Empty spec - no attributes
+
+        blocker = _get_network_blocker(config)
+
+        assert hasattr(config, '_test_categories_network_blocker')
+        assert blocker is config._test_categories_network_blocker
+
+    def it_returns_same_blocker_on_subsequent_calls(self) -> None:
+        """Same blocker is returned on subsequent calls."""
+        config = Mock(spec=[])  # Empty spec - no attributes
+
+        blocker1 = _get_network_blocker(config)
+        blocker2 = _get_network_blocker(config)
+
+        assert blocker1 is blocker2

@@ -130,24 +130,20 @@ The plugin hooks into several pytest phases to:
 | Medium       | 15%               | 5%        |
 | Large/XLarge | 5%                | 3%        |
 
-## Network Isolation (Planned for v0.4.0)
+## Network Isolation
 
-> **COMING SOON** - This feature is currently being implemented across multiple PRs.
-> The `NetworkBlockerPort` interface exists (PR #74), but hook integration is planned for PR #69.
-> The configuration options and markers below are **not yet available**.
-
-The plugin will enforce network isolation based on test size to ensure test hermeticity:
+The plugin enforces network isolation for small tests to ensure test hermeticity. When enabled, small tests that attempt network access will fail immediately or emit warnings, depending on the enforcement mode.
 
 | Test Size | Network Access |
 |-----------|---------------|
 | Small     | **Blocked** - Must be hermetic |
-| Medium    | Localhost only |
+| Medium    | Allowed |
 | Large     | Allowed |
 | XLarge    | Allowed |
 
-### Configuration (Planned)
+### Configuration
 
-Network isolation enforcement will be configured via `pyproject.toml`:
+Network isolation enforcement is configured via `pyproject.toml`:
 
 ```toml
 [tool.pytest.ini_options]
@@ -155,19 +151,19 @@ Network isolation enforcement will be configured via `pyproject.toml`:
 test_categories_enforcement = "strict"
 ```
 
-Or via command line (planned):
+Or via command line (CLI option takes precedence over ini setting):
 
 ```bash
 pytest --test-categories-enforcement=strict
 ```
 
-### Enforcement Modes (Planned)
+### Enforcement Modes
 
 | Mode | Behavior |
 |------|----------|
 | `strict` | Fail tests immediately on network violations |
 | `warn` | Emit warnings but allow tests to continue |
-| `off` | Disable network isolation enforcement |
+| `off` | Disable network isolation enforcement (default) |
 
 ### Per-Test Override (Planned)
 
