@@ -94,7 +94,6 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         help='Set enforcement mode for test hermeticity (off, warn, strict). Overrides ini option.',
     )
 
-    # Register ini option for enforcement mode
     parser.addini(
         'test_categories_enforcement',
         help='Enforcement mode for test hermeticity: off (default), warn, or strict',
@@ -222,24 +221,20 @@ def pytest_runtest_call(item: pytest.Item) -> Generator[None, None, None]:
     """
     enforcement_mode = _get_enforcement_mode(item.config)
 
-    # Skip blocking if enforcement is disabled
     if enforcement_mode == EnforcementMode.OFF:
         yield
         return
 
-    # Get test size
     config_adapter = PytestConfigAdapter(item.config)
     session_state = config_adapter.get_plugin_state()
     discovery_service = _ensure_discovery_service(session_state)
     item_adapter = PytestItemAdapter(item)
     test_size = discovery_service.find_test_size(item_adapter)
 
-    # Only block network for small tests
     if test_size != TestSize.SMALL:
         yield
         return
 
-    # Create and activate network blocker
     blocker = _get_network_blocker(item.config)
     blocker.current_test_nodeid = item.nodeid
 
@@ -358,17 +353,14 @@ def _get_enforcement_mode(config: pytest.Config) -> EnforcementMode:
         The EnforcementMode enum value.
 
     """
-    # CLI option takes precedence
     cli_value = config.getoption('--test-categories-enforcement', default=None)
     if cli_value is not None:
         return EnforcementMode(cli_value)
 
-    # Fall back to ini setting
     ini_value = config.getini('test_categories_enforcement')
     if ini_value and ini_value in _VALID_ENFORCEMENT_MODES:
         return EnforcementMode(ini_value)
 
-    # Default to OFF
     return EnforcementMode.OFF
 
 
@@ -385,7 +377,6 @@ def _get_network_blocker(config: pytest.Config) -> SocketPatchingNetworkBlocker:
         The SocketPatchingNetworkBlocker instance.
 
     """
-    # Store blocker on config for lifecycle management
     blocker_attr = '_test_categories_network_blocker'
     if not hasattr(config, blocker_attr):
         blocker = SocketPatchingNetworkBlocker()

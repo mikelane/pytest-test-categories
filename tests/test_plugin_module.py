@@ -523,7 +523,7 @@ class DescribeGetEnforcementMode:
     """Test the _get_enforcement_mode helper function."""
 
     def it_returns_cli_option_when_provided(self) -> None:
-        """Test that CLI option takes precedence over ini setting."""
+        """CLI option takes precedence over ini setting."""
         config = Mock()
         config.getoption.return_value = 'strict'
         config.getini.return_value = 'warn'  # Should be ignored
@@ -534,7 +534,7 @@ class DescribeGetEnforcementMode:
         config.getoption.assert_called_once_with('--test-categories-enforcement', default=None)
 
     def it_returns_ini_value_when_cli_not_provided(self) -> None:
-        """Test that ini value is used when CLI option is not provided."""
+        """Ini value used when CLI option not provided."""
         config = Mock()
         config.getoption.return_value = None  # No CLI option
         config.getini.return_value = 'warn'
@@ -544,7 +544,7 @@ class DescribeGetEnforcementMode:
         assert result == EnforcementMode.WARN
 
     def it_returns_off_when_neither_cli_nor_ini_provided(self) -> None:
-        """Test that default is OFF when no configuration is provided."""
+        """Default is OFF when no configuration is provided."""
         config = Mock()
         config.getoption.return_value = None
         config.getini.return_value = ''  # Empty string
@@ -554,7 +554,7 @@ class DescribeGetEnforcementMode:
         assert result == EnforcementMode.OFF
 
     def it_returns_off_for_invalid_ini_value(self) -> None:
-        """Test that invalid ini value falls back to OFF."""
+        """Invalid ini value falls back to OFF."""
         config = Mock()
         config.getoption.return_value = None
         config.getini.return_value = 'invalid_mode'  # Not a valid enforcement mode
@@ -569,17 +569,16 @@ class DescribeGetNetworkBlocker:
     """Test the _get_network_blocker helper function."""
 
     def it_creates_blocker_on_first_call(self) -> None:
-        """Test that a new blocker is created on the first call."""
+        """New blocker is created on the first call."""
         config = Mock(spec=[])  # Empty spec - no attributes
 
         blocker = _get_network_blocker(config)
 
-        # Should create and store the blocker
         assert hasattr(config, '_test_categories_network_blocker')
         assert blocker is config._test_categories_network_blocker
 
     def it_returns_same_blocker_on_subsequent_calls(self) -> None:
-        """Test that the same blocker is returned on subsequent calls."""
+        """Same blocker is returned on subsequent calls."""
         config = Mock(spec=[])  # Empty spec - no attributes
 
         blocker1 = _get_network_blocker(config)

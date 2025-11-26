@@ -39,27 +39,26 @@ class DescribeNetworkBlockingConfiguration:
         assert 'INTERNALERROR' not in result.stdout.str()
         assert 'unrecognized configuration option' not in result.stderr.str()
 
-    def it_accepts_valid_enforcement_modes(self, pytester: pytest.Pytester) -> None:
+    @pytest.mark.parametrize('mode', ['off', 'warn', 'strict'])
+    def it_accepts_valid_enforcement_modes(self, pytester: pytest.Pytester, mode: str) -> None:
         """Verify plugin accepts all valid enforcement modes: off, warn, strict."""
-        for mode in ['off', 'warn', 'strict']:
-            pytester.makeini(f"""
-                [pytest]
-                test_categories_enforcement = {mode}
-            """)
-            pytester.makepyfile(
-                test_example="""
-                import pytest
+        pytester.makeini(f"""
+            [pytest]
+            test_categories_enforcement = {mode}
+        """)
+        pytester.makepyfile(
+            test_example="""
+            import pytest
 
-                @pytest.mark.small
-                def test_small():
-                    assert True
-                """
-            )
+            @pytest.mark.small
+            def test_small():
+                assert True
+            """
+        )
 
-            result = pytester.runpytest('-v')
+        result = pytester.runpytest('-v')
 
-            # Should run without configuration errors
-            assert 'INTERNALERROR' not in result.stdout.str()
+        assert 'INTERNALERROR' not in result.stdout.str()
 
 
 @pytest.mark.medium
