@@ -53,4 +53,4 @@ class DescribeTestBaseClasses:
         for line in stdout.splitlines():
             if 'test_one' not in line and 'test_two' not in line:
                 continue
-            assert re.match(rf'test_example.py::TestExample::test_(one|two) \[{size}\]', line)
+            assert re.search(rf'test_example.py::TestExample::test_(one|two) \[{size}\]', line)

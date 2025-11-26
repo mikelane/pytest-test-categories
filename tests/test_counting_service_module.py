@@ -41,7 +41,7 @@ class FakeWarningSystem:
         """Initialize fake warning system."""
         self.warnings: list[str] = []
 
-    def warn(self, message: str) -> None:
+    def warn(self, message: str, category: type[Warning] | None = None) -> None:
         """Record a warning."""
         self.warnings.append(message)
 

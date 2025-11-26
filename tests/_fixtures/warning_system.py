@@ -47,15 +47,16 @@ class FakeWarningSystem(WarningSystemPort):
         """Initialize the fake warning system with an empty warning list."""
         self._warnings: list[tuple[str, type[Warning]]] = []
 
-    def warn(self, message: str, category: type[Warning]) -> None:
+    def warn(self, message: str, category: type[Warning] | None = None) -> None:
         """Record a warning without emitting it.
 
         Args:
             message: The warning message to record.
-            category: The warning category (e.g., UserWarning, DeprecationWarning).
+            category: The warning category (default: UserWarning if None).
 
         """
-        self._warnings.append((message, category))
+        actual_category = category if category is not None else UserWarning
+        self._warnings.append((message, actual_category))
 
     def has_warning(self, message: str) -> bool:
         """Check if a warning with the given message was recorded.
