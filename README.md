@@ -130,6 +130,63 @@ The plugin hooks into several pytest phases to:
 | Medium       | 15%               | 5%        |
 | Large/XLarge | 5%                | 3%        |
 
+## Network Isolation (Planned for v0.4.0)
+
+> **COMING SOON** - This feature is currently being implemented across multiple PRs.
+> The `NetworkBlockerPort` interface exists (PR #74), but hook integration is planned for PR #69.
+> The configuration options and markers below are **not yet available**.
+
+The plugin will enforce network isolation based on test size to ensure test hermeticity:
+
+| Test Size | Network Access |
+|-----------|---------------|
+| Small     | **Blocked** - Must be hermetic |
+| Medium    | Localhost only |
+| Large     | Allowed |
+| XLarge    | Allowed |
+
+### Configuration (Planned)
+
+Network isolation enforcement will be configured via `pyproject.toml`:
+
+```toml
+[tool.pytest.ini_options]
+# Enforcement modes: "strict", "warn", "off"
+test_categories_enforcement = "strict"
+```
+
+Or via command line (planned):
+
+```bash
+pytest --test-categories-enforcement=strict
+```
+
+### Enforcement Modes (Planned)
+
+| Mode | Behavior |
+|------|----------|
+| `strict` | Fail tests immediately on network violations |
+| `warn` | Emit warnings but allow tests to continue |
+| `off` | Disable network isolation enforcement |
+
+### Per-Test Override (Planned)
+
+The `allow_network` marker will allow network access for specific tests:
+
+```python
+@pytest.mark.small
+@pytest.mark.allow_network  # Planned - not yet available
+def test_special_case():
+    ...
+```
+
+### Documentation
+
+- [User Guide: Network Isolation](docs/user-guide/network-isolation.md)
+- [Troubleshooting: Network Violations](docs/troubleshooting/network-violations.md)
+- [Examples: Network Isolation](docs/examples/network-isolation.md)
+- [ADR-001: Network Isolation Architecture](docs/architecture/adr-001-network-isolation.md)
+
 ## Project Resources
 
 ### Documentation
