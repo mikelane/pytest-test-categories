@@ -34,6 +34,11 @@ See Also:
 
 from __future__ import annotations
 
+__all__ = [
+    'HermeticityViolationError',
+    'NetworkAccessViolationError',
+]
+
 from pytest_test_categories.types import TestSize
 
 
@@ -122,7 +127,7 @@ class HermeticityViolationError(Exception):
                 lines.append(f'  {i}. {suggestion}')
             lines.append('')
 
-        lines.append('Documentation: https://pytest-test-categories.readthedocs.io/resource-isolation/')
+        lines.append('Documentation: See docs/architecture/adr-001-network-isolation.md')
         lines.append('=' * 60)
 
         return '\n'.join(lines)

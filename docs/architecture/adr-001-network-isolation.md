@@ -92,12 +92,13 @@ class NetworkBlockerPort(ABC):
         """
 
     @abstractmethod
-    def on_violation(self, host: str, port: int) -> None:
+    def on_violation(self, host: str, port: int, test_nodeid: str) -> None:
         """Handle a network access violation.
 
         Args:
             host: The attempted target hostname.
             port: The attempted target port.
+            test_nodeid: The pytest node ID of the violating test.
 
         Raises:
             HermeticityViolationError: If enforcement mode is STRICT.
