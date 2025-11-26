@@ -130,9 +130,13 @@ The plugin hooks into several pytest phases to:
 | Medium       | 15%               | 5%        |
 | Large/XLarge | 5%                | 3%        |
 
-## Network Isolation (v0.4.0+)
+## Network Isolation (Planned for v0.4.0)
 
-The plugin enforces network isolation based on test size to ensure test hermeticity:
+> **COMING SOON** - This feature is currently being implemented across multiple PRs.
+> The `NetworkBlockerPort` interface exists (PR #74), but hook integration is planned for PR #69.
+> The configuration options and markers below are **not yet available**.
+
+The plugin will enforce network isolation based on test size to ensure test hermeticity:
 
 | Test Size | Network Access |
 |-----------|---------------|
@@ -141,9 +145,9 @@ The plugin enforces network isolation based on test size to ensure test hermetic
 | Large     | Allowed |
 | XLarge    | Allowed |
 
-### Configuration
+### Configuration (Planned)
 
-Configure network isolation enforcement via `pyproject.toml`:
+Network isolation enforcement will be configured via `pyproject.toml`:
 
 ```toml
 [tool.pytest.ini_options]
@@ -151,20 +155,13 @@ Configure network isolation enforcement via `pyproject.toml`:
 test_categories_enforcement = "strict"
 ```
 
-Or via `pytest.ini`:
-
-```ini
-[pytest]
-test_categories_enforcement = strict
-```
-
-Or via command line:
+Or via command line (planned):
 
 ```bash
 pytest --test-categories-enforcement=strict
 ```
 
-### Enforcement Modes
+### Enforcement Modes (Planned)
 
 | Mode | Behavior |
 |------|----------|
@@ -172,13 +169,13 @@ pytest --test-categories-enforcement=strict
 | `warn` | Emit warnings but allow tests to continue |
 | `off` | Disable network isolation enforcement |
 
-### Per-Test Override
+### Per-Test Override (Planned)
 
-Allow network access for specific tests using the `allow_network` marker:
+The `allow_network` marker will allow network access for specific tests:
 
 ```python
 @pytest.mark.small
-@pytest.mark.allow_network  # Override: allow network for this test
+@pytest.mark.allow_network  # Planned - not yet available
 def test_special_case():
     ...
 ```

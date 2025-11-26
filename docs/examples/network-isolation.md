@@ -1,5 +1,33 @@
 # Network Isolation Examples
 
+> **PLANNED FEATURE - Coming in v0.4.0**
+>
+> These examples demonstrate the **expected behavior** once network isolation is fully released.
+> The `NetworkBlockerPort` interface exists (PR #74), but pytest hook integration is planned
+> for PR #69. The error messages, CLI options, and markers shown below are **not yet available**.
+>
+> Track progress: [Issue #70](https://github.com/mikelane/pytest-test-categories/issues/70)
+
+## Prerequisites
+
+To follow these examples when the feature is released, you may want to install optional mocking libraries:
+
+```bash
+# For mocking requests library
+pip install responses
+
+# For mocking httpx library
+pip install respx
+
+# For mocking Redis
+pip install fakeredis
+```
+
+These libraries are **not required** by pytest-test-categories but are recommended for writing
+hermetic tests that mock network calls.
+
+---
+
 This document provides practical examples of tests that violate network isolation and how to fix them.
 
 ## Example 1: HTTP API Client

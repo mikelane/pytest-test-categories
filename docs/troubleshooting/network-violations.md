@@ -1,5 +1,14 @@
 # Troubleshooting Network Violations
 
+> **PLANNED FEATURE - Coming in v0.4.0**
+>
+> This troubleshooting guide describes error messages and behaviors that will be available
+> once network isolation is fully released. The `NetworkBlockerPort` interface exists (PR #74),
+> but pytest hook integration is planned for PR #69. The error messages and CLI options shown
+> below are **not yet available**.
+>
+> Track progress: [Issue #70](https://github.com/mikelane/pytest-test-categories/issues/70)
+
 This guide helps you identify and fix network access violations in your test suite.
 
 ## Understanding the Error Message

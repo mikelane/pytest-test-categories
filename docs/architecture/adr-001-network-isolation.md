@@ -4,6 +4,10 @@
 
 Proposed
 
+> **Implementation Progress**: The core interfaces (`NetworkBlockerPort`, exception hierarchy,
+> `EnforcementMode`) are implemented in PR #74. Pytest hook integration (CLI options, config
+> parsing, markers) is planned for PR #69. Track progress in Issue #70.
+
 ## Context
 
 Small tests, as defined by Google's "Software Engineering at Google" best practices, must be **hermetic** - they should run entirely in memory with no external dependencies. This makes them:

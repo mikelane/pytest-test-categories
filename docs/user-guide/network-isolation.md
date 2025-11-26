@@ -1,10 +1,18 @@
 # Network Isolation for Hermetic Tests
 
+> **PLANNED FEATURE - Coming in v0.4.0**
+>
+> This documentation describes network isolation features that are **currently being implemented**.
+> The `NetworkBlockerPort` interface exists (PR #74), but pytest hook integration is planned for a
+> future PR (#69). The CLI options, config options, and markers described below are **not yet available**.
+>
+> Track progress: [Issue #70](https://github.com/mikelane/pytest-test-categories/issues/70)
+
 ## What is Network Isolation?
 
-Network isolation is a test enforcement mechanism that prevents tests from making network connections during execution. This ensures tests are **hermetic** - they run entirely in memory with no external dependencies.
+Network isolation will be a test enforcement mechanism that prevents tests from making network connections during execution. This will ensure tests are **hermetic** - running entirely in memory with no external dependencies.
 
-When enabled, the pytest-test-categories plugin intercepts socket connections and either blocks them or warns about them, depending on your configuration.
+When enabled, the pytest-test-categories plugin will intercept socket connections and either block them or warn about them, depending on your configuration.
 
 ## Why Network Isolation Matters
 
@@ -51,7 +59,7 @@ Network-dependent tests create resource contention:
 
 ## Google's Test Size Definitions
 
-The network isolation feature implements Google's test size definitions from "Software Engineering at Google":
+The network isolation feature will implement Google's test size definitions from "Software Engineering at Google":
 
 | Test Size | Network Access | Rationale |
 |-----------|---------------|-----------|
@@ -69,7 +77,7 @@ Small tests are the foundation of a healthy test suite. They must be:
 - **Deterministic**: Same input always produces same output
 - **Parallelizable**: Safe to run concurrently with other tests
 
-Network isolation enforces hermeticity by blocking all network access in small tests.
+Network isolation will enforce hermeticity by blocking all network access in small tests.
 
 ### Medium Tests
 
@@ -91,9 +99,11 @@ Large and XLarge tests may access external networks for:
 
 ## Enabling Network Isolation
 
-Network isolation is controlled by the `test_categories_enforcement` configuration option.
+> **Planned Configuration** - The options below are not yet implemented.
 
-### Configuration via pyproject.toml
+Network isolation will be controlled by the `test_categories_enforcement` configuration option.
+
+### Configuration via pyproject.toml (Planned)
 
 ```toml
 [tool.pytest.ini_options]
@@ -101,14 +111,14 @@ Network isolation is controlled by the `test_categories_enforcement` configurati
 test_categories_enforcement = "strict"
 ```
 
-### Configuration via pytest.ini
+### Configuration via pytest.ini (Planned)
 
 ```ini
 [pytest]
 test_categories_enforcement = strict
 ```
 
-### Configuration via Command Line
+### Configuration via Command Line (Planned)
 
 ```bash
 pytest --test-categories-enforcement=strict
@@ -116,7 +126,7 @@ pytest --test-categories-enforcement=strict
 
 ## Enforcement Modes
 
-The plugin supports three enforcement modes:
+The plugin will support three enforcement modes:
 
 ### STRICT Mode
 
@@ -124,7 +134,7 @@ The plugin supports three enforcement modes:
 test_categories_enforcement = "strict"
 ```
 
-In strict mode, network violations immediately fail the test with a detailed error message:
+In strict mode, network violations will immediately fail the test with a detailed error message:
 
 ```
 ============================================================
@@ -154,7 +164,7 @@ Use strict mode in CI pipelines to catch violations before merge.
 test_categories_enforcement = "warn"
 ```
 
-In warn mode, network violations emit a warning but allow the test to continue:
+In warn mode, network violations will emit a warning but allow the test to continue:
 
 ```
 PytestWarning: Network access violation in test_fetch_user:
@@ -177,15 +187,17 @@ In off mode, network isolation is disabled entirely. Use this for:
 
 ## Per-Test Overrides
 
-Individual tests can override the global enforcement using markers:
+> **Planned Marker** - The `@pytest.mark.allow_network` marker is not yet implemented.
 
-### Allow Network Access
+Individual tests will be able to override the global enforcement using markers:
+
+### Allow Network Access (Planned)
 
 ```python
 import pytest
 
 @pytest.mark.small
-@pytest.mark.allow_network
+@pytest.mark.allow_network  # Planned - not yet available
 def test_special_case_requiring_network():
     """This small test is allowed to access the network."""
     # Network access is permitted for this test only
