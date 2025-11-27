@@ -517,7 +517,7 @@ git tag -a "v$VERSION" -m "Release v$VERSION"
 
 ## Monitoring and Observability
 
-See [MONITORING.md](./MONITORING.md) for production observability recommendations.
+See [monitoring](monitoring.md) for production observability recommendations.
 
 ## Additional Resources
 
