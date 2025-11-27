@@ -614,4 +614,3 @@ jobs:
 - [Prometheus Best Practices](https://prometheus.io/docs/practices/)
 - [Grafana Dashboard Design](https://grafana.com/docs/grafana/latest/dashboards/build-dashboards/best-practices/)
 - [SLO/SLI/Error Budget for CI](https://sre.google/workbook/implementing-slos/)
-- [Test Observability Guide](https://martinfowler.com/articles/test-observability.html)

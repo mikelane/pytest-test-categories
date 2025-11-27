@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 # -- Project information -----------------------------------------------------
 
 project = 'pytest-test-categories'
-copyright = '2024, Mike Lane'
+copyright = '2025, Mike Lane'
 author = 'Mike Lane'
 release = '0.3.0'
 version = '0.3.0'

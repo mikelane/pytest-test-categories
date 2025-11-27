@@ -525,4 +525,4 @@ See [monitoring](monitoring.md) for production observability recommendations.
 - [uv Documentation](https://github.com/astral-sh/uv)
 - [PyPI Publishing Guide](https://packaging.python.org/en/latest/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/)
 - [OpenSSF Best Practices](https://bestpractices.coreinfrastructure.org/)
-- [Python Security Guide](https://python.readthedocs.io/en/latest/library/security.html)
+- [Python Security Considerations](https://docs.python.org/3/library/security_warnings.html)
