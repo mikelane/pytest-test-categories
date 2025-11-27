@@ -32,3 +32,7 @@ coverage.json
 .vscode/
 .DS_Store
 .worktrees/
+
+# Sphinx documentation
+docs/_build/
+docs/api/
