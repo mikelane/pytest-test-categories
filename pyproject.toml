@@ -45,6 +45,13 @@ dev = [
     "tox>=4.32.0",
     "tox-uv>=1.29.0",
 ]
+docs = [
+    "furo>=2024.8.6",
+    "myst-parser>=4.0.0",
+    "sphinx>=8.0.0",
+    "sphinx-autoapi>=3.4.0",
+    "sphinx-copybutton>=0.5.2",
+]
 
 
 [tool.pytest.ini_options]

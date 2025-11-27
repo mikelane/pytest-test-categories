@@ -517,7 +517,7 @@ git tag -a "v$VERSION" -m "Release v$VERSION"
 
 ## Monitoring and Observability
 
-See [MONITORING.md](./MONITORING.md) for production observability recommendations.
+See [monitoring](monitoring.md) for production observability recommendations.
 
 ## Additional Resources
 
@@ -525,4 +525,4 @@ See [MONITORING.md](./MONITORING.md) for production observability recommendation
 - [uv Documentation](https://github.com/astral-sh/uv)
 - [PyPI Publishing Guide](https://packaging.python.org/en/latest/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/)
 - [OpenSSF Best Practices](https://bestpractices.coreinfrastructure.org/)
-- [Python Security Guide](https://python.readthedocs.io/en/latest/library/security.html)
+- [Python Security Considerations](https://docs.python.org/3/library/security_warnings.html)
