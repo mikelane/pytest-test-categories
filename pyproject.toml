@@ -42,6 +42,7 @@ lint = [
     "ruff>=0.14.4",
 ]
 dev = [
+    "commitizen>=4.1.0",
     "tox>=4.32.0",
     "tox-uv>=1.29.0",
 ]
@@ -183,6 +184,14 @@ ignore_missing_imports = true
 module = "pytest.*"
 ignore_missing_imports = true
 
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version_provider = "pep621"
+tag_format = "v$version"
+update_changelog_on_bump = true
+changelog_file = "CHANGELOG.md"
+major_version_zero = true
 
 [build-system]
 requires = ["hatchling"]
