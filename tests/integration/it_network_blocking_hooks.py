@@ -132,39 +132,6 @@ class DescribeNetworkBlockingForSmallTests:
         assert 'NetworkAccessViolationError' in stdout or 'HermeticityViolationError' in stdout
         result.assert_outcomes(failed=1)
 
-    def it_warns_on_network_access_in_warn_mode(self, pytester: pytest.Pytester) -> None:
-        """Verify network access generates warning in warn mode."""
-        pytester.makeini("""
-            [pytest]
-            test_categories_enforcement = warn
-        """)
-        pytester.makepyfile(
-            test_example="""
-            import pytest
-            import socket
-
-            @pytest.mark.small
-            def test_small_with_network():
-                # Try to create a connection - should warn but not fail
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                try:
-                    # This might fail on CI without network, so wrap in try
-                    s.settimeout(1)
-                    s.connect(('httpbin.org', 80))
-                except (socket.timeout, OSError):
-                    pass  # Connection failed, that's OK for this test
-                finally:
-                    s.close()
-            """
-        )
-
-        result = pytester.runpytest('-v')
-
-        # Test should pass but warning should be emitted
-        # (The actual behavior depends on whether the connection succeeds)
-        # At minimum, no NetworkAccessViolationError should be raised
-        assert 'NetworkAccessViolationError' not in result.stdout.str()
-
     def it_does_not_block_network_when_enforcement_off(self, pytester: pytest.Pytester) -> None:
         """Verify network is not blocked when enforcement=off."""
         pytester.makeini("""
@@ -217,8 +184,8 @@ class DescribeNetworkBlockingForSmallTests:
 class DescribeNetworkBlockingForOtherSizes:
     """Integration tests for network blocking with non-small tests."""
 
-    def it_does_not_block_medium_tests(self, pytester: pytest.Pytester) -> None:
-        """Verify medium tests are not blocked from network access."""
+    def it_allows_medium_tests_localhost_access(self, pytester: pytest.Pytester) -> None:
+        """Verify medium tests can access localhost but not external hosts."""
         pytester.makeini("""
             [pytest]
             test_categories_enforcement = strict
@@ -229,18 +196,51 @@ class DescribeNetworkBlockingForOtherSizes:
             import socket
 
             @pytest.mark.medium
-            def test_medium_with_network():
-                # Medium tests should not be blocked
+            def test_medium_with_localhost():
+                # Medium tests can create localhost sockets
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                s.close()
+                try:
+                    # Binding to localhost is allowed
+                    s.bind(('127.0.0.1', 0))
+                finally:
+                    s.close()
                 assert True
             """
         )
 
         result = pytester.runpytest('-v')
 
-        # Test should pass - medium tests aren't blocked
+        # Test should pass - medium tests can use localhost
         result.assert_outcomes(passed=1)
+
+    def it_blocks_medium_tests_external_access(self, pytester: pytest.Pytester) -> None:
+        """Verify medium tests are blocked from external network access."""
+        pytester.makeini("""
+            [pytest]
+            test_categories_enforcement = strict
+        """)
+        pytester.makepyfile(
+            test_example="""
+            import pytest
+            import socket
+
+            @pytest.mark.medium
+            def test_medium_external_blocked():
+                # Medium tests cannot access external hosts
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                try:
+                    s.connect(('example.com', 80))
+                finally:
+                    s.close()
+            """
+        )
+
+        result = pytester.runpytest('-v')
+
+        # Test should fail - medium tests blocked from external network
+        stdout = result.stdout.str()
+        assert 'NetworkAccessViolationError' in stdout or 'HermeticityViolationError' in stdout
+        result.assert_outcomes(failed=1)
 
     def it_does_not_block_large_tests(self, pytester: pytest.Pytester) -> None:
         """Verify large tests are not blocked from network access."""
@@ -407,3 +407,45 @@ class DescribeNetworkBlockingCleanup:
 
         # All tests should pass
         result.assert_outcomes(passed=3)
+
+
+@pytest.mark.large
+class DescribeNetworkBlockingWarnModeTests:
+    """Tests for WARN mode behavior requiring external network.
+
+    These tests are marked large because they need external network access
+    to verify the blocker allows connections in WARN mode.
+    """
+
+    def it_warns_on_network_access_in_warn_mode(self, pytester: pytest.Pytester) -> None:
+        """Verify network access generates warning in warn mode."""
+        pytester.makeini("""
+            [pytest]
+            test_categories_enforcement = warn
+        """)
+        pytester.makepyfile(
+            test_example="""
+            import pytest
+            import socket
+
+            @pytest.mark.small
+            def test_small_with_network():
+                # Try to create a connection - should warn but not fail
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                try:
+                    # This might fail on CI without network, so wrap in try
+                    s.settimeout(1)
+                    s.connect(('httpbin.org', 80))
+                except (socket.timeout, OSError):
+                    pass  # Connection failed, that's OK for this test
+                finally:
+                    s.close()
+            """
+        )
+
+        result = pytester.runpytest('-v')
+
+        # Test should pass but warning should be emitted
+        # (The actual behavior depends on whether the connection succeeds)
+        # At minimum, no NetworkAccessViolationError should be raised
+        assert 'NetworkAccessViolationError' not in result.stdout.str()

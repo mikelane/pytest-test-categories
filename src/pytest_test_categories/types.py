@@ -20,6 +20,24 @@ class TimingViolationError(Exception):
     """Exception raised for timing violations."""
 
 
+class NetworkMode(StrEnum):
+    """Network access modes for test size enforcement.
+
+    Each test size category has an associated network mode that determines
+    what network access is permitted during test execution:
+    - BLOCK_ALL: No network access permitted (small tests)
+    - LOCALHOST_ONLY: Only localhost connections allowed (medium tests)
+    - ALLOW_ALL: Full network access permitted (large/xlarge tests)
+
+    This enum is used by NetworkBlockerPort to enforce appropriate
+    network restrictions based on test size.
+    """
+
+    BLOCK_ALL = 'block_all'
+    LOCALHOST_ONLY = 'localhost'
+    ALLOW_ALL = 'allow_all'
+
+
 class TestSize(StrEnum):
     """Test size categories."""
 
@@ -42,6 +60,22 @@ class TestSize(StrEnum):
     def label(self) -> str:
         """Get the label to show in test output."""
         return f'[{self.name}]'
+
+    @property
+    def network_mode(self) -> NetworkMode:
+        """Get the network access mode for this test size.
+
+        Returns the appropriate NetworkMode based on Google's test size
+        definitions:
+        - SMALL: No network access (BLOCK_ALL)
+        - MEDIUM: Localhost only (LOCALHOST_ONLY)
+        - LARGE/XLARGE: Full network access (ALLOW_ALL)
+        """
+        if self == TestSize.SMALL:
+            return NetworkMode.BLOCK_ALL
+        if self == TestSize.MEDIUM:
+            return NetworkMode.LOCALHOST_ONLY
+        return NetworkMode.ALLOW_ALL
 
 
 class TimerState(StrEnum):

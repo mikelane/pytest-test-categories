@@ -24,7 +24,10 @@ from pytest_test_categories.ports.network import (
     ConnectionAttempt,
     EnforcementMode,
 )
-from pytest_test_categories.types import TestSize
+from pytest_test_categories.types import (
+    NetworkMode,
+    TestSize,
+)
 
 
 @pytest.mark.small
@@ -419,3 +422,41 @@ class DescribeLocalhostDetection:
         blocker.activate(TestSize.MEDIUM, EnforcementMode.STRICT)
 
         assert blocker.check_connection_allowed(host, 80) is False
+
+
+@pytest.mark.small
+class DescribeNetworkModeEnum:
+    """Tests for the NetworkMode enum."""
+
+    def it_has_block_all_value(self) -> None:
+        """Verify BLOCK_ALL value is correct."""
+        assert NetworkMode.BLOCK_ALL.value == 'block_all'
+
+    def it_has_localhost_only_value(self) -> None:
+        """Verify LOCALHOST_ONLY value is correct."""
+        assert NetworkMode.LOCALHOST_ONLY.value == 'localhost'
+
+    def it_has_allow_all_value(self) -> None:
+        """Verify ALLOW_ALL value is correct."""
+        assert NetworkMode.ALLOW_ALL.value == 'allow_all'
+
+
+@pytest.mark.small
+class DescribeTestSizeNetworkMode:
+    """Tests for TestSize.network_mode property."""
+
+    def it_maps_small_to_block_all(self) -> None:
+        """Verify small tests map to BLOCK_ALL network mode."""
+        assert TestSize.SMALL.network_mode == NetworkMode.BLOCK_ALL
+
+    def it_maps_medium_to_localhost_only(self) -> None:
+        """Verify medium tests map to LOCALHOST_ONLY network mode."""
+        assert TestSize.MEDIUM.network_mode == NetworkMode.LOCALHOST_ONLY
+
+    def it_maps_large_to_allow_all(self) -> None:
+        """Verify large tests map to ALLOW_ALL network mode."""
+        assert TestSize.LARGE.network_mode == NetworkMode.ALLOW_ALL
+
+    def it_maps_xlarge_to_allow_all(self) -> None:
+        """Verify xlarge tests map to ALLOW_ALL network mode."""
+        assert TestSize.XLARGE.network_mode == NetworkMode.ALLOW_ALL
