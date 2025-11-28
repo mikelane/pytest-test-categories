@@ -7,7 +7,7 @@ resource restrictions.
 Exception Hierarchy:
     HermeticityViolationError (base)
     +-- NetworkAccessViolationError
-    +-- FilesystemAccessViolationError (future)
+    +-- FilesystemAccessViolationError
     +-- SubprocessViolationError (future)
     +-- SleepViolationError (future)
 
@@ -28,6 +28,7 @@ Example:
 
 See Also:
     - ADR-001: docs/architecture/adr-001-network-isolation.md
+    - ADR-002: docs/architecture/adr-002-filesystem-isolation.md
     - TimingViolationError: Existing exception in types.py (similar pattern)
 
 """
@@ -35,11 +36,19 @@ See Also:
 from __future__ import annotations
 
 __all__ = [
+    'FilesystemAccessViolationError',
     'HermeticityViolationError',
     'NetworkAccessViolationError',
 ]
 
+from typing import TYPE_CHECKING
+
 from pytest_test_categories.types import TestSize
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from pytest_test_categories.ports.filesystem import FilesystemOperation as FsOp
 
 
 class HermeticityViolationError(Exception):
@@ -62,6 +71,7 @@ class HermeticityViolationError(Exception):
 
     Example:
         >>> class CustomViolation(HermeticityViolationError):
+        ...     _adr_reference = 'docs/architecture/adr-003-custom-isolation.md'
         ...     def __init__(self, test_size, test_nodeid, custom_detail):
         ...         super().__init__(
         ...             test_size=test_size,
@@ -72,6 +82,8 @@ class HermeticityViolationError(Exception):
         ...         )
 
     """
+
+    _adr_reference: str = 'docs/architecture/adr-001-network-isolation.md'
 
     def __init__(
         self,
@@ -127,7 +139,7 @@ class HermeticityViolationError(Exception):
                 lines.append(f'  {i}. {suggestion}')
             lines.append('')
 
-        lines.append('Documentation: See docs/architecture/adr-001-network-isolation.md')
+        lines.append(f'Documentation: See {self._adr_reference}')
         lines.append('=' * 60)
 
         return '\n'.join(lines)
@@ -214,3 +226,91 @@ class NetworkAccessViolationError(HermeticityViolationError):
                 'Change test category to @pytest.mark.large (if external network is required)',
             ]
         return []  # Large/XLarge tests have no network restrictions
+
+
+class FilesystemAccessViolationError(HermeticityViolationError):
+    """Raised when a test makes an unauthorized filesystem access.
+
+    This exception is raised when a test attempts filesystem access
+    that violates its size category's restrictions:
+    - Small tests: No filesystem access (except allowed paths)
+    - Medium/Large/XLarge: All filesystem access allowed
+
+    Attributes:
+        path: The attempted path.
+        operation: The type of operation attempted.
+
+    Example:
+        >>> raise FilesystemAccessViolationError(
+        ...     test_size=TestSize.SMALL,
+        ...     test_nodeid='tests/test_file.py::test_save',
+        ...     path=Path('/etc/passwd'),
+        ...     operation=FilesystemOperation.READ
+        ... )
+
+    The error message includes:
+    - Test identification (nodeid, size category)
+    - Path and operation details
+    - Remediation suggestions (tmp_path, mocking, size change)
+
+    """
+
+    _adr_reference: str = 'docs/architecture/adr-002-filesystem-isolation.md'
+
+    def __init__(
+        self,
+        test_size: TestSize,
+        test_nodeid: str,
+        path: Path,
+        operation: FsOp,
+    ) -> None:
+        """Initialize a filesystem access violation error.
+
+        Args:
+            test_size: The test's size category.
+            test_nodeid: The pytest node ID of the violating test.
+            path: The attempted path.
+            operation: The type of operation attempted.
+
+        """
+        # Import locally to avoid circular dependency
+
+        self.path = path
+        self.operation: FsOp = operation
+
+        remediation = self._get_remediation(test_size, operation)
+
+        super().__init__(
+            test_size=test_size,
+            test_nodeid=test_nodeid,
+            violation_type='Filesystem access attempted',
+            details=f'Attempted {operation.value} on: {path}',
+            remediation=remediation,
+        )
+
+    @staticmethod
+    def _get_remediation(test_size: TestSize, operation: FsOp) -> list[str]:
+        """Get remediation suggestions based on test size and operation.
+
+        Args:
+            test_size: The test's size category.
+            operation: The type of operation attempted.
+
+        Returns:
+            List of remediation suggestions.
+
+        """
+        # Import locally to avoid circular dependency
+        from pytest_test_categories.ports.filesystem import FilesystemOperation as FsOp  # noqa: PLC0415
+
+        if test_size == TestSize.SMALL:
+            suggestions = [
+                "Use pytest's tmp_path fixture for temporary files",
+                'Mock file operations using pytest-mock (mocker fixture) or pyfakefs',
+                'Use io.StringIO or io.BytesIO for in-memory file-like objects',
+            ]
+            if operation in (FsOp.READ, FsOp.STAT):
+                suggestions.append('Embed test data as Python constants or use importlib.resources')
+            suggestions.append('Change test category to @pytest.mark.medium (if filesystem access is required)')
+            return suggestions
+        return []  # Medium/Large/XLarge tests have no filesystem restrictions
