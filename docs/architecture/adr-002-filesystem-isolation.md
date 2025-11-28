@@ -6,7 +6,7 @@ Proposed
 
 > **Implementation Progress**: This ADR documents the design for filesystem isolation.
 > Implementation will follow in Issue #92 (port interface), Issue #93 (adapters),
-> and Issue #94 (pytest integration). Track progress in Epic #34.
+> and Issue #94 (pytest integration). Track progress in Epic #66.
 
 ## Context
 
@@ -238,7 +238,7 @@ class FilesystemOperation(StrEnum):
     DELETE = 'delete'       # os.remove(), Path.unlink(), shutil.rmtree()
     CREATE = 'create'       # mkdir(), touch(), open() with 'x' mode
     MODIFY = 'modify'       # chmod(), chown(), rename()
-    STAT = 'stat'           # stat(), exists(), is_file() - may be allowed for path resolution
+    STAT = 'stat'           # stat(), exists(), is_file() - blocked on non-allowed paths
     LIST = 'list'           # listdir(), scandir(), iterdir()
 ```
 
@@ -285,7 +285,7 @@ Implements `FilesystemBlockerPort` by:
 3. **Allowed Path Checking** - Path is allowed if:
    - It is under an allowed path (parent check)
    - It matches a user-configured pattern
-   - Operation type is STAT and configured to allow metadata reads
+   - All operation types (including STAT) follow the same rules - no special exemptions
 
 4. **Violation Handling**:
    - STRICT mode: Raise `FilesystemAccessViolationError`
@@ -412,7 +412,7 @@ class FilesystemAccessViolationError(HermeticityViolationError):
         if test_size == TestSize.SMALL:
             suggestions = [
                 'Use pytest\'s tmp_path fixture for temporary files',
-                'Mock file operations using unittest.mock or pyfakefs',
+                'Mock file operations using pytest-mock (mocker fixture) or pyfakefs',
                 'Use io.StringIO or io.BytesIO for in-memory file-like objects',
             ]
             if operation in (FilesystemOperation.READ, FilesystemOperation.STAT):
@@ -452,8 +452,9 @@ def get_default_allowed_paths(config: pytest.Config) -> frozenset[Path]:
     if basetemp:
         allowed.add(Path(basetemp).resolve())
     else:
-        # Default pytest basetemp location
-        allowed.add(Path(tempfile.gettempdir()).resolve() / 'pytest-of-{user}')
+        # Default pytest basetemp location (resolve username at runtime)
+        import getpass
+        allowed.add(Path(tempfile.gettempdir()).resolve() / f'pytest-of-{getpass.getuser()}')
 
     # User-configured allowed paths from pytest.ini / pyproject.toml
     configured_paths = config.getini('test_categories_allowed_paths')
@@ -501,11 +502,12 @@ test_categories_allowed_paths = [
     "tests/fixtures/",
     "src/mypackage/data/",
 ]
-
-# Allow STAT operations for path resolution (default: true)
-# This permits os.path.exists(), Path.is_file(), etc.
-test_categories_allow_stat = true
 ```
+
+> **Note on STAT operations**: STAT operations (`os.path.exists()`, `Path.is_file()`, etc.)
+> are treated identically to other filesystem operations - blocked on non-allowed paths,
+> permitted on allowed paths. There is no special exemption for read-only metadata operations,
+> as they still create dependencies on external filesystem state and violate hermeticity.
 
 CLI options (extend existing):
 
@@ -513,9 +515,8 @@ CLI options (extend existing):
 # Already exists from v0.4.0
 pytest --test-categories-enforcement=strict|warn|off
 
-# New options for filesystem
+# New option for filesystem
 pytest --test-categories-allowed-paths=path1,path2
-pytest --test-categories-allow-stat=true|false
 ```
 
 Per-test marker:
@@ -582,7 +583,7 @@ Details:
 
 Small tests have restricted resource access. Options:
   1. Use pytest's tmp_path fixture for temporary files
-  2. Mock file operations using unittest.mock or pyfakefs
+  2. Mock file operations using pytest-mock (mocker fixture) or pyfakefs
   3. Use io.StringIO or io.BytesIO for in-memory file-like objects
   4. Change test category to @pytest.mark.medium (if filesystem access is required)
 
@@ -639,7 +640,7 @@ Estimated overhead: <1ms per filesystem operation (dominated by actual I/O in pr
 | Path resolution edge cases | Comprehensive unit tests for path resolution logic |
 | pytest fixture compatibility | Test with tmp_path, tmp_path_factory explicitly |
 | Performance regression | Benchmark before/after, optimize hot paths |
-| Conflicts with pyfakefs | Document interaction, test compatibility |
+| Conflicts with pyfakefs | Incompatible by design - document that users should choose one approach (blocking vs faking) |
 
 ## Alternatives Considered
 
@@ -735,7 +736,7 @@ Estimated overhead: <1ms per filesystem operation (dominated by actual I/O in pr
 - Patch `os.open`, `os.mkdir`, `os.remove`, etc.
 - Patch `shutil.copy`, `shutil.rmtree`, etc.
 - Patch `Path.write_text`, `Path.read_text`, etc.
-- Add configuration for STAT operations
+- Patch STAT operations (`os.path.exists`, `Path.is_file`, etc.) - same blocking rules apply
 - Comprehensive operation coverage tests
 
 ### Phase 5: Documentation and Polish (Issue #96)
