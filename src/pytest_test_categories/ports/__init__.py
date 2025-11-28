@@ -7,6 +7,7 @@ are provided in the `adapters` package.
 Ports defined here:
 - NetworkBlockerPort: Interface for network access control
 - FilesystemBlockerPort: Interface for filesystem access control
+- ProcessBlockerPort: Interface for subprocess/process spawn control
 """
 
 from __future__ import annotations
@@ -22,6 +23,10 @@ from pytest_test_categories.ports.network import (
     EnforcementMode,
     NetworkBlockerPort,
 )
+from pytest_test_categories.ports.process import (
+    ProcessBlockerPort,
+    SpawnAttempt,
+)
 
 __all__ = [
     'BlockerState',
@@ -31,4 +36,6 @@ __all__ = [
     'FilesystemBlockerPort',
     'FilesystemOperation',
     'NetworkBlockerPort',
+    'ProcessBlockerPort',
+    'SpawnAttempt',
 ]
