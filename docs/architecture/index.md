@@ -8,6 +8,7 @@ This section documents the architectural decisions and design of pytest-test-cat
 :maxdepth: 2
 
 adr-001-network-isolation
+adr-002-filesystem-isolation
 ```
 
 ## Overview
@@ -63,15 +64,18 @@ The main pytest plugin that:
 
 Abstract interfaces defining contracts:
 - `TestTimer`: Timer interface for measuring test duration
-- `NetworkBlockerPort`: Interface for network blocking (planned)
+- `NetworkBlockerPort`: Interface for network blocking
+- `FilesystemBlockerPort`: Interface for filesystem blocking (planned)
 
 ### Adapters (Implementations)
 
 Concrete implementations of ports:
 - `WallTimer`: Production timer using `time.perf_counter()`
 - `FakeTimer`: Test timer with controllable time
-- `SocketPatchingBlocker`: Production network blocker (planned)
+- `SocketPatchingNetworkBlocker`: Production network blocker
 - `FakeNetworkBlocker`: Test network blocker
+- `FilesystemPatchingBlocker`: Production filesystem blocker (planned)
+- `FakeFilesystemBlocker`: Test filesystem blocker (planned)
 
 ### Services
 
@@ -93,11 +97,13 @@ Domain models:
 
 Custom exception hierarchy:
 - `TimingViolationError`: Test exceeded time limit
-- `HermeticityViolationError`: Test violated hermeticity (planned)
-- `NetworkAccessViolationError`: Test made network request (planned)
+- `HermeticityViolationError`: Test violated hermeticity (base class)
+- `NetworkAccessViolationError`: Test made unauthorized network request
+- `FilesystemAccessViolationError`: Test made unauthorized filesystem access (planned)
 
 ## Design Decisions
 
 See the Architecture Decision Records (ADRs) for detailed reasoning behind key design decisions:
 
 - [ADR-001: Network Isolation](adr-001-network-isolation.md)
+- [ADR-002: Filesystem Isolation](adr-002-filesystem-isolation.md)
