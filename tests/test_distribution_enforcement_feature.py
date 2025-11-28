@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import pytest
 
+pytestmark = pytest.mark.medium
+
 
 @pytest.fixture(autouse=True)
 def conftest_file(pytester: pytest.Pytester) -> None:
