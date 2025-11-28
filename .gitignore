@@ -32,6 +32,8 @@ coverage.json
 .vscode/
 .DS_Store
 .worktrees/
+.python-version
+poetry.lock
 
 # Sphinx documentation
 docs/_build/
