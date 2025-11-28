@@ -31,6 +31,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Medium: `LOCALHOST_ONLY` (localhost only)
     - Large/XLarge: `ALLOW_ALL` (full network access)
   - Follows Google's "Software Engineering at Google" test size definitions
+- **Thread Monitoring**: Warn when small tests use threading primitives (#105)
+  - `ThreadMonitorPort` interface defined in `ports/threading.py`
+  - Production adapter `ThreadPatchingMonitor` in `adapters/threading.py`
+  - Test adapter `FakeThreadMonitor` in `adapters/fake_threading.py`
+  - Monitors `threading.Thread`, `threading.Timer`, `concurrent.futures.ThreadPoolExecutor`, and `concurrent.futures.ProcessPoolExecutor`
+  - Unlike other blockers, thread monitoring WARNS instead of blocking because:
+    - Many libraries use threading internally (logging, garbage collection)
+    - Some test frameworks use threading
+    - Blocking threading could break legitimate test infrastructure
+  - Warning message includes test name and suggests using `@pytest.mark.medium`
+  - No impact on medium/large/xlarge tests (threading is expected for those sizes)
 - **Distribution Enforcement**: New enforcement modes for test distribution validation (#104)
   - `--test-categories-distribution-enforcement` CLI option with choices: `off`, `warn`, `strict`
   - `test_categories_distribution_enforcement` ini option for configuration

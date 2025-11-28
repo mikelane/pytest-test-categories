@@ -48,6 +48,7 @@ from pytest_test_categories.adapters.pytest_adapter import (
     PytestWarningAdapter,
     TerminalReporterAdapter,
 )
+from pytest_test_categories.adapters.threading import ThreadPatchingMonitor
 from pytest_test_categories.distribution.stats import DistributionStats
 from pytest_test_categories.ports.network import EnforcementMode
 from pytest_test_categories.services.distribution_validation import (
@@ -258,7 +259,7 @@ def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None) -> 
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_call(item: pytest.Item) -> Generator[None, None, None]:
-    """Block resources based on test size during execution.
+    """Block resources based on test size during execution and monitor threading.
 
     This hook enforces resource isolation based on test size and enforcement
     configuration. When enforcement is enabled (strict or warn):
@@ -271,6 +272,11 @@ def pytest_runtest_call(item: pytest.Item) -> Generator[None, None, None]:
     Filesystem and process isolation (small tests only):
     - Small tests: Filesystem access blocked (except allowed paths)
     - Small tests: Subprocess spawning blocked
+    - Small tests: Database connections blocked
+    - Small tests: Thread creation warnings emitted
+
+    Note: Thread monitoring WARNS instead of blocking because many libraries
+    use threading internally. Blocking would break legitimate test infrastructure.
 
     Uses ExitStack pattern to manage all resource blockers together,
     ensuring proper cleanup even if exceptions occur.
@@ -330,6 +336,12 @@ def pytest_runtest_call(item: pytest.Item) -> Generator[None, None, None]:
         database_blocker.current_test_nodeid = item.nodeid
         database_blocker.activate(test_size, enforcement_mode)
         stack.callback(_safe_deactivate_database, database_blocker)
+
+        # Activate thread monitor (warns instead of blocking)
+        thread_monitor = _get_thread_monitor(item.config)
+        thread_monitor.current_test_nodeid = item.nodeid
+        thread_monitor.activate(test_size, enforcement_mode)
+        stack.callback(_safe_deactivate_thread_monitor, thread_monitor)
 
         yield
 
@@ -604,6 +616,39 @@ def _safe_deactivate_database(blocker: DatabasePatchingBlocker) -> None:
     """
     if blocker.state.value == 'active':
         blocker.deactivate()
+
+
+def _get_thread_monitor(config: pytest.Config) -> ThreadPatchingMonitor:
+    """Get or create the thread monitor instance.
+
+    The monitor is stored on the config object to ensure proper lifecycle
+    management across test execution.
+
+    Args:
+        config: The pytest configuration object.
+
+    Returns:
+        The ThreadPatchingMonitor instance.
+
+    """
+    monitor_attr = '_test_categories_thread_monitor'
+    if not hasattr(config, monitor_attr):
+        monitor = ThreadPatchingMonitor()
+        setattr(config, monitor_attr, monitor)
+    return cast('ThreadPatchingMonitor', getattr(config, monitor_attr))
+
+
+def _safe_deactivate_thread_monitor(monitor: ThreadPatchingMonitor) -> None:
+    """Safely deactivate thread monitor, handling edge cases.
+
+    This function is used as a callback in ExitStack to ensure cleanup.
+
+    Args:
+        monitor: The thread monitor to deactivate.
+
+    """
+    if monitor.state.value == 'active':
+        monitor.deactivate()
 
 
 def _get_allowed_paths(item: pytest.Item) -> frozenset[Path]:
