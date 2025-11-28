@@ -48,7 +48,6 @@ from pytest_test_categories.types import TestSize
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from pytest_test_categories.ports.filesystem import FilesystemOperation
     from pytest_test_categories.ports.filesystem import FilesystemOperation as FsOp
 
 
@@ -72,6 +71,7 @@ class HermeticityViolationError(Exception):
 
     Example:
         >>> class CustomViolation(HermeticityViolationError):
+        ...     _adr_reference = 'docs/architecture/adr-003-custom-isolation.md'
         ...     def __init__(self, test_size, test_nodeid, custom_detail):
         ...         super().__init__(
         ...             test_size=test_size,
@@ -82,6 +82,8 @@ class HermeticityViolationError(Exception):
         ...         )
 
     """
+
+    _adr_reference: str = 'docs/architecture/adr-001-network-isolation.md'
 
     def __init__(
         self,
@@ -137,7 +139,7 @@ class HermeticityViolationError(Exception):
                 lines.append(f'  {i}. {suggestion}')
             lines.append('')
 
-        lines.append('Documentation: See docs/architecture/adr-001-network-isolation.md')
+        lines.append(f'Documentation: See {self._adr_reference}')
         lines.append('=' * 60)
 
         return '\n'.join(lines)
@@ -253,12 +255,14 @@ class FilesystemAccessViolationError(HermeticityViolationError):
 
     """
 
+    _adr_reference: str = 'docs/architecture/adr-002-filesystem-isolation.md'
+
     def __init__(
         self,
         test_size: TestSize,
         test_nodeid: str,
         path: Path,
-        operation: FilesystemOperation,
+        operation: FsOp,
     ) -> None:
         """Initialize a filesystem access violation error.
 
@@ -285,7 +289,7 @@ class FilesystemAccessViolationError(HermeticityViolationError):
         )
 
     @staticmethod
-    def _get_remediation(test_size: TestSize, operation: FilesystemOperation) -> list[str]:
+    def _get_remediation(test_size: TestSize, operation: FsOp) -> list[str]:
         """Get remediation suggestions based on test size and operation.
 
         Args:
