@@ -9,6 +9,7 @@ Ports defined here:
 - FilesystemBlockerPort: Interface for filesystem access control
 - ProcessBlockerPort: Interface for subprocess/process spawn control
 - DatabaseBlockerPort: Interface for database access control
+- ThreadMonitorPort: Interface for thread creation monitoring (warns instead of blocks)
 """
 
 from __future__ import annotations
@@ -32,6 +33,10 @@ from pytest_test_categories.ports.process import (
     ProcessBlockerPort,
     SpawnAttempt,
 )
+from pytest_test_categories.ports.threading import (
+    ThreadCreationAttempt,
+    ThreadMonitorPort,
+)
 
 __all__ = [
     'BlockerState',
@@ -45,4 +50,6 @@ __all__ = [
     'NetworkBlockerPort',
     'ProcessBlockerPort',
     'SpawnAttempt',
+    'ThreadCreationAttempt',
+    'ThreadMonitorPort',
 ]
