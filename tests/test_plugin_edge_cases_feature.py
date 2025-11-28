@@ -16,10 +16,14 @@ from __future__ import annotations
 import pytest
 
 
+@pytest.mark.medium
 class DescribePluginEdgeCases:
-    """Test edge cases in plugin functionality."""
+    """Test edge cases in plugin functionality.
 
-    @pytest.mark.small
+    All tests in this class use pytester which spawns subprocesses and
+    creates files on disk - these are medium tests, not small tests.
+    """
+
     def it_handles_test_size_report_with_failures(self, pytester: pytest.Pytester) -> None:
         """It includes failed tests in the size report.
 
@@ -43,7 +47,6 @@ class DescribePluginEdgeCases:
         result.assert_outcomes(passed=1, failed=1)
         result.stdout.fnmatch_lines(['*Test Size Report*'])
 
-    @pytest.mark.small
     def it_only_validates_timing_for_call_phase(self, pytester: pytest.Pytester) -> None:
         """It validates timing only during the call phase, not setup or teardown.
 
@@ -72,7 +75,6 @@ class DescribePluginEdgeCases:
         # Test should pass even though fixture takes longer than small test limit
         result.assert_outcomes(passed=1)
 
-    @pytest.mark.small
     def it_displays_distribution_summary_in_terminal(self, pytester: pytest.Pytester) -> None:
         """It displays the distribution summary at the end of test run.
 
@@ -102,7 +104,6 @@ class DescribePluginEdgeCases:
             ]
         )
 
-    @pytest.mark.small
     def it_shows_size_label_in_test_id(self, pytester: pytest.Pytester) -> None:
         """It appends size labels to test IDs during collection.
 
@@ -122,7 +123,6 @@ class DescribePluginEdgeCases:
         result.assert_outcomes(passed=1)
         result.stdout.fnmatch_lines(['*test_example*[SMALL]*PASSED*'])
 
-    @pytest.mark.small
     def it_validates_distribution_after_collection(self, pytester: pytest.Pytester) -> None:
         """It validates test distribution and warns if out of range.
 
