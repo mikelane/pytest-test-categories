@@ -17,9 +17,10 @@ Intercepted Entry Points:
 - subprocess.check_output
 - os.system
 - os.popen
-- os.spawn* family (spawnl, spawnle, spawnlp, spawnlpe, spawnv, spawnve, spawnvp, spawnvpe)
-- os.exec* family (execl, execle, execlp, execlpe, execv, execve, execvp, execvpe)
 - multiprocessing.Process
+
+Note: The os.spawn* and os.exec* families are not currently intercepted as they
+are rarely used in modern Python code. They can be added based on user feedback.
 
 Example:
     >>> blocker = SubprocessPatchingBlocker()

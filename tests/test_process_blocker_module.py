@@ -579,3 +579,318 @@ class DescribeSpawnAttempt:
         )
 
         assert attempt1 == attempt2
+
+
+@pytest.mark.small
+class DescribeExtractCommandAndArgs:
+    """Tests for the _extract_command_and_args method."""
+
+    def it_extracts_command_from_list(self) -> None:
+        """Verify list input extracts command and args."""
+        blocker = SubprocessPatchingBlocker()
+
+        command, args = blocker._extract_command_and_args(['python', 'script.py', '--verbose'])
+
+        assert command == 'python'
+        assert args == ('script.py', '--verbose')
+
+    def it_extracts_command_from_string(self) -> None:
+        """Verify string input returns command with empty args."""
+        blocker = SubprocessPatchingBlocker()
+
+        command, args = blocker._extract_command_and_args('python script.py')
+
+        assert command == 'python script.py'
+        assert args == ()
+
+    def it_handles_empty_list(self) -> None:
+        """Verify empty list returns stringified input with empty args."""
+        blocker = SubprocessPatchingBlocker()
+
+        command, args = blocker._extract_command_and_args([])
+
+        assert command == '[]'
+        assert args == ()
+
+    def it_handles_none_input(self) -> None:
+        """Verify None input returns stringified None with empty args."""
+        blocker = SubprocessPatchingBlocker()
+
+        command, args = blocker._extract_command_and_args(None)
+
+        assert command == 'None'
+        assert args == ()
+
+    def it_handles_single_item_list(self) -> None:
+        """Verify single item list extracts command with no args."""
+        blocker = SubprocessPatchingBlocker()
+
+        command, args = blocker._extract_command_and_args(['python'])
+
+        assert command == 'python'
+        assert args == ()
+
+    def it_handles_tuple_input(self) -> None:
+        """Verify tuple input extracts command and args."""
+        blocker = SubprocessPatchingBlocker()
+
+        command, args = blocker._extract_command_and_args(('echo', 'hello', 'world'))
+
+        assert command == 'echo'
+        assert args == ('hello', 'world')
+
+
+@pytest.mark.small
+class DescribeSubprocessPatchingBlockerBlocking:
+    """Tests that verify subprocess calls are blocked for small tests."""
+
+    def it_blocks_subprocess_popen_for_small_tests(self) -> None:
+        """Verify patched subprocess.Popen raises SubprocessViolationError for small tests."""
+        blocker = SubprocessPatchingBlocker()
+        blocker.activate(TestSize.SMALL, EnforcementMode.STRICT)
+
+        try:
+            with pytest.raises(SubprocessViolationError) as exc_info:
+                subprocess.Popen(['echo', 'test'])  # noqa: S607
+
+            assert exc_info.value.method == 'subprocess.Popen'
+            assert exc_info.value.command == 'echo'
+        finally:
+            blocker.deactivate()
+
+    def it_blocks_subprocess_run_for_small_tests(self) -> None:
+        """Verify patched subprocess.run raises SubprocessViolationError for small tests."""
+        blocker = SubprocessPatchingBlocker()
+        blocker.activate(TestSize.SMALL, EnforcementMode.STRICT)
+
+        try:
+            with pytest.raises(SubprocessViolationError) as exc_info:
+                subprocess.run(['echo', 'test'], check=False)  # noqa: S607
+
+            assert exc_info.value.method == 'subprocess.run'
+            assert exc_info.value.command == 'echo'
+        finally:
+            blocker.deactivate()
+
+    def it_blocks_subprocess_call_for_small_tests(self) -> None:
+        """Verify patched subprocess.call raises SubprocessViolationError for small tests."""
+        blocker = SubprocessPatchingBlocker()
+        blocker.activate(TestSize.SMALL, EnforcementMode.STRICT)
+
+        try:
+            with pytest.raises(SubprocessViolationError) as exc_info:
+                subprocess.call(['echo', 'test'])  # noqa: S607
+
+            assert exc_info.value.method == 'subprocess.call'
+        finally:
+            blocker.deactivate()
+
+    def it_blocks_subprocess_check_call_for_small_tests(self) -> None:
+        """Verify patched subprocess.check_call raises SubprocessViolationError for small tests."""
+        blocker = SubprocessPatchingBlocker()
+        blocker.activate(TestSize.SMALL, EnforcementMode.STRICT)
+
+        try:
+            with pytest.raises(SubprocessViolationError) as exc_info:
+                subprocess.check_call(['echo', 'test'])  # noqa: S607
+
+            assert exc_info.value.method == 'subprocess.check_call'
+        finally:
+            blocker.deactivate()
+
+    def it_blocks_subprocess_check_output_for_small_tests(self) -> None:
+        """Verify patched subprocess.check_output raises SubprocessViolationError for small tests."""
+        blocker = SubprocessPatchingBlocker()
+        blocker.activate(TestSize.SMALL, EnforcementMode.STRICT)
+
+        try:
+            with pytest.raises(SubprocessViolationError) as exc_info:
+                subprocess.check_output(['echo', 'test'])  # noqa: S607
+
+            assert exc_info.value.method == 'subprocess.check_output'
+        finally:
+            blocker.deactivate()
+
+    def it_blocks_os_system_for_small_tests(self) -> None:
+        """Verify patched os.system raises SubprocessViolationError for small tests."""
+        blocker = SubprocessPatchingBlocker()
+        blocker.activate(TestSize.SMALL, EnforcementMode.STRICT)
+
+        try:
+            with pytest.raises(SubprocessViolationError) as exc_info:
+                os.system('echo test')  # noqa: S605, S607
+
+            assert exc_info.value.method == 'os.system'
+        finally:
+            blocker.deactivate()
+
+    def it_blocks_os_popen_for_small_tests(self) -> None:
+        """Verify patched os.popen raises SubprocessViolationError for small tests."""
+        blocker = SubprocessPatchingBlocker()
+        blocker.activate(TestSize.SMALL, EnforcementMode.STRICT)
+
+        try:
+            with pytest.raises(SubprocessViolationError) as exc_info:
+                os.popen('echo test')  # noqa: S605, S607
+
+            assert exc_info.value.method == 'os.popen'
+        finally:
+            blocker.deactivate()
+
+    def it_blocks_multiprocessing_process_for_small_tests(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Verify patched multiprocessing.Process.start raises SubprocessViolationError for small tests."""
+        original_process = multiprocessing.Process
+        blocker = SubprocessPatchingBlocker()
+        blocker.activate(TestSize.SMALL, EnforcementMode.STRICT)
+
+        try:
+
+            def dummy_target() -> None:
+                pass
+
+            proc = multiprocessing.Process(target=dummy_target)
+
+            # Mock the original start method so we don't actually spawn
+            # The violation should happen before super().start() is called
+            monkeypatch.setattr(original_process, 'start', lambda self: None)  # noqa: ARG005
+
+            with pytest.raises(SubprocessViolationError) as exc_info:
+                proc.start()
+
+            assert exc_info.value.method == 'multiprocessing.Process'
+            assert exc_info.value.command == 'dummy_target'
+        finally:
+            blocker.deactivate()
+
+
+@pytest.mark.medium
+class DescribeSubprocessPatchingBlockerIntegration:
+    """Integration tests that actually execute subprocess calls for medium tests."""
+
+    def it_allows_subprocess_run_for_medium_tests(self) -> None:
+        """Verify patched subprocess.run delegates to original for medium tests."""
+        blocker = SubprocessPatchingBlocker()
+        blocker.activate(TestSize.MEDIUM, EnforcementMode.STRICT)
+
+        try:
+            result = subprocess.run(['echo', 'test'], capture_output=True, text=True, check=False)  # noqa: S607
+
+            assert 'test' in result.stdout
+        finally:
+            blocker.deactivate()
+
+    def it_allows_subprocess_call_for_medium_tests(self) -> None:
+        """Verify patched subprocess.call delegates to original for medium tests."""
+        blocker = SubprocessPatchingBlocker()
+        blocker.activate(TestSize.MEDIUM, EnforcementMode.STRICT)
+
+        try:
+            exit_code = subprocess.call(['true'])  # noqa: S607
+
+            assert exit_code == 0
+        finally:
+            blocker.deactivate()
+
+    def it_allows_subprocess_check_call_for_medium_tests(self) -> None:
+        """Verify patched subprocess.check_call delegates to original for medium tests."""
+        blocker = SubprocessPatchingBlocker()
+        blocker.activate(TestSize.MEDIUM, EnforcementMode.STRICT)
+
+        try:
+            subprocess.check_call(['true'])  # noqa: S607
+        finally:
+            blocker.deactivate()
+
+    def it_allows_subprocess_check_output_for_medium_tests(self) -> None:
+        """Verify patched subprocess.check_output delegates to original for medium tests."""
+        blocker = SubprocessPatchingBlocker()
+        blocker.activate(TestSize.MEDIUM, EnforcementMode.STRICT)
+
+        try:
+            output = subprocess.check_output(['echo', 'hello'], text=True)  # noqa: S607
+
+            assert 'hello' in output
+        finally:
+            blocker.deactivate()
+
+    def it_allows_subprocess_popen_for_medium_tests(self) -> None:
+        """Verify patched subprocess.Popen delegates to original for medium tests."""
+        blocker = SubprocessPatchingBlocker()
+        blocker.activate(TestSize.MEDIUM, EnforcementMode.STRICT)
+
+        try:
+            proc = subprocess.Popen(
+                ['echo', 'popen_test'],  # noqa: S607
+                stdout=subprocess.PIPE,
+                text=True,
+            )
+            stdout, _ = proc.communicate()
+
+            assert 'popen_test' in stdout
+        finally:
+            blocker.deactivate()
+
+    def it_allows_os_system_for_medium_tests(self) -> None:
+        """Verify patched os.system delegates to original for medium tests."""
+        blocker = SubprocessPatchingBlocker()
+        blocker.activate(TestSize.MEDIUM, EnforcementMode.STRICT)
+
+        try:
+            exit_code = os.system('true')  # noqa: S605, S607
+
+            assert exit_code == 0
+        finally:
+            blocker.deactivate()
+
+    def it_allows_os_popen_for_medium_tests(self) -> None:
+        """Verify patched os.popen delegates to original for medium tests."""
+        blocker = SubprocessPatchingBlocker()
+        blocker.activate(TestSize.MEDIUM, EnforcementMode.STRICT)
+
+        try:
+            pipe = os.popen('echo popen_os_test')  # noqa: S605, S607
+            output = pipe.read()
+            pipe.close()
+
+            assert 'popen_os_test' in output
+        finally:
+            blocker.deactivate()
+
+    def it_allows_multiprocessing_process_for_medium_tests(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Verify patched multiprocessing.Process.start delegates to original for medium tests.
+
+        We mock the actual process start to avoid macOS spawn/pickling issues while
+        still testing the blocking logic path for MEDIUM tests.
+        """
+        # Store references to original classes before patching
+        original_process = multiprocessing.Process
+
+        blocker = SubprocessPatchingBlocker()
+        blocker.activate(TestSize.MEDIUM, EnforcementMode.STRICT)
+
+        try:
+
+            def dummy_target() -> None:
+                pass
+
+            # Create a process using the patched BlockingProcess
+            proc = multiprocessing.Process(target=dummy_target)
+
+            # Track whether super().start() was called
+            start_called = []
+
+            def mock_start(self: multiprocessing.Process) -> None:  # noqa: ARG001
+                start_called.append(True)
+
+            # Mock the original Process's start method to avoid pickling
+            # The BlockingProcess.start() calls super().start() which we mock
+            monkeypatch.setattr(original_process, 'start', mock_start)
+
+            # Call start - this should go through BlockingProcess.start(), check permissions,
+            # and then call super().start() (which is now mocked)
+            proc.start()
+
+            # Verify super().start() was called (meaning blocking logic allowed it)
+            assert len(start_called) == 1
+        finally:
+            blocker.deactivate()
