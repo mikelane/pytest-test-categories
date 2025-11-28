@@ -39,6 +39,7 @@ __all__ = [
     'FilesystemAccessViolationError',
     'HermeticityViolationError',
     'NetworkAccessViolationError',
+    'SubprocessViolationError',
 ]
 
 from typing import TYPE_CHECKING
@@ -314,3 +315,99 @@ class FilesystemAccessViolationError(HermeticityViolationError):
             suggestions.append('Change test category to @pytest.mark.medium (if filesystem access is required)')
             return suggestions
         return []  # Medium/Large/XLarge tests have no filesystem restrictions
+
+
+class SubprocessViolationError(HermeticityViolationError):
+    """Raised when a test attempts to spawn a subprocess.
+
+    This exception is raised when a test attempts to spawn a subprocess
+    that violates its size category's restrictions:
+    - Small tests: No subprocess spawning allowed
+    - Medium/Large/XLarge: All subprocess spawning allowed
+
+    Small tests should run in a single process according to Google's
+    test size definitions. Subprocess spawning introduces:
+    - Non-determinism from external process behavior
+    - I/O overhead from process creation
+    - Timing variability that can cause flaky tests
+
+    Attributes:
+        command: The command that was attempted.
+        command_args: The arguments passed to the command.
+        method: The method used to spawn (e.g., 'subprocess.run', 'os.system').
+
+    Example:
+        >>> raise SubprocessViolationError(
+        ...     test_size=TestSize.SMALL,
+        ...     test_nodeid='tests/test_cli.py::test_run_command',
+        ...     command='python',
+        ...     command_args=('script.py', '--verbose'),
+        ...     method='subprocess.run'
+        ... )
+
+    The error message includes:
+    - Test identification (nodeid, size category)
+    - Command and arguments details
+    - Remediation suggestions (mocking, DI, size change)
+
+    """
+
+    _adr_reference: str = 'docs/architecture/adr-003-process-isolation.md'
+
+    def __init__(
+        self,
+        test_size: TestSize,
+        test_nodeid: str,
+        command: str,
+        command_args: tuple[str, ...],
+        method: str,
+    ) -> None:
+        """Initialize a subprocess violation error.
+
+        Args:
+            test_size: The test's size category.
+            test_nodeid: The pytest node ID of the violating test.
+            command: The command that was attempted.
+            command_args: The arguments passed to the command.
+            method: The spawn method used (e.g., 'subprocess.run').
+
+        """
+        self.command = command
+        self.command_args = command_args
+        self.method = method
+
+        args_str = ' '.join(command_args) if command_args else '(no args)'
+        remediation = self._get_remediation(test_size, method)
+
+        super().__init__(
+            test_size=test_size,
+            test_nodeid=test_nodeid,
+            violation_type='Subprocess spawn attempted',
+            details=f'Attempted {method}: {command} {args_str}',
+            remediation=remediation,
+        )
+
+    @staticmethod
+    def _get_remediation(test_size: TestSize, method: str) -> list[str]:
+        """Get remediation suggestions based on test size and spawn method.
+
+        Args:
+            test_size: The test's size category.
+            method: The spawn method used.
+
+        Returns:
+            List of remediation suggestions.
+
+        """
+        if test_size == TestSize.SMALL:
+            suggestions = [
+                f'Mock {method} using pytest-mock (mocker.patch)',
+                'Use dependency injection to provide a fake command executor',
+                'Test the logic that prepares subprocess arguments, not the spawn itself',
+            ]
+            if 'pytester' in method.lower() or method == 'subprocess.run':
+                suggestions.append('Change test category to @pytest.mark.medium (pytester spawns subprocesses)')
+            else:
+                suggestions.append('Change test category to @pytest.mark.medium (if subprocess is required)')
+            return suggestions
+        return []  # Medium/Large/XLarge tests have no subprocess restrictions

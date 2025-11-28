@@ -40,6 +40,7 @@ import pytest
 
 from pytest_test_categories.adapters.filesystem import FilesystemPatchingBlocker
 from pytest_test_categories.adapters.network import SocketPatchingNetworkBlocker
+from pytest_test_categories.adapters.process import SubprocessPatchingBlocker
 from pytest_test_categories.adapters.pytest_adapter import (
     PytestConfigAdapter,
     PytestItemAdapter,
@@ -220,16 +221,17 @@ def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None) -> 
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_call(item: pytest.Item) -> Generator[None, None, None]:
-    """Block network and filesystem access for small tests during execution.
+    """Block network, filesystem, and subprocess access for small tests during execution.
 
     This hook enforces resource isolation for small tests based on the
     enforcement configuration. When enforcement is enabled (strict or warn):
     - Small tests will have network access blocked
     - Small tests will have filesystem access blocked (except allowed paths)
+    - Small tests will have subprocess spawning blocked
     - Medium/large/xlarge tests are not affected
 
-    Uses ExitStack pattern to manage both network and filesystem blockers
-    together, ensuring proper cleanup even if exceptions occur.
+    Uses ExitStack pattern to manage all resource blockers together,
+    ensuring proper cleanup even if exceptions occur.
 
     Args:
         item: The test item being executed.
@@ -268,6 +270,12 @@ def pytest_runtest_call(item: pytest.Item) -> Generator[None, None, None]:
         allowed_paths = _get_allowed_paths(item)
         filesystem_blocker.activate(test_size, enforcement_mode, allowed_paths)
         stack.callback(_safe_deactivate_filesystem, filesystem_blocker)
+
+        # Activate process blocker
+        process_blocker = _get_process_blocker(item.config)
+        process_blocker.current_test_nodeid = item.nodeid
+        process_blocker.activate(test_size, enforcement_mode)
+        stack.callback(_safe_deactivate_process, process_blocker)
 
         yield
 
@@ -449,6 +457,39 @@ def _safe_deactivate_filesystem(blocker: FilesystemPatchingBlocker) -> None:
 
     Args:
         blocker: The filesystem blocker to deactivate.
+
+    """
+    if blocker.state.value == 'active':
+        blocker.deactivate()
+
+
+def _get_process_blocker(config: pytest.Config) -> SubprocessPatchingBlocker:
+    """Get or create the process blocker instance.
+
+    The blocker is stored on the config object to ensure proper lifecycle
+    management across test execution.
+
+    Args:
+        config: The pytest configuration object.
+
+    Returns:
+        The SubprocessPatchingBlocker instance.
+
+    """
+    blocker_attr = '_test_categories_process_blocker'
+    if not hasattr(config, blocker_attr):
+        blocker = SubprocessPatchingBlocker()
+        setattr(config, blocker_attr, blocker)
+    return cast('SubprocessPatchingBlocker', getattr(config, blocker_attr))
+
+
+def _safe_deactivate_process(blocker: SubprocessPatchingBlocker) -> None:
+    """Safely deactivate process blocker, handling edge cases.
+
+    This function is used as a callback in ExitStack to ensure cleanup.
+
+    Args:
+        blocker: The process blocker to deactivate.
 
     """
     if blocker.state.value == 'active':

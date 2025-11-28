@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Process Isolation**: New `SubprocessViolationError` exception and `ProcessBlockerPort` interface for blocking subprocess spawning in small tests (#101)
+  - Intercepts `subprocess.Popen`, `subprocess.run`, `subprocess.call`, `subprocess.check_call`, `subprocess.check_output`
+  - Intercepts `os.system`, `os.popen`
+  - Intercepts `multiprocessing.Process`
+  - Provides actionable error messages with remediation guidance
+  - Architecture Decision Record (ADR-003) documenting the design
 - **Filesystem Isolation Design**: Architecture Decision Record (ADR-002) documenting the design for filesystem isolation in small tests (#91, #95)
 - **Filesystem Isolation Documentation**: Comprehensive documentation for the filesystem isolation feature including:
   - User guide explaining filesystem isolation concepts and usage (#94)
