@@ -186,8 +186,8 @@ class DescribePytestAddoption:
         pytest_addoption(parser)
 
         parser.getgroup.assert_called_once_with('test-categories')
-        # Now adds two options: --test-size-report and --test-categories-enforcement
-        assert group.addoption.call_count == 2
+        # Now adds three options: --test-size-report, --test-categories-enforcement, --test-categories-allowed-paths
+        assert group.addoption.call_count == 3
         # Find the test-size-report call
         test_size_report_call = None
         for call in group.addoption.call_args_list:
@@ -222,11 +222,52 @@ class DescribePytestAddoption:
 
         pytest_addoption(parser)
 
-        parser.addini.assert_called_once_with(
-            'test_categories_enforcement',
-            help='Enforcement mode for test hermeticity: off (default), warn, or strict',
-            default='off',
+        # Find the enforcement ini call
+        enforcement_ini_call = None
+        for call in parser.addini.call_args_list:
+            if call[0][0] == 'test_categories_enforcement':
+                enforcement_ini_call = call
+                break
+        assert enforcement_ini_call is not None
+        assert (
+            enforcement_ini_call[1]['help'] == 'Enforcement mode for test hermeticity: off (default), warn, or strict'
         )
+        assert enforcement_ini_call[1]['default'] == 'off'
+
+    def it_registers_allowed_paths_ini_option(self) -> None:
+        """Test that pytest_addoption registers the allowed paths ini option."""
+        parser = Mock()
+        group = Mock()
+        parser.getgroup.return_value = group
+
+        pytest_addoption(parser)
+
+        # Find the allowed paths ini call
+        allowed_paths_call = None
+        for call in parser.addini.call_args_list:
+            if call[0][0] == 'test_categories_allowed_paths':
+                allowed_paths_call = call
+                break
+        assert allowed_paths_call is not None
+        assert allowed_paths_call[1]['type'] == 'pathlist'
+        assert allowed_paths_call[1]['default'] == []
+
+    def it_adds_allowed_paths_cli_option(self) -> None:
+        """Test that pytest_addoption adds the allowed paths CLI option."""
+        parser = Mock()
+        group = Mock()
+        parser.getgroup.return_value = group
+
+        pytest_addoption(parser)
+
+        # Find the allowed paths call
+        allowed_paths_call = None
+        for call in group.addoption.call_args_list:
+            if call[0][0] == '--test-categories-allowed-paths':
+                allowed_paths_call = call
+                break
+        assert allowed_paths_call is not None
+        assert 'Comma-separated paths' in allowed_paths_call[1]['help']
 
 
 @pytest.mark.small

@@ -27,7 +27,10 @@ that are easy to understand and maintain.
 
 from __future__ import annotations
 
+import tempfile
 from collections import defaultdict
+from contextlib import ExitStack
+from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     cast,
@@ -35,6 +38,7 @@ from typing import (
 
 import pytest
 
+from pytest_test_categories.adapters.filesystem import FilesystemPatchingBlocker
 from pytest_test_categories.adapters.network import SocketPatchingNetworkBlocker
 from pytest_test_categories.adapters.pytest_adapter import (
     PytestConfigAdapter,
@@ -69,8 +73,9 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     """Add plugin-specific command-line options.
 
     This hook registers the --test-size-report option that controls
-    whether and how test size reports are generated, and the
-    --test-categories-enforcement option for network blocking control.
+    whether and how test size reports are generated, the
+    --test-categories-enforcement option for resource blocking control,
+    and the --test-categories-allowed-paths option for filesystem access.
 
     Args:
         parser: The pytest command-line option parser.
@@ -93,11 +98,23 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         choices=['off', 'warn', 'strict'],
         help='Set enforcement mode for test hermeticity (off, warn, strict). Overrides ini option.',
     )
+    group.addoption(
+        '--test-categories-allowed-paths',
+        action='store',
+        default=None,
+        help='Comma-separated paths allowed for filesystem access in small tests. Extends ini option.',
+    )
 
     parser.addini(
         'test_categories_enforcement',
         help='Enforcement mode for test hermeticity: off (default), warn, or strict',
         default='off',
+    )
+    parser.addini(
+        'test_categories_allowed_paths',
+        type='pathlist',
+        help='Paths allowed for filesystem access in small tests (extends default temp paths)',
+        default=[],
     )
 
 
@@ -203,14 +220,16 @@ def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None) -> 
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_call(item: pytest.Item) -> Generator[None, None, None]:
-    """Block network access for small tests during execution.
+    """Block network and filesystem access for small tests during execution.
 
-    This hook enforces network isolation for small tests based on the
+    This hook enforces resource isolation for small tests based on the
     enforcement configuration. When enforcement is enabled (strict or warn):
     - Small tests will have network access blocked
+    - Small tests will have filesystem access blocked (except allowed paths)
     - Medium/large/xlarge tests are not affected
 
-    The blocker uses socket patching to intercept connection attempts.
+    Uses ExitStack pattern to manage both network and filesystem blockers
+    together, ensuring proper cleanup even if exceptions occur.
 
     Args:
         item: The test item being executed.
@@ -235,16 +254,22 @@ def pytest_runtest_call(item: pytest.Item) -> Generator[None, None, None]:
         yield
         return
 
-    blocker = _get_network_blocker(item.config)
-    blocker.current_test_nodeid = item.nodeid
+    # Use ExitStack for combined resource blocking
+    with ExitStack() as stack:
+        # Activate network blocker
+        network_blocker = _get_network_blocker(item.config)
+        network_blocker.current_test_nodeid = item.nodeid
+        network_blocker.activate(test_size, enforcement_mode)
+        stack.callback(_safe_deactivate_network, network_blocker)
 
-    try:
-        blocker.activate(test_size, enforcement_mode)
+        # Activate filesystem blocker
+        filesystem_blocker = _get_filesystem_blocker(item.config)
+        filesystem_blocker.current_test_nodeid = item.nodeid
+        allowed_paths = _get_allowed_paths(item)
+        filesystem_blocker.activate(test_size, enforcement_mode, allowed_paths)
+        stack.callback(_safe_deactivate_filesystem, filesystem_blocker)
+
         yield
-    finally:
-        # Always deactivate to restore socket behavior
-        if blocker.state.value == 'active':
-            blocker.deactivate()
 
 
 @pytest.hookimpl(hookwrapper=True)
@@ -382,3 +407,94 @@ def _get_network_blocker(config: pytest.Config) -> SocketPatchingNetworkBlocker:
         blocker = SocketPatchingNetworkBlocker()
         setattr(config, blocker_attr, blocker)
     return cast('SocketPatchingNetworkBlocker', getattr(config, blocker_attr))
+
+
+def _get_filesystem_blocker(config: pytest.Config) -> FilesystemPatchingBlocker:
+    """Get or create the filesystem blocker instance.
+
+    The blocker is stored on the config object to ensure proper lifecycle
+    management across test execution.
+
+    Args:
+        config: The pytest configuration object.
+
+    Returns:
+        The FilesystemPatchingBlocker instance.
+
+    """
+    blocker_attr = '_test_categories_filesystem_blocker'
+    if not hasattr(config, blocker_attr):
+        blocker = FilesystemPatchingBlocker()
+        setattr(config, blocker_attr, blocker)
+    return cast('FilesystemPatchingBlocker', getattr(config, blocker_attr))
+
+
+def _safe_deactivate_network(blocker: SocketPatchingNetworkBlocker) -> None:
+    """Safely deactivate network blocker, handling edge cases.
+
+    This function is used as a callback in ExitStack to ensure cleanup.
+
+    Args:
+        blocker: The network blocker to deactivate.
+
+    """
+    if blocker.state.value == 'active':
+        blocker.deactivate()
+
+
+def _safe_deactivate_filesystem(blocker: FilesystemPatchingBlocker) -> None:
+    """Safely deactivate filesystem blocker, handling edge cases.
+
+    This function is used as a callback in ExitStack to ensure cleanup.
+
+    Args:
+        blocker: The filesystem blocker to deactivate.
+
+    """
+    if blocker.state.value == 'active':
+        blocker.deactivate()
+
+
+def _get_allowed_paths(item: pytest.Item) -> frozenset[Path]:
+    """Get the set of allowed filesystem paths for a test item.
+
+    This function computes the allowed paths from:
+    1. System temp directory (always allowed)
+    2. pytest's basetemp directory (where tmp_path is created)
+    3. User-configured paths from ini file
+    4. User-configured paths from CLI option
+
+    Args:
+        item: The test item being executed.
+
+    Returns:
+        A frozenset of Path objects that are allowed for filesystem access.
+
+    """
+    config = item.config
+    allowed: set[Path] = set()
+
+    # System temp directory is always allowed
+    allowed.add(Path(tempfile.gettempdir()).resolve())
+
+    # pytest's basetemp (where tmp_path fixture creates directories)
+    basetemp = config.getoption('basetemp', default=None)
+    if basetemp:
+        allowed.add(Path(basetemp).resolve())
+
+    # User-configured allowed paths from ini file (pathlist type)
+    ini_paths = config.getini('test_categories_allowed_paths')
+    if ini_paths:
+        for ini_path in ini_paths:
+            # ini pathlist returns Path objects, resolve them
+            allowed.add(Path(ini_path).resolve())
+
+    # User-configured allowed paths from CLI (comma-separated string)
+    cli_paths = config.getoption('--test-categories-allowed-paths', default=None)
+    if cli_paths:
+        for path_str in cli_paths.split(','):
+            stripped_path = path_str.strip()
+            if stripped_path:
+                allowed.add(Path(stripped_path).expanduser().resolve())
+
+    return frozenset(allowed)
