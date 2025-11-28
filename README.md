@@ -132,58 +132,78 @@ The plugin hooks into several pytest phases to:
 | Medium       | 15%               | 5%        |
 | Large/XLarge | 5%                | 3%        |
 
-## Network Isolation
+## Resource Isolation
 
-The plugin enforces network isolation for small tests to ensure test hermeticity. When enabled, small tests that attempt network access will fail immediately or emit warnings, depending on the enforcement mode.
+The plugin enforces resource isolation for small tests to ensure test hermeticity. When enabled, small tests that attempt network or filesystem access will fail immediately or emit warnings, depending on the enforcement mode.
 
-| Test Size | Network Access |
-|-----------|---------------|
-| Small     | **Blocked** - Must be hermetic |
-| Medium    | Allowed |
-| Large     | Allowed |
-| XLarge    | Allowed |
+| Test Size | Network Access | Filesystem Access |
+|-----------|---------------|-------------------|
+| Small     | **Blocked** | **Blocked*** |
+| Medium    | Allowed | Allowed |
+| Large     | Allowed | Allowed |
+| XLarge    | Allowed | Allowed |
+
+*Small tests can access `tmp_path`, system temp directories, and configured allowed paths.
 
 ### Configuration
 
-Network isolation enforcement is configured via `pyproject.toml`:
+Resource isolation enforcement is configured via `pyproject.toml`:
 
 ```toml
 [tool.pytest.ini_options]
 # Enforcement modes: "strict", "warn", "off"
 test_categories_enforcement = "strict"
+
+# Additional allowed paths for filesystem access in small tests
+test_categories_allowed_paths = [
+    "tests/fixtures/",
+]
 ```
 
 Or via command line (CLI option takes precedence over ini setting):
 
 ```bash
 pytest --test-categories-enforcement=strict
+pytest --test-categories-allowed-paths=tests/fixtures/
 ```
 
 ### Enforcement Modes
 
 | Mode | Behavior |
 |------|----------|
-| `strict` | Fail tests immediately on network violations |
+| `strict` | Fail tests immediately on violations |
 | `warn` | Emit warnings but allow tests to continue |
-| `off` | Disable network isolation enforcement (default) |
+| `off` | Disable isolation enforcement (default) |
 
 ### Per-Test Override (Planned)
 
-The `allow_network` marker will allow network access for specific tests:
+The `allow_network` and `allow_filesystem` markers will allow access for specific tests:
 
 ```python
 @pytest.mark.small
 @pytest.mark.allow_network  # Planned - not yet available
-def test_special_case():
+def test_special_case_network():
+    ...
+
+@pytest.mark.small
+@pytest.mark.allow_filesystem  # Planned - not yet available
+def test_special_case_filesystem():
     ...
 ```
 
 ### Documentation
 
+**Network Isolation:**
 - [User Guide: Network Isolation](docs/user-guide/network-isolation.md)
 - [Troubleshooting: Network Violations](docs/troubleshooting/network-violations.md)
 - [Examples: Network Isolation](docs/examples/network-isolation.md)
 - [ADR-001: Network Isolation Architecture](docs/architecture/adr-001-network-isolation.md)
+
+**Filesystem Isolation:**
+- [User Guide: Filesystem Isolation](docs/user-guide/filesystem-isolation.md)
+- [Troubleshooting: Filesystem Violations](docs/troubleshooting/filesystem-violations.md)
+- [Examples: Filesystem Isolation](docs/examples/filesystem-isolation.md)
+- [ADR-002: Filesystem Isolation Architecture](docs/architecture/adr-002-filesystem-isolation.md)
 
 ## Project Resources
 

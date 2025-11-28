@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - TBD
+
+### Added
+
+- **Filesystem Isolation Design**: Architecture Decision Record (ADR-002) documenting the design for filesystem isolation in small tests (#91, #95)
+- **Filesystem Isolation Documentation**: Comprehensive documentation for the filesystem isolation feature including:
+  - User guide explaining filesystem isolation concepts and usage (#94)
+  - Troubleshooting guide for filesystem violations (#94)
+  - Examples demonstrating common patterns and fixes (#94)
+  - Configuration reference for allowed paths (#94)
+- **Configuration Options**: New configuration options for filesystem isolation (planned implementation):
+  - `test_categories_allowed_paths` ini option for configuring allowed filesystem paths
+  - `--test-categories-allowed-paths` CLI option for command-line configuration
+  - Per-test markers `@pytest.mark.allow_filesystem` and `@pytest.mark.allow_filesystem_paths` (planned)
+
+### Documentation
+
+- Updated user guide index with filesystem isolation information
+- Updated troubleshooting index with filesystem violations guide
+- Updated examples index with filesystem isolation examples
+- Updated configuration reference with new filesystem options
+- Added filesystem column to test size markers quick reference table
+
 ## [0.4.0] - 2025-11-27
 
 ### BREAKING CHANGE

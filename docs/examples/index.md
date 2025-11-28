@@ -8,6 +8,7 @@ This section provides practical examples of using pytest-test-categories in vari
 :maxdepth: 2
 
 network-isolation
+filesystem-isolation
 ```
 
 ## Quick Examples
