@@ -16,6 +16,7 @@ jobs:
   build:
     name: Build distribution
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       actions: write
@@ -90,6 +91,7 @@ jobs:
     name: Publish to TestPyPI
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     if: inputs.validate_testpypi
     environment:
       name: testpypi
@@ -119,6 +121,7 @@ jobs:
     name: Validate (${{ matrix.os }}, Python ${{ matrix.python-version }})
     needs: [build, publish-testpypi]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
     if: inputs.validate_testpypi
     permissions:
       contents: read
@@ -126,7 +129,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ['3.11', '3.12', '3.13']
+        python-version: ['3.11', '3.12', '3.13', '3.14']
 
     steps:
       - name: Set up Python ${{ matrix.python-version }}
@@ -182,6 +185,7 @@ jobs:
     name: TestPyPI Validation Summary
     needs: [build, publish-testpypi, validate-testpypi]
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     if: always() && inputs.validate_testpypi
     permissions:
       contents: read
