@@ -35,6 +35,14 @@ This is a pytest plugin that enforces test timing constraints and validates test
    - Documentation is code - treat it with the same rigor
    - Never merge a PR with outdated documentation
 
+5. **Book Content Updates**: This project is part of the "Effective Testing with Python" book ecosystem
+   - Location: `/Users/mikelane/dev/effective-testing-with-python/`
+   - When making **significant design decisions**, add an entry to `design-decisions/` using the template
+   - When discovering **key insights or quotable content**, add to `notes/key-insights.md`
+   - When changing **how tools integrate**, update `notes/tool-ecosystem.md`
+   - Design decisions become book content — document the "why" not just the "what"
+   - This is NOT required for routine bug fixes or minor changes
+
 ## Development Commands
 
 ### Installation

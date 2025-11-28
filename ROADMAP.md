@@ -4,331 +4,396 @@ This document outlines the vision, goals, and planned milestones for pytest-test
 
 ## Vision (2-3 Years)
 
-**Become the de facto standard for test categorization and timing enforcement in the Python ecosystem**, enabling teams to maintain fast, reliable test suites that follow industry best practices.
+**Become the de facto standard for test categorization, timing enforcement, and resource isolation in the Python ecosystem**, enabling teams to maintain fast, reliable, hermetic test suites that follow Google's "Software Engineering at Google" best practices.
+
+### Strategic Position
+
+pytest-test-categories is the **foundational component** of a commercial Python testing ecosystem:
+
+```
+┌─────────────────────┐     ┌─────────────────────┐     ┌─────────────────────┐
+│  pytest-test-       │     │  pytest-test-       │     │  [mutation          │
+│  categories         │     │  impact             │     │  testing tool]      │
+│                     │     │                     │     │                     │
+│  "Which tests are   │     │  "Which tests cover │     │  "Are my tests      │
+│   fast/hermetic?"   │     │   this code?"       │     │   catching bugs?"   │
+│                     │     │                     │     │                     │
+└─────────┬───────────┘     └──────────┬──────────┘     └──────────┬──────────┘
+          │                            │                           │
+          └────────────────┬───────────┴───────────────────────────┘
+                           │
+                           ▼
+                 ┌─────────────────────┐
+                 │      dioxide        │
+                 │  "How do I write    │
+                 │   testable code?"   │
+                 └─────────────────────┘
+```
+
+**The killer integration:**
+```bash
+# Mutation test using only fast, hermetic tests that cover the changed code
+pytest --mutate --impacted-by-diff origin/main -m small
+```
+
+This integration provides 10x faster mutation testing by combining:
+- **Test size filtering** (pytest-test-categories): Only run fast tests
+- **Impact analysis** (pytest-test-impact): Only run tests that cover mutated code
+- **Hermeticity enforcement** (pytest-test-categories): Ensure reliable, non-flaky results
 
 ### Strategic Goals
 
-1. **Ubiquity**: Widely adopted by Python projects for test organization
-2. **Best Practices**: Promote Google's test size philosophy across the Python community
-3. **Integration**: Seamless integration with popular testing tools and CI/CD platforms
-4. **Performance**: Zero-overhead test categorization and timing
-5. **Extensibility**: Pluggable architecture for custom test categories and constraints
+1. **Foundation**: Be the cornerstone of the commercial Python testing ecosystem
+2. **Hermeticity**: Enforce resource isolation so small tests are truly hermetic
+3. **Best Practices**: Promote Google's test size philosophy across the Python community
+4. **Integration**: Enable seamless integration with pytest-test-impact and mutation testing
+5. **Performance**: Zero-overhead test categorization and timing
+6. **Extensibility**: Pluggable architecture for custom categories and resource policies
 
 ## Current State (v0.3.0)
 
 ### Completed Capabilities
 
 - ✅ Four test size categories (small, medium, large, xlarge)
-- ✅ Timing enforcement with configurable limits
-- ✅ Distribution validation with target percentages
+- ✅ Timing enforcement with fixed limits (1s/300s/900s)
+- ✅ Distribution validation with target percentages (80/15/5)
 - ✅ Test size reporting (basic and detailed)
 - ✅ Base test classes for easy categorization
 - ✅ Comprehensive test coverage (100%)
-- ✅ CI/CD pipeline with multi-version Python support
+- ✅ CI/CD pipeline with multi-version Python support (3.11, 3.12, 3.13, 3.14)
 - ✅ Pre-commit hooks for quality enforcement
+- ✅ Hexagonal architecture (WallTimer/FakeTimer adapters)
 
 ### Known Limitations
 
+- No resource isolation enforcement (network, filesystem, sleep)
 - Fixed time limits (not user-configurable)
 - Limited reporting formats (terminal only)
-- No integration with test result databases
+- No integration with test impact analysis
 - No parallel execution optimization
 - No custom category support
-- Limited pytest-xdist integration
 
-## Quarterly Goals
+## Revised Timeline (Velocity-Based)
 
-### Q1 2025: Stability and Configuration
+Based on realistic development velocity (10-15 hours/week with Claude Code assistance):
 
-**Theme**: Make pytest-test-categories production-ready for early adopters
+### Phase 1: Resource Isolation (Q4 2025)
+**Target: v0.4.0 - v0.6.0**
 
-**Goals**:
-1. Achieve stable 1.0 release
-2. Enable user configuration of time limits
-3. Improve documentation and onboarding
-4. Establish community feedback channels
+This is the **critical differentiator** that makes pytest-test-categories valuable for mutation testing integration.
 
-**Success Metrics**:
-- 100+ GitHub stars
-- 10+ external contributors
-- 5+ production deployments
-- Zero critical bugs in backlog
+**Scope:**
+- Network access blocking for small tests
+- Filesystem access blocking for small tests
+- `time.sleep()` blocking for small tests
+- Enforcement modes: `warn` (default) and `strict`
+- Clear error messages with remediation guidance
 
-### Q2 2025: Integration and Extensibility
+**Why First:**
+- Creates the "moat" around the commercial ecosystem
+- Small tests must be hermetic for reliable mutation testing
+- Enables the killer integration with pytest-test-impact
 
-**Theme**: Integrate with the broader Python testing ecosystem
+### Phase 2: Configuration & Polish (Q1 2026)
+**Target: v0.7.0 - v0.9.0**
 
-**Goals**:
-1. Add pytest-xdist parallel execution support
-2. Integrate with popular test result dashboards
-3. Support custom test categories
-4. Improve performance for large test suites
+**Scope:**
+- User-configurable time limits via pytest configuration
+- Per-category configuration
+- JSON/XML report export for CI integration
+- Documentation overhaul with real-world examples
+- Migration guides from v0.x
 
-**Success Metrics**:
-- 500+ GitHub stars
-- 25+ external contributors
-- Integration with at least 2 test dashboards
-- Sub-1% performance overhead
+### Phase 3: v1.0 Stable Release (Late January 2026)
+**Target: v1.0.0**
 
-### Q3 2025: Adoption and Ecosystem
-
-**Theme**: Drive adoption and build ecosystem
-
-**Goals**:
-1. Create plugin ecosystem for specialized domains
-2. Develop IDE integrations (VS Code, PyCharm)
-3. Build comprehensive tutorial content
-4. Establish partnerships with popular Python projects
-
-**Success Metrics**:
-- 1000+ GitHub stars
-- 50+ external contributors
-- 5+ ecosystem plugins
-- Featured in major Python testing resources
-
-### Q4 2025: Advanced Features
-
-**Theme**: Advanced capabilities for sophisticated test suites
-
-**Goals**:
-1. Machine learning-based test categorization suggestions
-2. Automated flaky test detection
-3. Test impact analysis
-4. Advanced distribution analytics
-
-**Success Metrics**:
-- 2000+ GitHub stars
-- 100+ external contributors
-- Used by at least one major open source project
-- Speaking slot at major Python conference
-
-## Milestones
-
-### Milestone: v1.0.0 - Stable Release (Target: March 2025)
-
-**Acceptance Criteria**:
-- [ ] Configurable time limits via pytest configuration
-- [ ] Comprehensive user documentation
-- [ ] Migration guide from v0.x
+**Acceptance Criteria:**
+- [ ] Resource isolation enforcement (network, filesystem, sleep)
+- [ ] Configurable time limits and tolerances
+- [ ] Comprehensive documentation
 - [ ] Production deployment case studies
-- [ ] Zero known critical or high-priority bugs
+- [ ] Zero known critical bugs
 - [ ] Security audit completed
 - [ ] Performance benchmarks published
 
-**Deliverables**:
-- User configuration for time limits and tolerances
-- Detailed migration guide
-- Production readiness checklist
-- Security policy and vulnerability reporting process
-- Performance benchmarking suite
+### Phase 4: Ecosystem Integration (Q2-Q3 2026)
+**Target: v1.1.0 - v1.3.0**
 
-### Milestone: v1.1.0 - Parallel Execution (Target: May 2025)
+**Scope:**
+- Integration with pytest-test-impact
+- pytest-xdist parallel execution support
+- Dashboard integrations (Allure, ReportPortal)
+- Historical trend tracking
 
-**Acceptance Criteria**:
-- [ ] Full pytest-xdist compatibility
-- [ ] Per-worker timer isolation
-- [ ] Correct distribution validation in parallel mode
-- [ ] Performance improvement with parallel execution
-- [ ] Documentation for parallel usage
+### Phase 5: Advanced Features (Q4 2026+)
+**Target: v2.0.0**
 
-**Deliverables**:
-- pytest-xdist integration module
-- Parallel execution test suite
-- Performance comparison documentation
-- Best practices guide for parallel testing
+**Scope:**
+- Custom test categories
+- dioxide DI integration (automatic faking for small tests)
+- ML-based test categorization suggestions
+- Flaky test detection
 
-### Milestone: v1.2.0 - Dashboard Integration (Target: July 2025)
+## Resource Isolation Feature (Priority #1)
 
-**Acceptance Criteria**:
-- [ ] JSON/XML report export
-- [ ] Integration with Allure
-- [ ] Integration with ReportPortal or Tesults
-- [ ] Historical trend tracking
-- [ ] Customizable report formats
+### The Problem
 
-**Deliverables**:
-- Multiple report format exporters
-- Dashboard integration adapters
-- Visualization templates
-- Integration guides for popular dashboards
+Small tests should be **hermetic** — producing the same result at 3am on Sunday or during peak traffic on Black Friday. Currently, pytest-test-categories only enforces timing; a "small" test can still:
 
-### Milestone: v1.3.0 - Custom Categories (Target: September 2025)
+- Make network requests (flaky, slow)
+- Write to the filesystem (side effects, race conditions)
+- Call `time.sleep()` (slow, timing-dependent)
 
-**Acceptance Criteria**:
-- [ ] User-defined test categories
-- [ ] Configurable category constraints
-- [ ] Category composition (inheritance/mixing)
-- [ ] Category validation API
-- [ ] Migration path for custom categories
+### The Solution
 
-**Deliverables**:
-- Category definition API
-- Category configuration schema
-- Examples for common custom categories
-- Testing utilities for custom categories
+**Enforcement mode** that blocks prohibited resources for small tests:
 
-### Milestone: v2.0.0 - Advanced Analytics (Target: December 2025)
+```toml
+# pyproject.toml
+[tool.pytest.ini_options]
+test_categories_enforcement = "strict"  # or "warn" (default)
 
-**Acceptance Criteria**:
-- [ ] ML-based test categorization suggestions
-- [ ] Flaky test detection
-- [ ] Test impact analysis
-- [ ] Historical performance trends
-- [ ] Actionable optimization recommendations
+# small tests will FAIL if they:
+# - Make network connections
+# - Access filesystem outside allowed paths
+# - Call time.sleep()
+```
 
-**Deliverables**:
-- ML model for test categorization
-- Flaky test detection algorithm
-- Impact analysis engine
-- Analytics dashboard templates
-- Optimization recommendation engine
+### Design Principles
+
+1. **Enforcement over magic**: When a test fails because it accessed the network, the developer learns something. Silent fakes teach nothing.
+
+2. **Gradual adoption**: `warn` mode lets teams see violations without breaking CI. `strict` mode enforces compliance.
+
+3. **Clear errors**: Error messages explain WHY the resource is blocked and HOW to fix it (mock the dependency, use a test double, or change the test size).
+
+4. **No hidden behavior**: Unlike automatic DI injection, enforcement is explicit and predictable.
+
+### Implementation Approach
+
+Using Python's import hooks and monkey-patching (similar to `gevent`):
+
+```python
+# Conceptual implementation
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_call(item):
+    if is_small_test(item) and enforcement_enabled():
+        with block_network(), block_filesystem(), block_sleep():
+            yield
+    else:
+        yield
+```
+
+### Resource Blocking Strategies
+
+| Resource | Strategy | Fallback |
+|----------|----------|----------|
+| Network | Patch `socket.socket` | Raise `HermeticityViolationError` |
+| Filesystem | Patch `open`, `pathlib.Path` | Allow only temp dirs |
+| Sleep | Patch `time.sleep` | Raise or warn |
+
+### Future: dioxide Integration
+
+After enforcement is mature, **optional** DI integration:
+
+```python
+# Future feature - NOT in v1.0
+@pytest.mark.small  # dioxide auto-injects FakeHttpClient, FakeFileSystem
+def test_user_creation(user_service: UserService):
+    ...
+```
+
+This is a **premium feature** that depends on dioxide adoption.
+
+## pytest-test-impact Integration
+
+### The Value Proposition
+
+When pytest-test-impact is available, pytest-test-categories enables:
+
+```bash
+# Run only small tests that cover changed code
+pytest --impacted-by-diff origin/main -m small
+```
+
+### Integration Points
+
+1. **Size-filtered impact queries**: "Which small tests cover this file?"
+2. **Combined CI optimization**: Fast feedback on small tests, then medium/large
+3. **Mutation testing acceleration**: Only run fast, relevant tests against mutations
+
+### Implementation
+
+pytest-test-impact will query pytest-test-categories for test size metadata:
+
+```python
+# pytest-test-impact queries test sizes
+tests = impact_map.get_tests_for_line("src/auth/login.py", 42)
+small_tests = [t for t in tests if categories.get_size(t) == TestSize.SMALL]
+```
+
+## Mutation Testing Integration
+
+### The Killer Combo
+
+```bash
+pytest --mutate --impacted-by-diff origin/main -m small
+```
+
+This command:
+1. Finds code changed from `origin/main`
+2. Generates mutations for changed lines
+3. Queries pytest-test-impact for tests covering those lines
+4. Filters to only `@pytest.mark.small` tests (via pytest-test-categories)
+5. Runs those tests against mutations
+6. Reports mutation score
+
+**Result**: Mutation testing in 2 minutes instead of 2 hours.
+
+### Why This Matters
+
+pytest-test-categories is the **moat** around the commercial mutation testing tool:
+
+- Without test sizes: Must run all tests against all mutations (slow)
+- With test sizes: Run only fast, hermetic tests (10x faster)
+- With hermeticity enforcement: Results are reliable (no flakes)
 
 ## Feature Backlog
 
-### High Priority
+### High Priority (v1.0 Requirements)
 
-1. **Configurable Time Limits**
+1. **Resource Isolation Enforcement**
+   - Network blocking for small tests
+   - Filesystem blocking for small tests
+   - Sleep blocking for small tests
+   - `warn` and `strict` enforcement modes
+   - Clear error messages with remediation
+
+2. **Configurable Time Limits**
    - Allow users to override default limits
    - Support per-category configuration
    - Validate configuration at startup
 
-2. **Parallel Execution Support**
-   - Ensure thread-safe timer state
-   - Correct distribution validation with pytest-xdist
-   - Per-worker reporting aggregation
-
 3. **Enhanced Reporting**
    - JSON export for CI integration
    - JUnit XML format with size metadata
-   - HTML report generation
-   - CSV export for analysis
+   - Hermeticity violation reports
 
 4. **Documentation Improvements**
-   - Interactive tutorials
-   - Video walkthroughs
+   - Resource isolation guide
+   - Migration from v0.x guide
    - Real-world case studies
-   - Migration guides
+   - Integration guides
 
-### Medium Priority
+### Medium Priority (v1.x)
 
-5. **Custom Test Categories**
-   - User-defined categories beyond small/medium/large/xlarge
-   - Category constraints (time, resource usage, network access)
-   - Category inheritance and composition
+5. **pytest-test-impact Integration**
+   - Size metadata API for impact queries
+   - Combined filtering examples
+   - CI optimization patterns
 
-6. **IDE Integration**
-   - VS Code extension for test categorization
-   - PyCharm plugin for size visualization
-   - Test size indicators in editor
+6. **Parallel Execution Support**
+   - Full pytest-xdist compatibility
+   - Per-worker timer isolation
+   - Correct distribution validation
 
-7. **CI/CD Integration**
-   - GitHub Actions for automated categorization
-   - GitLab CI integration
-   - Jenkins plugin
-   - BuildKite integration
+7. **Dashboard Integration**
+   - Allure integration
+   - ReportPortal integration
+   - Historical trend tracking
 
-8. **Performance Optimization**
-   - Lazy timer initialization
-   - Cached distribution validation
-   - Minimal overhead mode
+### Low Priority (v2.0+)
 
-### Low Priority
+8. **Custom Test Categories**
+   - User-defined categories
+   - Custom resource policies
+   - Category inheritance
 
-9. **Advanced Distribution Analysis**
-   - Historical distribution tracking
-   - Distribution trend visualization
-   - Anomaly detection
-   - Optimization recommendations
+9. **dioxide Integration**
+   - Automatic test double injection
+   - Profile-based configuration
+   - Premium feature tier
 
-10. **Ecosystem Plugins**
-    - Django test categorization
-    - Flask test categorization
-    - Async test handling
-    - Database test helpers
+10. **Advanced Analytics**
+    - ML-based categorization suggestions
+    - Flaky test detection
+    - Optimization recommendations
 
-11. **Machine Learning Features**
-    - Auto-categorization suggestions
-    - Flaky test prediction
-    - Optimal distribution recommendations
-    - Test execution time prediction
+## Milestones
 
-12. **Developer Experience**
-    - Interactive CLI for test exploration
-    - Test size migration assistant
-    - Performance profiling tools
-    - Debugging utilities
+### Milestone: v0.4.0 - Network Isolation (Target: December 2025)
 
-## Research & Exploration
+**Acceptance Criteria**:
+- [ ] Network access blocked for small tests in strict mode
+- [ ] Warning issued in warn mode
+- [ ] Clear error message with remediation guidance
+- [ ] Documentation for network isolation
+- [ ] Tests for isolation behavior
 
-### Areas for Investigation
+### Milestone: v0.5.0 - Filesystem Isolation (Target: December 2025)
 
-1. **Test Categorization Beyond Timing**
-   - Resource usage limits (memory, CPU, network)
-   - Dependency constraints (database, external services)
-   - Isolation levels (unit, integration, e2e)
+**Acceptance Criteria**:
+- [ ] Filesystem access blocked for small tests (except temp dirs)
+- [ ] Configurable allowed paths
+- [ ] Warning/strict modes
+- [ ] Documentation and examples
 
-2. **Advanced Timing Strategies**
-   - Adaptive time limits based on hardware
-   - Statistical analysis of test durations
-   - Percentile-based limits instead of fixed
+### Milestone: v0.6.0 - Sleep Blocking (Target: January 2026)
 
-3. **Integration with Modern Testing Frameworks**
-   - Hypothesis (property-based testing)
-   - pytest-bdd (behavior-driven development)
-   - tox (multi-environment testing)
+**Acceptance Criteria**:
+- [ ] `time.sleep()` blocked for small tests
+- [ ] Warning/strict modes
+- [ ] Clear error messages
+- [ ] Complete resource isolation suite
 
-4. **Community Needs Assessment**
-   - Survey Python testing community
-   - Identify common pain points
-   - Gather feature requests
-   - Understand adoption blockers
+### Milestone: v1.0.0 - Stable Release (Target: Late January 2026)
 
-## Contributing to the Roadmap
+**Acceptance Criteria**:
+- [ ] Full resource isolation (network, filesystem, sleep)
+- [ ] Configurable time limits
+- [ ] JSON/XML reporting
+- [ ] Comprehensive documentation
+- [ ] Zero critical bugs
+- [ ] Security audit completed
+- [ ] Performance benchmarks
 
-This roadmap is a living document that evolves based on:
+### Milestone: v1.1.0 - Impact Integration (Target: Q2 2026)
 
-- **Community Feedback**: Your needs and priorities
-- **Industry Trends**: Emerging best practices
-- **Technical Capabilities**: New technologies and approaches
-- **Resource Availability**: Contributor capacity
+**Acceptance Criteria**:
+- [ ] Size metadata API for pytest-test-impact
+- [ ] Combined filtering documentation
+- [ ] CI optimization examples
+- [ ] Integration test suite
 
-### How to Influence the Roadmap
+### Milestone: v2.0.0 - Advanced Features (Target: Q4 2026)
 
-1. **Share Your Use Case**: Open a discussion describing how you use pytest-test-categories
-2. **Propose Features**: Use the feature request template to suggest new capabilities
-3. **Vote on Issues**: React with 👍 to issues you care about
-4. **Contribute**: Submit PRs for features you want to see
-5. **Provide Feedback**: Comment on proposed features with your perspective
-
-### Roadmap Review Process
-
-The roadmap is reviewed and updated:
-- **Monthly**: Adjust quarterly goals based on progress
-- **Quarterly**: Plan next quarter's objectives
-- **Annually**: Revise vision and long-term strategy
+**Acceptance Criteria**:
+- [ ] Custom test categories
+- [ ] dioxide integration (optional)
+- [ ] ML-based suggestions
+- [ ] Flaky test detection
 
 ## Success Metrics
 
 ### Project Health
 
 - **Code Quality**: 100% test coverage maintained
-- **Security**: Zero unpatched security vulnerabilities
-- **Performance**: < 1% overhead on test suite execution
+- **Security**: Zero unpatched vulnerabilities
+- **Performance**: < 1% overhead on test execution
 - **Documentation**: 100% of public API documented
+
+### Ecosystem Health
+
+- **Integration**: Seamless with pytest-test-impact
+- **Adoption**: Used by mutation testing tool users
+- **Reliability**: Zero flaky tests in hermeticity-enforced suites
 
 ### Community Health
 
 - **Contributors**: Growing contributor base
-- **Issues**: < 7 day median time to first response
-- **PRs**: < 14 day median time to merge
-- **Releases**: Regular releases (monthly patch, quarterly minor)
-
-### Adoption Metrics
-
-- **Downloads**: PyPI download trends
-- **GitHub Stars**: Community interest indicator
-- **Forks**: Active development indicator
-- **Dependents**: Projects using pytest-test-categories
+- **Issues**: < 7 day median response time
+- **PRs**: < 14 day median merge time
+- **Releases**: Monthly patches, quarterly minors
 
 ## Versioning Strategy
 
@@ -344,25 +409,24 @@ Following [Semantic Versioning 2.0.0](https://semver.org/):
 - **Minor releases**: Quarterly for new features
 - **Major releases**: Annually or when breaking changes required
 
-## Deprecation Policy
+## Contributing to the Roadmap
 
-When deprecating features:
+This roadmap is a living document that evolves based on:
 
-1. **Announce**: Deprecation warning in documentation and release notes
-2. **Deprecate**: Add runtime deprecation warnings (1 minor version)
-3. **Remove**: Remove deprecated feature (next major version)
+- **Ecosystem Needs**: Integration requirements with pytest-test-impact and mutation testing
+- **Community Feedback**: Your needs and priorities
+- **Industry Trends**: Emerging best practices
+- **Technical Capabilities**: New technologies and approaches
 
-Minimum deprecation period: 6 months
+### How to Influence the Roadmap
 
-## Questions & Feedback
-
-Have questions about the roadmap? Want to propose changes?
-
-- **Discussions**: [GitHub Discussions](https://github.com/mikelane/pytest-test-categories/discussions)
-- **Issues**: Use the feature request template
-- **Email**: [mikelane@gmail.com](mailto:mikelane@gmail.com)
+1. **Share Your Use Case**: Open a discussion describing how you use pytest-test-categories
+2. **Propose Features**: Use the feature request template
+3. **Vote on Issues**: React with 👍 to issues you care about
+4. **Contribute**: Submit PRs for features you want to see
+5. **Provide Feedback**: Comment on proposed features
 
 ---
 
-*Last Updated: November 2024*
-*Next Review: December 2024*
+*Last Updated: November 2025*
+*Next Review: December 2025*
