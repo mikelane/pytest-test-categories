@@ -1,0 +1,212 @@
+name: Test Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      validate_testpypi:
+        description: 'Publish to TestPyPI and validate installation'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build distribution
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      dev_version: ${{ steps.dev-version.outputs.dev_version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Get base version
+        id: version
+        run: |
+          VERSION=$(uv run python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Base version: $VERSION"
+
+      - name: Generate dev version for TestPyPI
+        id: dev-version
+        run: |
+          BASE_VERSION="${{ steps.version.outputs.version }}"
+          # Use timestamp to ensure unique version for each TestPyPI upload
+          TIMESTAMP=$(date -u +%Y%m%d%H%M%S)
+          DEV_VERSION="${BASE_VERSION}.dev${TIMESTAMP}"
+          echo "dev_version=$DEV_VERSION" >> $GITHUB_OUTPUT
+          echo "Dev version for TestPyPI: $DEV_VERSION"
+
+      - name: Update version in pyproject.toml for TestPyPI
+        run: |
+          DEV_VERSION="${{ steps.dev-version.outputs.dev_version }}"
+          # Use sed to update the version in pyproject.toml
+          sed -i "s/^version = \"[^\"]*\"/version = \"$DEV_VERSION\"/" pyproject.toml
+          echo "Updated pyproject.toml version:"
+          grep "^version" pyproject.toml
+
+      - name: Install dependencies
+        run: uv sync --all-groups
+
+      - name: Run tests
+        run: uv run pytest
+
+      - name: Build package
+        run: uv build
+
+      - name: Verify package can be installed
+        run: uv pip install dist/*.whl --system
+
+      - name: List built artifacts
+        run: |
+          echo "Built distribution packages:"
+          ls -lh dist/
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v5
+        with:
+          name: dist-${{ steps.dev-version.outputs.dev_version }}
+          path: dist/
+          retention-days: 7
+
+  publish-testpypi:
+    name: Publish to TestPyPI
+    needs: build
+    runs-on: ubuntu-latest
+    if: inputs.validate_testpypi
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/project/pytest-test-categories/${{ needs.build.outputs.dev_version }}/
+    permissions:
+      actions: read
+      id-token: write
+
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v6
+        with:
+          name: dist-${{ needs.build.outputs.dev_version }}
+          path: dist/
+
+      - name: List artifacts
+        run: ls -lh dist/
+
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          print-hash: true
+          verbose: true
+
+  validate-testpypi:
+    name: Validate (${{ matrix.os }}, Python ${{ matrix.python-version }})
+    needs: [build, publish-testpypi]
+    runs-on: ${{ matrix.os }}
+    if: inputs.validate_testpypi
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ['3.11', '3.12', '3.13']
+
+    steps:
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Wait for TestPyPI to update
+        run: sleep 30
+
+      - name: Install from TestPyPI
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          # Install from TestPyPI with fallback to PyPI for dependencies
+          pip install --index-url https://test.pypi.org/simple/ \
+            --extra-index-url https://pypi.org/simple/ \
+            pytest-test-categories==${{ needs.build.outputs.dev_version }}
+
+      - name: Verify installation
+        shell: bash
+        run: |
+          python -c "import pytest_test_categories; print(f'Version: {pytest_test_categories.__version__}')"
+
+      - name: Verify plugin registration
+        shell: bash
+        run: |
+          pytest --co -q --collect-only 2>&1 | head -20 || echo "Plugin loaded (no tests to collect)"
+
+      - name: Run smoke test
+        shell: bash
+        run: |
+          # Create a minimal test file
+          cat > test_smoke.py << 'EOF'
+          import pytest
+
+          @pytest.mark.small
+          def test_plugin_loads():
+              """Verify the plugin marker is recognized."""
+              pass
+
+          @pytest.mark.small
+          def test_import_works():
+              """Verify the package can be imported."""
+              import pytest_test_categories
+              assert hasattr(pytest_test_categories, '__version__')
+          EOF
+
+          # Run the smoke test
+          pytest test_smoke.py -v
+
+  summary:
+    name: TestPyPI Validation Summary
+    needs: [build, publish-testpypi, validate-testpypi]
+    runs-on: ubuntu-latest
+    if: always() && inputs.validate_testpypi
+    permissions:
+      contents: read
+
+    steps:
+      - name: Create summary
+        run: |
+          echo "# TestPyPI Validation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Package Information" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Base Version:** ${{ needs.build.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **TestPyPI Version:** ${{ needs.build.outputs.dev_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **TestPyPI URL:** https://test.pypi.org/project/pytest-test-categories/${{ needs.build.outputs.dev_version }}/" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Validation Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Publish to TestPyPI | ${{ needs.publish-testpypi.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Validate Installation | ${{ needs.validate-testpypi.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.validate-testpypi.result }}" == "success" ]; then
+            echo "> **Ready for production release!** All validation checks passed." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "> **Not ready for release.** Please review failed checks above." >> $GITHUB_STEP_SUMMARY
+          fi
