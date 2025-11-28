@@ -55,7 +55,7 @@ This integration provides 10x faster mutation testing by combining:
 ### Completed Capabilities
 
 - ✅ Four test size categories (small, medium, large, xlarge)
-- ✅ Timing enforcement with configurable limits
+- ✅ Timing enforcement with fixed limits (1s/300s/900s)
 - ✅ Distribution validation with target percentages (80/15/5)
 - ✅ Test size reporting (basic and detailed)
 - ✅ Base test classes for easy categorization
@@ -148,10 +148,10 @@ Small tests should be **hermetic** — producing the same result at 3am on Sunda
 
 **Enforcement mode** that blocks prohibited resources for small tests:
 
-```python
-# pytest.ini or pyproject.toml
-[pytest]
-test_categories_enforcement = strict  # or "warn" (default)
+```toml
+# pyproject.toml
+[tool.pytest.ini_options]
+test_categories_enforcement = "strict"  # or "warn" (default)
 
 # small tests will FAIL if they:
 # - Make network connections
