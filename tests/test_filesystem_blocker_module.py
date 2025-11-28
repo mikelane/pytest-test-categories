@@ -36,9 +36,15 @@ from pytest_test_categories.ports.network import (
 from pytest_test_categories.types import TestSize
 
 
-@pytest.mark.small
+@pytest.mark.medium
 class DescribeFakeFilesystemBlocker:
-    """Tests for the FakeFilesystemBlocker test double."""
+    """Tests for the FakeFilesystemBlocker test double.
+
+    Note: Marked as medium due to timing variability with icontract ViolationError
+    on CI environments (specifically macOS + Python 3.11). The icontract library
+    performs introspection and string formatting when raising violations, which can
+    exceed the 1-second small test limit under CI load conditions.
+    """
 
     def it_starts_in_inactive_state(self) -> None:
         """Verify the blocker initializes in INACTIVE state."""
