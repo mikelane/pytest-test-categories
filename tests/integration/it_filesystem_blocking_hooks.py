@@ -108,6 +108,9 @@ class DescribeFilesystemBlockingForSmallTests:
         test_file = test_dir / 'data.txt'
         test_file.write_text('test data')
 
+        # Escape backslashes for Windows compatibility in string literals
+        escaped_path = str(test_file).replace('\\', '\\\\')
+
         pytester.makeini(f"""
             [pytest]
             test_categories_enforcement = strict
@@ -119,7 +122,7 @@ class DescribeFilesystemBlockingForSmallTests:
 
             @pytest.mark.small
             def test_small_with_allowed_path():
-                with open('{test_file}', 'r') as f:
+                with open('{escaped_path}', 'r') as f:
                     content = f.read()
                 assert content == 'test data'
             """
@@ -137,6 +140,9 @@ class DescribeFilesystemBlockingForSmallTests:
         test_file = test_dir / 'cli_data.txt'
         test_file.write_text('cli test data')
 
+        # Escape backslashes for Windows compatibility in string literals
+        escaped_path = str(test_file).replace('\\', '\\\\')
+
         pytester.makeini("""
             [pytest]
             test_categories_enforcement = strict
@@ -147,7 +153,7 @@ class DescribeFilesystemBlockingForSmallTests:
 
             @pytest.mark.small
             def test_small_with_cli_allowed_path():
-                with open('{test_file}', 'r') as f:
+                with open('{escaped_path}', 'r') as f:
                     content = f.read()
                 assert content == 'cli test data'
             """
