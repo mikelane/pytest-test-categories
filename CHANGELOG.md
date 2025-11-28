@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Database Isolation**: Block database connections in small tests (#102)
+  - `DatabaseBlockerPort` interface in `ports/database.py` following hexagonal architecture
+  - `DatabasePatchingBlocker` production adapter that patches `sqlite3.connect`
+  - `FakeDatabaseBlocker` test adapter for unit testing
+  - `DatabaseViolationError` exception with remediation guidance
+  - Optional support for popular database libraries (when installed):
+    - PostgreSQL: `psycopg2.connect`, `psycopg.connect`
+    - MySQL: `pymysql.connect`
+    - MongoDB: `pymongo.MongoClient`
+    - Redis: `redis.Redis`, `redis.StrictRedis`
+    - SQLAlchemy: `sqlalchemy.create_engine`
+  - Integration with pytest hooks for automatic enforcement on small tests
+  - In-memory SQLite (`:memory:`) is blocked (stricter interpretation of hermeticity)
 - **Distribution Enforcement**: New enforcement modes for test distribution validation (#104)
   - `--test-categories-distribution-enforcement` CLI option with choices: `off`, `warn`, `strict`
   - `test_categories_distribution_enforcement` ini option for configuration

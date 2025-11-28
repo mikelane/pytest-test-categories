@@ -139,6 +139,10 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
     "SLF001", # Allow private member access in tests (for verification)
 ]
 "scripts/*" = ["T201"] # allow print function in the scripts
+"src/pytest_test_categories/adapters/database.py" = [
+    "C901", # Allow complexity in _restore_optional_libraries (many independent library restorations)
+    "PLR0915", # Allow many statements in _restore_optional_libraries
+]
 "conftest.py" = ["D100"] # Don't require module docstrings in conftest
 "__init__.py" = ["F401"] # allow unused imports in __init__.py
 
@@ -183,6 +187,16 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "pytest.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "pytest_test_categories.adapters.database"
+# This module patches database libraries that may not be installed
+# and uses dynamic patching that mypy can't type-check
+disable_error_code = ["import-untyped", "import-not-found", "assignment", "no-any-return", "unused-ignore"]
+
+[[tool.mypy.overrides]]
+module = ["psycopg2", "psycopg2.*", "psycopg", "psycopg.*", "pymysql", "pymysql.*", "pymongo", "pymongo.*", "redis", "redis.*", "sqlalchemy", "sqlalchemy.*"]
 ignore_missing_imports = true
 
 
