@@ -21,7 +21,7 @@ import pytest
 class DescribeTimerStateMachineTransitions:
     """Test all state transitions of the timer state machine."""
 
-    @pytest.mark.small
+    @pytest.mark.medium
     def it_transitions_through_normal_lifecycle(self, pytester: pytest.Pytester) -> None:
         """It transitions correctly through READY → RUNNING → STOPPED."""
         test_file = pytester.makepyfile(
@@ -77,7 +77,7 @@ class DescribeTimerStateMachineTransitions:
         timer.start()
         assert timer.state.value == 'running'
 
-    @pytest.mark.small
+    @pytest.mark.medium
     def it_allows_timer_reset_during_test_execution(self, pytester: pytest.Pytester) -> None:
         """It handles timer reset and restart during test execution."""
         test_file = pytester.makepyfile(
@@ -288,7 +288,7 @@ class DescribeFakeTimerAdvancement:
 class DescribeTimerIntegrationWithPytest:
     """Test timer behavior through actual pytest execution."""
 
-    @pytest.mark.small
+    @pytest.mark.medium
     def it_tracks_timing_for_passing_test(self, pytester: pytest.Pytester) -> None:
         """It successfully tracks timing for a passing test."""
         test_file = pytester.makepyfile(
@@ -305,7 +305,7 @@ class DescribeTimerIntegrationWithPytest:
         result = pytester.runpytest(test_file)
         result.assert_outcomes(passed=1)
 
-    @pytest.mark.small
+    @pytest.mark.medium
     def it_tracks_timing_for_failing_test(self, pytester: pytest.Pytester) -> None:
         """It tracks timing even when test fails."""
         test_file = pytester.makepyfile(
@@ -321,7 +321,7 @@ class DescribeTimerIntegrationWithPytest:
         result = pytester.runpytest(test_file)
         result.assert_outcomes(failed=1)
 
-    @pytest.mark.small
+    @pytest.mark.medium
     def it_handles_test_with_setup_and_teardown(self, pytester: pytest.Pytester) -> None:
         """It handles timer lifecycle with test setup and teardown."""
         test_file = pytester.makepyfile(
@@ -344,7 +344,7 @@ class DescribeTimerIntegrationWithPytest:
         result = pytester.runpytest(test_file)
         result.assert_outcomes(passed=1)
 
-    @pytest.mark.small
+    @pytest.mark.medium
     def it_handles_parametrized_tests(self, pytester: pytest.Pytester) -> None:
         """It tracks timing correctly for parametrized tests."""
         test_file = pytester.makepyfile(

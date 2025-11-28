@@ -62,6 +62,7 @@ python_functions = ["it_*"]
 python_classes = ["Describe[A-Z]*"]
 addopts = ["-s", "-ra", "-q", "-vv"]
 pythonpath = ["src", "tests/plugins"]
+test_categories_enforcement = "strict"
 
 filterwarnings = [
     "ignore:Unused async fixture loop scope:pytest.PytestWarning",
