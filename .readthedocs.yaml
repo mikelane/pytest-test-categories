@@ -1,0 +1,35 @@
+# Read the Docs configuration file for pytest-test-categories
+# See https://docs.readthedocs.com/platform/en/stable/config-file/v2.html for details
+
+version: 2
+
+# Sphinx configuration
+sphinx:
+  configuration: docs/conf.py
+  fail_on_warning: false  # Project has some autoapi duplicate warnings
+
+# Build additional formats
+formats:
+  - pdf
+  - epub
+
+# Build configuration using uv package manager
+build:
+  os: ubuntu-24.04
+  tools:
+    python: "3.12"
+
+  jobs:
+    # Install uv via asdf before environment creation
+    pre_create_environment:
+      - asdf plugin add uv
+      - asdf install uv latest
+      - asdf global uv latest
+
+    # Create virtual environment using uv
+    create_environment:
+      - uv venv "${READTHEDOCS_VIRTUALENV_PATH}"
+
+    # Install dependencies using uv sync with docs group
+    install:
+      - UV_PROJECT_ENVIRONMENT="${READTHEDOCS_VIRTUALENV_PATH}" uv sync --frozen --group docs

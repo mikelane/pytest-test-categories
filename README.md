@@ -1,5 +1,7 @@
 # Pytest Test Categories Plugin
 
+[![Documentation Status](https://readthedocs.org/projects/pytest-test-categories/badge/?version=latest)](https://pytest-test-categories.readthedocs.io/en/latest/?badge=latest)
+
 ## Overview
 
 **Pytest Test Categories** is a plugin designed to help developers enforce test timing constraints and size distributions in their test suites. This plugin provides an effective way to categorize tests by their execution time and ensures that the test distribution meets predefined targets for different test sizes.
