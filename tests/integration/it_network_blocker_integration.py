@@ -108,67 +108,6 @@ class DescribeSocketPatchingNetworkBlockerIntegration:
             blocker.reset()
             sock.close()
 
-    def it_allows_all_connections_for_large_test(self) -> None:
-        """Verify all connections are allowed for large tests.
-
-        Note: We cannot actually connect since the host may not exist,
-        but the blocker should not raise NetworkAccessViolationError.
-        """
-        blocker = SocketPatchingNetworkBlocker()
-
-        try:
-            blocker.activate(TestSize.LARGE, EnforcementMode.STRICT)
-
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(0.5)
-
-            # The blocker should NOT raise NetworkAccessViolationError
-            # We expect a socket error instead (DNS failure, timeout, etc.)
-            with pytest.raises((socket.gaierror, OSError, TimeoutError)):
-                sock.connect(('nonexistent.invalid.example', 80))
-
-        finally:
-            blocker.reset()
-            sock.close()
-
-    def it_allows_connection_in_warn_mode(self) -> None:
-        """Verify connections proceed in WARN mode (no exception raised)."""
-        blocker = SocketPatchingNetworkBlocker()
-
-        try:
-            blocker.activate(TestSize.SMALL, EnforcementMode.WARN)
-
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(0.5)
-
-            # In WARN mode, should NOT raise NetworkAccessViolationError
-            # Should get a socket error instead since we're trying to connect
-            # to a nonexistent host
-            with pytest.raises((socket.gaierror, OSError, TimeoutError)):
-                sock.connect(('nonexistent.invalid.example', 80))
-
-        finally:
-            blocker.reset()
-            sock.close()
-
-    def it_allows_connection_in_off_mode(self) -> None:
-        """Verify connections proceed in OFF mode (no interception)."""
-        blocker = SocketPatchingNetworkBlocker()
-
-        try:
-            blocker.activate(TestSize.SMALL, EnforcementMode.OFF)
-
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(0.5)
-
-            # In OFF mode, should NOT raise NetworkAccessViolationError
-            with pytest.raises((socket.gaierror, OSError, TimeoutError)):
-                sock.connect(('nonexistent.invalid.example', 80))
-
-        finally:
-            blocker.reset()
-            sock.close()
-
     def it_intercepts_connect_ex(self) -> None:
         """Verify connect_ex() is also intercepted."""
         blocker = SocketPatchingNetworkBlocker()
@@ -297,6 +236,77 @@ class DescribeSocketPatchingNetworkBlockerEdgeCases:
             # Set options should still work
             sock.settimeout(1.0)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+        finally:
+            blocker.reset()
+            sock.close()
+
+
+@pytest.mark.large
+class DescribeSocketPatchingNetworkBlockerExternalNetworkTests:
+    """Tests requiring external network access.
+
+    These tests need to make actual network connections to verify
+    the blocker allows connections in specific modes. They are marked
+    large because medium tests are restricted to localhost only.
+    """
+
+    def it_allows_all_connections_for_large_test(self) -> None:
+        """Verify all connections are allowed for large tests.
+
+        Note: We cannot actually connect since the host may not exist,
+        but the blocker should not raise NetworkAccessViolationError.
+        """
+        blocker = SocketPatchingNetworkBlocker()
+
+        try:
+            blocker.activate(TestSize.LARGE, EnforcementMode.STRICT)
+
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(0.5)
+
+            # The blocker should NOT raise NetworkAccessViolationError
+            # We expect a socket error instead (DNS failure, timeout, etc.)
+            with pytest.raises((socket.gaierror, OSError, TimeoutError)):
+                sock.connect(('nonexistent.invalid.example', 80))
+
+        finally:
+            blocker.reset()
+            sock.close()
+
+    def it_allows_connection_in_warn_mode(self) -> None:
+        """Verify connections proceed in WARN mode (no exception raised)."""
+        blocker = SocketPatchingNetworkBlocker()
+
+        try:
+            blocker.activate(TestSize.SMALL, EnforcementMode.WARN)
+
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(0.5)
+
+            # In WARN mode, should NOT raise NetworkAccessViolationError
+            # Should get a socket error instead since we're trying to connect
+            # to a nonexistent host
+            with pytest.raises((socket.gaierror, OSError, TimeoutError)):
+                sock.connect(('nonexistent.invalid.example', 80))
+
+        finally:
+            blocker.reset()
+            sock.close()
+
+    def it_allows_connection_in_off_mode(self) -> None:
+        """Verify connections proceed in OFF mode (no interception)."""
+        blocker = SocketPatchingNetworkBlocker()
+
+        try:
+            blocker.activate(TestSize.SMALL, EnforcementMode.OFF)
+
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(0.5)
+
+            # In OFF mode, should NOT raise NetworkAccessViolationError
+            with pytest.raises((socket.gaierror, OSError, TimeoutError)):
+                sock.connect(('nonexistent.invalid.example', 80))
 
         finally:
             blocker.reset()

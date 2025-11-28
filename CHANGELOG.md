@@ -22,6 +22,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - SQLAlchemy: `sqlalchemy.create_engine`
   - Integration with pytest hooks for automatic enforcement on small tests
   - In-memory SQLite (`:memory:`) is blocked (stricter interpretation of hermeticity)
+- **Medium Network Restriction**: Network access enforcement for medium tests (#103)
+  - Medium tests now restricted to localhost-only network access
+  - External network connections blocked for medium tests in strict/warn modes
+  - `NetworkMode` enum added to `types.py` with values: `BLOCK_ALL`, `LOCALHOST_ONLY`, `ALLOW_ALL`
+  - `TestSize.network_mode` property maps test sizes to appropriate network modes:
+    - Small: `BLOCK_ALL` (no network access)
+    - Medium: `LOCALHOST_ONLY` (localhost only)
+    - Large/XLarge: `ALLOW_ALL` (full network access)
+  - Follows Google's "Software Engineering at Google" test size definitions
 - **Distribution Enforcement**: New enforcement modes for test distribution validation (#104)
   - `--test-categories-distribution-enforcement` CLI option with choices: `off`, `warn`, `strict`
   - `test_categories_distribution_enforcement` ini option for configuration

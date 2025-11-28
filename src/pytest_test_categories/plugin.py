@@ -258,14 +258,19 @@ def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None) -> 
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_call(item: pytest.Item) -> Generator[None, None, None]:
-    """Block network, filesystem, and subprocess access for small tests during execution.
+    """Block resources based on test size during execution.
 
-    This hook enforces resource isolation for small tests based on the
-    enforcement configuration. When enforcement is enabled (strict or warn):
-    - Small tests will have network access blocked
-    - Small tests will have filesystem access blocked (except allowed paths)
-    - Small tests will have subprocess spawning blocked
-    - Medium/large/xlarge tests are not affected
+    This hook enforces resource isolation based on test size and enforcement
+    configuration. When enforcement is enabled (strict or warn):
+
+    Network access (based on Google's test size definitions):
+    - Small tests: All network blocked (BLOCK_ALL)
+    - Medium tests: Localhost only (LOCALHOST_ONLY)
+    - Large/XLarge tests: Full network access (ALLOW_ALL)
+
+    Filesystem and process isolation (small tests only):
+    - Small tests: Filesystem access blocked (except allowed paths)
+    - Small tests: Subprocess spawning blocked
 
     Uses ExitStack pattern to manage all resource blockers together,
     ensuring proper cleanup even if exceptions occur.
@@ -289,30 +294,36 @@ def pytest_runtest_call(item: pytest.Item) -> Generator[None, None, None]:
     item_adapter = PytestItemAdapter(item)
     test_size = discovery_service.find_test_size(item_adapter)
 
-    if test_size != TestSize.SMALL:
+    # Large, XLarge, and unsized tests have no restrictions
+    if test_size is None or test_size in (TestSize.LARGE, TestSize.XLARGE):
         yield
         return
 
     # Use ExitStack for combined resource blocking
+    # At this point test_size is guaranteed to be SMALL or MEDIUM
     with ExitStack() as stack:
-        # Activate network blocker
+        # Network blocking applies to both small and medium tests
+        # - Small: BLOCK_ALL (no network)
+        # - Medium: LOCALHOST_ONLY (localhost only)
         network_blocker = _get_network_blocker(item.config)
         network_blocker.current_test_nodeid = item.nodeid
         network_blocker.activate(test_size, enforcement_mode)
         stack.callback(_safe_deactivate_network, network_blocker)
 
-        # Activate filesystem blocker
-        filesystem_blocker = _get_filesystem_blocker(item.config)
-        filesystem_blocker.current_test_nodeid = item.nodeid
-        allowed_paths = _get_allowed_paths(item)
-        filesystem_blocker.activate(test_size, enforcement_mode, allowed_paths)
-        stack.callback(_safe_deactivate_filesystem, filesystem_blocker)
+        # Filesystem and process blocking only applies to small tests
+        if test_size == TestSize.SMALL:
+            # Activate filesystem blocker
+            filesystem_blocker = _get_filesystem_blocker(item.config)
+            filesystem_blocker.current_test_nodeid = item.nodeid
+            allowed_paths = _get_allowed_paths(item)
+            filesystem_blocker.activate(test_size, enforcement_mode, allowed_paths)
+            stack.callback(_safe_deactivate_filesystem, filesystem_blocker)
 
-        # Activate process blocker
-        process_blocker = _get_process_blocker(item.config)
-        process_blocker.current_test_nodeid = item.nodeid
-        process_blocker.activate(test_size, enforcement_mode)
-        stack.callback(_safe_deactivate_process, process_blocker)
+            # Activate process blocker
+            process_blocker = _get_process_blocker(item.config)
+            process_blocker.current_test_nodeid = item.nodeid
+            process_blocker.activate(test_size, enforcement_mode)
+            stack.callback(_safe_deactivate_process, process_blocker)
 
         # Activate database blocker
         database_blocker = _get_database_blocker(item.config)
