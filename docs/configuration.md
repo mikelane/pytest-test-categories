@@ -25,9 +25,15 @@ markers = [
     "xlarge: Extended tests (< 15min)",
 ]
 
-# Network isolation enforcement (planned feature)
+# Resource isolation enforcement (network and filesystem)
 # Options: "strict", "warn", "off"
 test_categories_enforcement = "warn"
+
+# Additional allowed paths for filesystem access in small tests
+test_categories_allowed_paths = [
+    "tests/fixtures/",
+    "src/mypackage/data/",
+]
 ```
 
 ## pytest.ini
@@ -43,6 +49,7 @@ markers =
     xlarge: Extended tests (< 15min)
 
 test_categories_enforcement = warn
+test_categories_allowed_paths = tests/fixtures/,src/mypackage/data/
 ```
 
 ## Command-Line Options
@@ -59,12 +66,12 @@ pytest --test-size-report=basic
 pytest --test-size-report=detailed
 ```
 
-### Network Enforcement (Planned)
+### Resource Isolation Enforcement
 
-Control network isolation enforcement:
+Control network and filesystem isolation enforcement:
 
 ```bash
-# Strict mode: fail on network violations
+# Strict mode: fail on violations
 pytest --test-categories-enforcement=strict
 
 # Warn mode: emit warnings but don't fail
@@ -72,6 +79,18 @@ pytest --test-categories-enforcement=warn
 
 # Disable enforcement
 pytest --test-categories-enforcement=off
+```
+
+### Allowed Filesystem Paths
+
+Add additional allowed paths for filesystem access in small tests:
+
+```bash
+# Single path
+pytest --test-categories-allowed-paths=tests/fixtures/
+
+# Multiple paths (comma-separated)
+pytest --test-categories-allowed-paths=tests/fixtures/,src/mypackage/data/
 ```
 
 ## Markers
@@ -100,15 +119,27 @@ def test_extended():
     pass
 ```
 
-### Network Override (Planned)
+### Resource Isolation Overrides (Planned)
 
-Override network isolation for specific tests:
+Override network or filesystem isolation for specific tests:
 
 ```python
 @pytest.mark.small
 @pytest.mark.allow_network  # Planned - not yet available
-def test_special_case():
+def test_special_case_network():
     """This small test is allowed to access the network."""
+    pass
+
+@pytest.mark.small
+@pytest.mark.allow_filesystem  # Planned - not yet available
+def test_special_case_filesystem():
+    """This small test is allowed to access the filesystem."""
+    pass
+
+@pytest.mark.small
+@pytest.mark.allow_filesystem_paths('/specific/path')  # Planned - not yet available
+def test_with_specific_path():
+    """This small test can access a specific path."""
     pass
 ```
 
@@ -152,10 +183,18 @@ Currently, pytest-test-categories does not use environment variables for configu
 If no configuration is provided:
 
 - All size markers are registered automatically
-- No network enforcement (enforcement mode is "off")
+- No resource isolation enforcement (enforcement mode is "off")
 - Distribution validation runs after collection
 - Time limits are enforced during test execution
 - Unmarked tests trigger a warning but are allowed to run
+
+### Default Allowed Filesystem Paths
+
+Even without configuration, small tests can access these paths:
+
+1. **System temp directory**: `tempfile.gettempdir()` and subdirectories
+2. **pytest basetemp**: Where `tmp_path` fixture creates directories
+3. **Test-specific tmp_path**: Automatically allowed when using the fixture
 
 ## Example Complete Configuration
 
@@ -179,5 +218,19 @@ markers = [
 
 # Plugin configuration
 test_categories_enforcement = "warn"
+test_categories_allowed_paths = [
+    "tests/fixtures/",
+    "src/mypackage/data/",
+]
 addopts = ["--test-size-report=basic"]
 ```
+
+## Configuration Options Reference
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `test_categories_enforcement` | string | `"off"` | Enforcement mode: `"strict"`, `"warn"`, or `"off"` |
+| `test_categories_allowed_paths` | list | `[]` | Additional paths allowed for filesystem access in small tests |
+| `--test-size-report` | CLI | none | Generate test size report: `basic` or `detailed` |
+| `--test-categories-enforcement` | CLI | none | Override enforcement mode from command line |
+| `--test-categories-allowed-paths` | CLI | none | Override allowed paths from command line |

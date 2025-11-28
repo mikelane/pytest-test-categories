@@ -8,6 +8,7 @@ This section helps you diagnose and fix common issues with pytest-test-categorie
 :maxdepth: 2
 
 network-violations
+filesystem-violations
 ```
 
 ## Common Issues
