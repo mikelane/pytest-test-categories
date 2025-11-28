@@ -29,6 +29,10 @@ markers = [
 # Options: "strict", "warn", "off"
 test_categories_enforcement = "warn"
 
+# Distribution enforcement (test pyramid validation)
+# Options: "strict", "warn", "off"
+test_categories_distribution_enforcement = "warn"
+
 # Additional allowed paths for filesystem access in small tests
 test_categories_allowed_paths = [
     "tests/fixtures/",
@@ -49,6 +53,7 @@ markers =
     xlarge: Extended tests (< 15min)
 
 test_categories_enforcement = warn
+test_categories_distribution_enforcement = warn
 test_categories_allowed_paths = tests/fixtures/,src/mypackage/data/
 ```
 
@@ -91,6 +96,21 @@ pytest --test-categories-allowed-paths=tests/fixtures/
 
 # Multiple paths (comma-separated)
 pytest --test-categories-allowed-paths=tests/fixtures/,src/mypackage/data/
+```
+
+### Distribution Enforcement
+
+Control test pyramid distribution enforcement:
+
+```bash
+# Strict mode: fail if distribution is outside acceptable range
+pytest --test-categories-distribution-enforcement=strict
+
+# Warn mode: emit warnings but don't fail
+pytest --test-categories-distribution-enforcement=warn
+
+# Disable distribution validation
+pytest --test-categories-distribution-enforcement=off
 ```
 
 ## Markers
@@ -229,8 +249,10 @@ addopts = ["--test-size-report=basic"]
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `test_categories_enforcement` | string | `"off"` | Enforcement mode: `"strict"`, `"warn"`, or `"off"` |
+| `test_categories_enforcement` | string | `"off"` | Resource isolation enforcement mode: `"strict"`, `"warn"`, or `"off"` |
+| `test_categories_distribution_enforcement` | string | `"off"` | Distribution validation enforcement mode: `"strict"`, `"warn"`, or `"off"` |
 | `test_categories_allowed_paths` | list | `[]` | Additional paths allowed for filesystem access in small tests |
 | `--test-size-report` | CLI | none | Generate test size report: `basic` or `detailed` |
-| `--test-categories-enforcement` | CLI | none | Override enforcement mode from command line |
+| `--test-categories-enforcement` | CLI | none | Override resource isolation enforcement mode from command line |
+| `--test-categories-distribution-enforcement` | CLI | none | Override distribution enforcement mode from command line |
 | `--test-categories-allowed-paths` | CLI | none | Override allowed paths from command line |

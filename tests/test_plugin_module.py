@@ -31,6 +31,7 @@ from pytest_test_categories.formatting import (
     pluralize_test,
 )
 from pytest_test_categories.plugin import (
+    _get_distribution_enforcement_mode,
     _get_enforcement_mode,
     _get_network_blocker,
 )
@@ -186,8 +187,9 @@ class DescribePytestAddoption:
         pytest_addoption(parser)
 
         parser.getgroup.assert_called_once_with('test-categories')
-        # Now adds three options: --test-size-report, --test-categories-enforcement, --test-categories-allowed-paths
-        assert group.addoption.call_count == 3
+        # Now adds four options: --test-size-report, --test-categories-enforcement,
+        # --test-categories-allowed-paths, --test-categories-distribution-enforcement
+        assert group.addoption.call_count == 4
         # Find the test-size-report call
         test_size_report_call = None
         for call in group.addoption.call_args_list:
@@ -343,6 +345,8 @@ class DescribePytestCollectionFinish:
         session.config.distribution_stats = session.config.distribution_stats.update_counts(
             counts={'small': 1, 'medium': 10, 'large': 0, 'xlarge': 0}
         )
+        # Configure enforcement mode to WARN for validation
+        session.config.getoption.return_value = 'warn'
 
         with pytest.warns(UserWarning, match='Test distribution does not meet targets'):
             pytest_collection_finish(session)
@@ -355,6 +359,8 @@ class DescribePytestCollectionFinish:
         session.config.distribution_stats = session.config.distribution_stats.update_counts(
             counts={'small': 80, 'medium': 15, 'large': 5, 'xlarge': 0}
         )
+        # Configure enforcement mode to WARN for validation
+        session.config.getoption.return_value = 'warn'
 
         with warnings.catch_warnings(record=True) as warning_list:
             warnings.simplefilter('always')
@@ -601,6 +607,52 @@ class DescribeGetEnforcementMode:
         config.getini.return_value = 'invalid_mode'  # Not a valid enforcement mode
 
         result = _get_enforcement_mode(config)
+
+        assert result == EnforcementMode.OFF
+
+
+@pytest.mark.small
+class DescribeGetDistributionEnforcementMode:
+    """Test the _get_distribution_enforcement_mode helper function."""
+
+    def it_returns_cli_option_when_provided(self) -> None:
+        """CLI option takes precedence over ini setting."""
+        config = Mock()
+        config.getoption.return_value = 'strict'
+        config.getini.return_value = 'warn'
+
+        result = _get_distribution_enforcement_mode(config)
+
+        assert result == EnforcementMode.STRICT
+        config.getoption.assert_called_once_with('--test-categories-distribution-enforcement', default=None)
+
+    def it_returns_ini_value_when_cli_not_provided(self) -> None:
+        """Ini value used when CLI option not provided."""
+        config = Mock()
+        config.getoption.return_value = None
+        config.getini.return_value = 'warn'
+
+        result = _get_distribution_enforcement_mode(config)
+
+        assert result == EnforcementMode.WARN
+
+    def it_returns_off_when_neither_cli_nor_ini_provided(self) -> None:
+        """Default is OFF when no configuration is provided."""
+        config = Mock()
+        config.getoption.return_value = None
+        config.getini.return_value = ''
+
+        result = _get_distribution_enforcement_mode(config)
+
+        assert result == EnforcementMode.OFF
+
+    def it_returns_off_for_invalid_ini_value(self) -> None:
+        """Invalid ini value falls back to OFF."""
+        config = Mock()
+        config.getoption.return_value = None
+        config.getini.return_value = 'invalid_mode'
+
+        result = _get_distribution_enforcement_mode(config)
 
         assert result == EnforcementMode.OFF
 

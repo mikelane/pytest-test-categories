@@ -317,7 +317,8 @@ class DescribeDistributionAnalysis:
             """
         )
 
-        result = pytester.runpytest('-vv')
+        # Need to enable warn mode for distribution validation
+        result = pytester.runpytest('-vv', '--test-categories-distribution-enforcement=warn')
 
         # The pytester test itself should pass
         assert result.ret == 0

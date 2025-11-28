@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Distribution Enforcement**: New enforcement modes for test distribution validation (#104)
+  - `--test-categories-distribution-enforcement` CLI option with choices: `off`, `warn`, `strict`
+  - `test_categories_distribution_enforcement` ini option for configuration
+  - `off` mode: Skip validation entirely (default, backwards compatible)
+  - `warn` mode: Emit warnings but allow build to continue
+  - `strict` mode: Fail collection if distribution is outside acceptable range
+  - Actionable error messages with current distribution, targets, and remediation guidance
+  - `DistributionValidationService` for pure domain logic with hexagonal architecture
+  - Comprehensive user documentation with examples for each mode
+
 ## [0.5.0] - TBD
 
 ### Added
