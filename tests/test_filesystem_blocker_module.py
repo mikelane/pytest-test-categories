@@ -178,11 +178,12 @@ class DescribeFakeFilesystemBlocker:
         """Verify on_violation records warning in WARN mode."""
         blocker = FakeFilesystemBlocker()
         blocker.activate(TestSize.SMALL, EnforcementMode.WARN, frozenset())
+        test_path = Path('/etc/passwd')
 
-        blocker.on_violation(Path('/etc/passwd'), FilesystemOperation.READ, 'test_module.py::test_fn')
+        blocker.on_violation(test_path, FilesystemOperation.READ, 'test_module.py::test_fn')
 
         assert len(blocker.warnings) == 1
-        assert '/etc/passwd' in blocker.warnings[0]
+        assert str(test_path) in blocker.warnings[0]
         assert 'read' in blocker.warnings[0]
 
     def it_does_nothing_in_off_mode(self) -> None:
