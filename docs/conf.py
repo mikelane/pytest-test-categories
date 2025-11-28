@@ -14,8 +14,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 project = 'pytest-test-categories'
 copyright = '2025, Mike Lane'
 author = 'Mike Lane'
-release = '0.3.0'
-version = '0.3.0'
+release = '0.4.0'
+version = '0.4.0'
 
 # -- General configuration ---------------------------------------------------
 

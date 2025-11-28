@@ -7,38 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.4.0] - In Progress
-
-### Added
-- **Network isolation enforcement via pytest hooks** (#69, #70)
-  - `--test-categories-enforcement` CLI option with values: `off`, `warn`, `strict`
-  - `test_categories_enforcement` ini option in pyproject.toml
-  - Blocks network access for small tests when enforcement is enabled
-  - Socket patching to intercept connection attempts
-  - Proper cleanup to restore socket behavior after each test
-- `NetworkBlockerPort` interface following hexagonal architecture (PR #74)
-- `SocketPatchingNetworkBlocker` adapter for network isolation (PR #74)
-- `HermeticityViolationError` exception hierarchy for resource violations (PR #74)
-- `NetworkAccessViolationError` with detailed remediation guidance (PR #74)
-- `EnforcementMode` enum for configuration (PR #74)
-- Comprehensive documentation for network isolation (PR #75):
-  - User guide: `docs/user-guide/network-isolation.md`
-  - Troubleshooting: `docs/troubleshooting/network-violations.md`
-  - Examples: `docs/examples/network-isolation.md`
-  - ADR: `docs/architecture/adr-001-network-isolation.md`
-
-### Changed
-- Small tests now have network access blocked when enforcement is `strict` or `warn`
-- Medium, large, and xlarge tests are not affected by network blocking
-
-Initial release
-
-## v0.4.0 (2025-11-27)
+## [0.4.0] - 2025-11-27
 
 ### BREAKING CHANGE
 
-- The plugin now requires session-specific state
-management, which may affect existing configurations.
+- The plugin now requires session-specific state management, which may affect existing configurations.
 
 ### Feat
 
