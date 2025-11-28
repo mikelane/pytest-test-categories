@@ -8,10 +8,15 @@ Ports defined here:
 - NetworkBlockerPort: Interface for network access control
 - FilesystemBlockerPort: Interface for filesystem access control
 - ProcessBlockerPort: Interface for subprocess/process spawn control
+- DatabaseBlockerPort: Interface for database access control
 """
 
 from __future__ import annotations
 
+from pytest_test_categories.ports.database import (
+    DatabaseAccessAttempt,
+    DatabaseBlockerPort,
+)
 from pytest_test_categories.ports.filesystem import (
     FilesystemAccessAttempt,
     FilesystemBlockerPort,
@@ -31,6 +36,8 @@ from pytest_test_categories.ports.process import (
 __all__ = [
     'BlockerState',
     'ConnectionAttempt',
+    'DatabaseAccessAttempt',
+    'DatabaseBlockerPort',
     'EnforcementMode',
     'FilesystemAccessAttempt',
     'FilesystemBlockerPort',

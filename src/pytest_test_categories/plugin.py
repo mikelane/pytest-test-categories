@@ -38,6 +38,7 @@ from typing import (
 
 import pytest
 
+from pytest_test_categories.adapters.database import DatabasePatchingBlocker
 from pytest_test_categories.adapters.filesystem import FilesystemPatchingBlocker
 from pytest_test_categories.adapters.network import SocketPatchingNetworkBlocker
 from pytest_test_categories.adapters.process import SubprocessPatchingBlocker
@@ -313,6 +314,12 @@ def pytest_runtest_call(item: pytest.Item) -> Generator[None, None, None]:
         process_blocker.activate(test_size, enforcement_mode)
         stack.callback(_safe_deactivate_process, process_blocker)
 
+        # Activate database blocker
+        database_blocker = _get_database_blocker(item.config)
+        database_blocker.current_test_nodeid = item.nodeid
+        database_blocker.activate(test_size, enforcement_mode)
+        stack.callback(_safe_deactivate_database, database_blocker)
+
         yield
 
 
@@ -549,6 +556,39 @@ def _safe_deactivate_process(blocker: SubprocessPatchingBlocker) -> None:
 
     Args:
         blocker: The process blocker to deactivate.
+
+    """
+    if blocker.state.value == 'active':
+        blocker.deactivate()
+
+
+def _get_database_blocker(config: pytest.Config) -> DatabasePatchingBlocker:
+    """Get or create the database blocker instance.
+
+    The blocker is stored on the config object to ensure proper lifecycle
+    management across test execution.
+
+    Args:
+        config: The pytest configuration object.
+
+    Returns:
+        The DatabasePatchingBlocker instance.
+
+    """
+    blocker_attr = '_test_categories_database_blocker'
+    if not hasattr(config, blocker_attr):
+        blocker = DatabasePatchingBlocker()
+        setattr(config, blocker_attr, blocker)
+    return cast('DatabasePatchingBlocker', getattr(config, blocker_attr))
+
+
+def _safe_deactivate_database(blocker: DatabasePatchingBlocker) -> None:
+    """Safely deactivate database blocker, handling edge cases.
+
+    This function is used as a callback in ExitStack to ensure cleanup.
+
+    Args:
+        blocker: The database blocker to deactivate.
 
     """
     if blocker.state.value == 'active':

@@ -8,7 +8,8 @@ Exception Hierarchy:
     HermeticityViolationError (base)
     +-- NetworkAccessViolationError
     +-- FilesystemAccessViolationError
-    +-- SubprocessViolationError (future)
+    +-- SubprocessViolationError
+    +-- DatabaseViolationError
     +-- SleepViolationError (future)
 
 The base HermeticityViolationError provides common functionality:
@@ -36,6 +37,7 @@ See Also:
 from __future__ import annotations
 
 __all__ = [
+    'DatabaseViolationError',
     'FilesystemAccessViolationError',
     'HermeticityViolationError',
     'NetworkAccessViolationError',
@@ -411,3 +413,95 @@ class SubprocessViolationError(HermeticityViolationError):
                 suggestions.append('Change test category to @pytest.mark.medium (if subprocess is required)')
             return suggestions
         return []  # Medium/Large/XLarge tests have no subprocess restrictions
+
+
+class DatabaseViolationError(HermeticityViolationError):
+    """Raised when a test attempts to connect to a database.
+
+    This exception is raised when a test attempts to make a database
+    connection that violates its size category's restrictions:
+    - Small tests: No database access allowed (including :memory:)
+    - Medium/Large/XLarge: All database access allowed
+
+    Small tests should be hermetic and run entirely in memory without
+    any I/O operations. Database connections, even to in-memory databases
+    like sqlite3 :memory:, introduce:
+    - I/O operations via the database engine
+    - External state dependencies
+    - Non-deterministic behavior potential
+    - Additional process complexity
+
+    Attributes:
+        library: The database library name (e.g., 'sqlite3', 'psycopg2').
+        connection_string: The connection string or database path.
+
+    Example:
+        >>> raise DatabaseViolationError(
+        ...     test_size=TestSize.SMALL,
+        ...     test_nodeid='tests/test_db.py::test_query',
+        ...     library='sqlite3',
+        ...     connection_string=':memory:'
+        ... )
+
+    The error message includes:
+    - Test identification (nodeid, size category)
+    - Library and connection details
+    - Remediation suggestions (mocking, DI, size change)
+
+    """
+
+    _adr_reference: str = 'docs/architecture/adr-004-database-isolation.md'
+
+    def __init__(
+        self,
+        test_size: TestSize,
+        test_nodeid: str,
+        library: str,
+        connection_string: str,
+    ) -> None:
+        """Initialize a database violation error.
+
+        Args:
+            test_size: The test's size category.
+            test_nodeid: The pytest node ID of the violating test.
+            library: The database library name.
+            connection_string: The connection string or database path.
+
+        """
+        self.library = library
+        self.connection_string = connection_string
+
+        remediation = self._get_remediation(test_size, library)
+
+        super().__init__(
+            test_size=test_size,
+            test_nodeid=test_nodeid,
+            violation_type='Database access attempted',
+            details=f'Attempted {library} connection to: {connection_string}',
+            remediation=remediation,
+        )
+
+    @staticmethod
+    def _get_remediation(test_size: TestSize, library: str) -> list[str]:
+        """Get remediation suggestions based on test size and database library.
+
+        Args:
+            test_size: The test's size category.
+            library: The database library used.
+
+        Returns:
+            List of remediation suggestions.
+
+        """
+        if test_size == TestSize.SMALL:
+            suggestions = [
+                f'Mock {library}.connect using pytest-mock (mocker.patch)',
+                'Use dependency injection to provide a fake database/repository',
+                'Use in-memory data structures (dict, list) for test data',
+                'Test business logic separately from database operations',
+            ]
+            if library == 'sqlalchemy':
+                suggestions.append('Consider using SQLAlchemy events or a fake engine')
+            suggestions.append('Change test category to @pytest.mark.medium (if database access is required)')
+            return suggestions
+        return []  # Medium/Large/XLarge tests have no database restrictions
