@@ -12,6 +12,45 @@ Following Google's recommendations, a healthy test suite should have:
 | Medium | 15% | +/- 5% | 10% - 20% |
 | Large/XLarge | 5% | +/- 3% | 2% - 8% |
 
+## Enforcement Modes
+
+Distribution validation supports three enforcement modes:
+
+| Mode | Behavior | Use Case |
+|------|----------|----------|
+| **off** (default) | No validation, silent operation | Initial adoption, legacy projects |
+| **warn** | Emits warnings but allows build to continue | Gradual improvement |
+| **strict** | Fails build if distribution is outside acceptable range | Enforced compliance |
+
+### Configuration
+
+**Via pytest.ini or pyproject.toml:**
+
+```ini
+# pytest.ini
+[pytest]
+test_categories_distribution_enforcement = warn
+```
+
+```toml
+# pyproject.toml
+[tool.pytest.ini_options]
+test_categories_distribution_enforcement = "warn"
+```
+
+**Via CLI (overrides ini settings):**
+
+```bash
+# Enable strict mode
+pytest --test-categories-distribution-enforcement=strict
+
+# Disable validation (useful for one-off runs)
+pytest --test-categories-distribution-enforcement=off
+
+# Enable warnings
+pytest --test-categories-distribution-enforcement=warn
+```
+
 ## How Validation Works
 
 Distribution validation occurs after test collection:
@@ -20,7 +59,11 @@ Distribution validation occurs after test collection:
 2. **Counting**: The plugin counts tests by size category
 3. **Calculation**: Percentages are calculated
 4. **Validation**: Distribution is compared against targets
-5. **Reporting**: Summary is displayed with status indicators
+5. **Action**: Based on enforcement mode:
+   - **off**: No action taken
+   - **warn**: Warning emitted if outside acceptable range
+   - **strict**: Build fails if outside acceptable range
+6. **Reporting**: Summary is displayed with status indicators
 
 ## Distribution Summary
 
@@ -40,6 +83,28 @@ Status indicators:
 - `[OK]` - Within acceptable range
 - `[WARNING]` - Outside acceptable range but not critical
 - `[CRITICAL]` - Severely outside acceptable range
+
+## Strict Mode Error
+
+When strict mode is enabled and distribution fails, you'll see a detailed error:
+
+```
+ERROR: Distribution violation: Test pyramid requirements not met
+
+Current Distribution:
+  Small:        50.0% (target: 80% +/-5%)
+  Medium:       30.0% (target: 15% +/-5%)
+  Large/XLarge: 20.0% (target: 5% +/-3%)
+
+Validation Error: Small test percentage (50.00%) outside target range 75.00%-85.00%
+
+Recommendations:
+  - Convert medium tests to small tests (mock external dependencies)
+  - Convert large tests to medium tests (use localhost services)
+  - See docs for guidance on test categorization
+
+To bypass: pytest --test-categories-distribution-enforcement=off
+```
 
 ## Critical Thresholds
 
@@ -180,11 +245,60 @@ Monitor your distribution to catch pyramid inversions early:
 3. **PR Checks**: Flag PRs that worsen distribution
 4. **Team Reviews**: Discuss distribution in retrospectives
 
-## Disabling Validation
+## Adopting Strict Enforcement
 
-If needed, distribution validation can be disabled by not using size markers. However, this is not recommended as it defeats the purpose of the plugin.
+For teams wanting to enforce distribution:
 
-Instead, consider:
-- Setting realistic targets for your project's current state
-- Using `@pytest.mark.skip` for tests being refactored
-- Creating a roadmap to improve distribution incrementally
+### Step 1: Baseline Assessment
+
+Start with `warn` mode to understand your current distribution:
+
+```ini
+[pytest]
+test_categories_distribution_enforcement = warn
+```
+
+### Step 2: Gradual Improvement
+
+Fix the most impactful issues first:
+- Convert obvious unit tests to `@pytest.mark.small`
+- Move test doubles to fixtures
+- Split large tests where possible
+
+### Step 3: Enable Strict Mode
+
+Once distribution is acceptable, enable strict mode:
+
+```ini
+[pytest]
+test_categories_distribution_enforcement = strict
+```
+
+### Step 4: CI Integration
+
+Add distribution enforcement to your CI pipeline:
+
+```yaml
+# .github/workflows/test.yml
+- name: Run tests with distribution enforcement
+  run: pytest --test-categories-distribution-enforcement=strict
+```
+
+## Bypassing Enforcement
+
+If you need to temporarily bypass enforcement:
+
+```bash
+# Run tests without distribution validation
+pytest --test-categories-distribution-enforcement=off
+```
+
+This is useful for:
+- Emergency hotfix deployments
+- Running subset of tests during development
+- Debugging test infrastructure issues
+
+However, **do not** leave enforcement disabled permanently. Instead:
+- Set realistic targets for your project's current state
+- Use `@pytest.mark.skip` for tests being refactored
+- Create a roadmap to improve distribution incrementally

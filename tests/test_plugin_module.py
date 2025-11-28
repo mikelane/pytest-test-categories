@@ -186,8 +186,9 @@ class DescribePytestAddoption:
         pytest_addoption(parser)
 
         parser.getgroup.assert_called_once_with('test-categories')
-        # Now adds three options: --test-size-report, --test-categories-enforcement, --test-categories-allowed-paths
-        assert group.addoption.call_count == 3
+        # Now adds four options: --test-size-report, --test-categories-enforcement,
+        # --test-categories-allowed-paths, --test-categories-distribution-enforcement
+        assert group.addoption.call_count == 4
         # Find the test-size-report call
         test_size_report_call = None
         for call in group.addoption.call_args_list:
@@ -343,6 +344,8 @@ class DescribePytestCollectionFinish:
         session.config.distribution_stats = session.config.distribution_stats.update_counts(
             counts={'small': 1, 'medium': 10, 'large': 0, 'xlarge': 0}
         )
+        # Configure enforcement mode to WARN for validation
+        session.config.getoption.return_value = 'warn'
 
         with pytest.warns(UserWarning, match='Test distribution does not meet targets'):
             pytest_collection_finish(session)
@@ -355,6 +358,8 @@ class DescribePytestCollectionFinish:
         session.config.distribution_stats = session.config.distribution_stats.update_counts(
             counts={'small': 80, 'medium': 15, 'large': 5, 'xlarge': 0}
         )
+        # Configure enforcement mode to WARN for validation
+        session.config.getoption.return_value = 'warn'
 
         with warnings.catch_warnings(record=True) as warning_list:
             warnings.simplefilter('always')

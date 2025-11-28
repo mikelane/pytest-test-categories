@@ -49,7 +49,10 @@ from pytest_test_categories.adapters.pytest_adapter import (
 )
 from pytest_test_categories.distribution.stats import DistributionStats
 from pytest_test_categories.ports.network import EnforcementMode
-from pytest_test_categories.services.distribution_validation import DistributionValidationService
+from pytest_test_categories.services.distribution_validation import (
+    DistributionValidationService,
+    DistributionViolationError,
+)
 from pytest_test_categories.services.test_discovery import TestDiscoveryService
 from pytest_test_categories.services.test_reporting import TestReportingService
 from pytest_test_categories.services.timing_validation import TimingValidationService
@@ -118,6 +121,20 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         default=[],
     )
 
+    # Distribution enforcement options
+    group.addoption(
+        '--test-categories-distribution-enforcement',
+        action='store',
+        default=None,
+        choices=['off', 'warn', 'strict'],
+        help='Set enforcement mode for distribution validation (off, warn, strict). Overrides ini option.',
+    )
+    parser.addini(
+        'test_categories_distribution_enforcement',
+        help='Enforcement mode for distribution validation: off (default), warn, or strict',
+        default='off',
+    )
+
 
 @pytest.hookimpl(tryfirst=True)
 def pytest_configure(config: pytest.Config) -> None:
@@ -176,12 +193,31 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
 
 @pytest.hookimpl
 def pytest_collection_finish(session: pytest.Session) -> None:
-    """Validate test distribution after collection."""
+    """Validate test distribution after collection.
+
+    Uses the distribution enforcement mode to determine behavior:
+    - OFF: Skip validation entirely
+    - WARN: Emit warning if out of spec, allow build to continue
+    - STRICT: Raise DistributionViolationError if out of spec
+
+    Args:
+        session: The pytest session object.
+
+    Raises:
+        pytest.UsageError: If enforcement mode is STRICT and distribution
+            is outside acceptable range.
+
+    """
     config_adapter = PytestConfigAdapter(session.config)
     stats = config_adapter.get_distribution_stats()
     warning_system = PytestWarningAdapter()
     validation_service = DistributionValidationService()
-    validation_service.validate_distribution(stats, warning_system)
+    enforcement_mode = _get_distribution_enforcement_mode(session.config)
+
+    try:
+        validation_service.validate_distribution(stats, warning_system, enforcement_mode)
+    except DistributionViolationError as e:
+        raise pytest.UsageError(str(e)) from e
 
 
 @pytest.hookimpl(hookwrapper=True)
@@ -391,6 +427,29 @@ def _get_enforcement_mode(config: pytest.Config) -> EnforcementMode:
         return EnforcementMode(cli_value)
 
     ini_value = config.getini('test_categories_enforcement')
+    if ini_value and ini_value in _VALID_ENFORCEMENT_MODES:
+        return EnforcementMode(ini_value)
+
+    return EnforcementMode.OFF
+
+
+def _get_distribution_enforcement_mode(config: pytest.Config) -> EnforcementMode:
+    """Get the distribution enforcement mode from configuration.
+
+    CLI option takes precedence over ini setting.
+
+    Args:
+        config: The pytest configuration object.
+
+    Returns:
+        The EnforcementMode enum value for distribution validation.
+
+    """
+    cli_value = config.getoption('--test-categories-distribution-enforcement', default=None)
+    if cli_value is not None:
+        return EnforcementMode(cli_value)
+
+    ini_value = config.getini('test_categories_distribution_enforcement')
     if ini_value and ini_value in _VALID_ENFORCEMENT_MODES:
         return EnforcementMode(ini_value)
 

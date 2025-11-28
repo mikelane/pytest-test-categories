@@ -156,8 +156,8 @@ class DescribeDistributionEdgeCases:
             """
         )
 
-        # When running pytest
-        result = pytester.runpytest('-v')
+        # When running pytest (with distribution enforcement enabled)
+        result = pytester.runpytest('-v', '--test-categories-distribution-enforcement=warn')
 
         # Then it should show a distribution warning
         result.assert_outcomes(passed=100)
@@ -258,8 +258,8 @@ class DescribeDistributionEdgeCases:
             """
         )
 
-        # When running pytest
-        result = pytester.runpytest('-v')
+        # When running pytest (with distribution enforcement enabled)
+        result = pytester.runpytest('-v', '--test-categories-distribution-enforcement=warn')
 
         # Then it should show a distribution warning
         result.assert_outcomes(passed=100)
