@@ -12,7 +12,7 @@ import sys
 import pytest
 
 
-@pytest.mark.small
+@pytest.mark.medium
 def it_covers_main_package_init() -> None:
     """Reload main package __init__.py to ensure coverage tracking."""
     # Reload the main package __init__.py to execute it under coverage
@@ -60,7 +60,7 @@ def it_covers_main_package_init() -> None:
     assert TestPercentages is not None
 
 
-@pytest.mark.small
+@pytest.mark.medium
 def it_covers_distribution_subpackage_init() -> None:
     """Reload distribution subpackage __init__.py to ensure coverage tracking."""
     # Reload the distribution subpackage __init__.py to execute it under coverage
