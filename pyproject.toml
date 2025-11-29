@@ -1,6 +1,6 @@
 [project]
 name = "pytest-test-categories"
-version = "0.6.0"
+version = "0.7.0"
 description = "A pytest plugin to enforce test timing constraints and size distributions."
 authors = [{ name = "Mike Lane", email = "mikelane@gmail.com" }]
 license = { text = "MIT" }
