@@ -50,73 +50,81 @@ This integration provides 10x faster mutation testing by combining:
 5. **Performance**: Zero-overhead test categorization and timing
 6. **Extensibility**: Pluggable architecture for custom categories and resource policies
 
-## Current State (v0.3.0)
+## Current State (v0.6.0) - November 2025
 
 ### Completed Capabilities
 
 - ✅ Four test size categories (small, medium, large, xlarge)
 - ✅ Timing enforcement with fixed limits (1s/300s/900s)
 - ✅ Distribution validation with target percentages (80/15/5)
+- ✅ **Distribution enforcement modes** (off/warn/strict)
 - ✅ Test size reporting (basic and detailed)
 - ✅ Base test classes for easy categorization
 - ✅ Comprehensive test coverage (100%)
 - ✅ CI/CD pipeline with multi-version Python support (3.11, 3.12, 3.13, 3.14)
 - ✅ Pre-commit hooks for quality enforcement
-- ✅ Hexagonal architecture (WallTimer/FakeTimer adapters)
+- ✅ Hexagonal architecture (Ports and Adapters pattern throughout)
 
-### Known Limitations
+### Resource Isolation (Phase 1 Complete)
 
-- No resource isolation enforcement (network, filesystem, sleep)
-- Fixed time limits (not user-configurable)
-- Limited reporting formats (terminal only)
-- No integration with test impact analysis
-- No parallel execution optimization
-- No custom category support
+- ✅ **Network Isolation** - Block all network access for small tests
+- ✅ **Medium Network Restriction** - Localhost-only for medium tests
+- ✅ **Process Isolation** - Block subprocess spawning in small tests
+- ✅ **Database Isolation** - Block database connections in small tests
+- ✅ **Thread Monitoring** - Warn when small tests use threading primitives
+- ✅ **Enforcement modes** - `warn` (default) and `strict` modes
+
+### Remaining for v1.0.0
+
+- Filesystem isolation implementation (ADR + docs complete)
+- Sleep blocking for small tests
+- Configurable time limits
+- JSON/XML report export
 
 ## Revised Timeline (Velocity-Based)
 
-Based on realistic development velocity (10-15 hours/week with Claude Code assistance):
+Based on development velocity with Claude Code assistance, the project is **~6 weeks ahead of schedule**.
 
-### Phase 1: Resource Isolation (Q4 2025)
-**Target: v0.4.0 - v0.6.0**
+### Phase 1: Resource Isolation (Q4 2025) ✅ COMPLETE
+**Delivered: v0.4.0 - v0.6.0**
 
-This is the **critical differentiator** that makes pytest-test-categories valuable for mutation testing integration.
+- ✅ Network access blocking for small tests
+- ✅ Localhost-only restriction for medium tests
+- ✅ Process/subprocess blocking for small tests
+- ✅ Database connection blocking for small tests
+- ✅ Thread monitoring with warnings
+- ✅ Enforcement modes: `warn` (default) and `strict`
+- ✅ Clear error messages with remediation guidance
 
-**Scope:**
-- Network access blocking for small tests
-- Filesystem access blocking for small tests
-- `time.sleep()` blocking for small tests
-- Enforcement modes: `warn` (default) and `strict`
-- Clear error messages with remediation guidance
-
-**Why First:**
-- Creates the "moat" around the commercial ecosystem
-- Small tests must be hermetic for reliable mutation testing
-- Enables the killer integration with pytest-test-impact
-
-### Phase 2: Configuration & Polish (Q1 2026)
+### Phase 2: Configuration & Polish (December 2025)
 **Target: v0.7.0 - v0.9.0**
 
 **Scope:**
 - User-configurable time limits via pytest configuration
-- Per-category configuration
+- Sleep blocking for small tests
+- Filesystem isolation implementation
 - JSON/XML report export for CI integration
 - Documentation overhaul with real-world examples
-- Migration guides from v0.x
 
-### Phase 3: v1.0 Stable Release (Late January 2026)
+### Phase 3: v1.0 Stable Release (January 2026)
 **Target: v1.0.0**
 
 **Acceptance Criteria:**
-- [ ] Resource isolation enforcement (network, filesystem, sleep)
+- [x] Network isolation enforcement
+- [x] Process isolation enforcement
+- [x] Database isolation enforcement
+- [x] Thread monitoring
+- [x] Distribution enforcement modes
+- [ ] Filesystem isolation enforcement
+- [ ] Sleep blocking for small tests
 - [ ] Configurable time limits and tolerances
+- [ ] JSON/XML reporting
 - [ ] Comprehensive documentation
-- [ ] Production deployment case studies
 - [ ] Zero known critical bugs
 - [ ] Security audit completed
 - [ ] Performance benchmarks published
 
-### Phase 4: Ecosystem Integration (Q2-Q3 2026)
+### Phase 4: Ecosystem Integration (Q1-Q2 2026)
 **Target: v1.1.0 - v1.3.0**
 
 **Scope:**
@@ -125,7 +133,7 @@ This is the **critical differentiator** that makes pytest-test-categories valuab
 - Dashboard integrations (Allure, ReportPortal)
 - Historical trend tracking
 
-### Phase 5: Advanced Features (Q4 2026+)
+### Phase 5: Advanced Features (Q3 2026+)
 **Target: v2.0.0**
 
 **Scope:**
@@ -134,156 +142,29 @@ This is the **critical differentiator** that makes pytest-test-categories valuab
 - ML-based test categorization suggestions
 - Flaky test detection
 
-## Resource Isolation Feature (Priority #1)
-
-### The Problem
-
-Small tests should be **hermetic** — producing the same result at 3am on Sunday or during peak traffic on Black Friday. Currently, pytest-test-categories only enforces timing; a "small" test can still:
-
-- Make network requests (flaky, slow)
-- Write to the filesystem (side effects, race conditions)
-- Call `time.sleep()` (slow, timing-dependent)
-
-### The Solution
-
-**Enforcement mode** that blocks prohibited resources for small tests:
-
-```toml
-# pyproject.toml
-[tool.pytest.ini_options]
-test_categories_enforcement = "strict"  # or "warn" (default)
-
-# small tests will FAIL if they:
-# - Make network connections
-# - Access filesystem outside allowed paths
-# - Call time.sleep()
-```
-
-### Design Principles
-
-1. **Enforcement over magic**: When a test fails because it accessed the network, the developer learns something. Silent fakes teach nothing.
-
-2. **Gradual adoption**: `warn` mode lets teams see violations without breaking CI. `strict` mode enforces compliance.
-
-3. **Clear errors**: Error messages explain WHY the resource is blocked and HOW to fix it (mock the dependency, use a test double, or change the test size).
-
-4. **No hidden behavior**: Unlike automatic DI injection, enforcement is explicit and predictable.
-
-### Implementation Approach
-
-Using Python's import hooks and monkey-patching (similar to `gevent`):
-
-```python
-# Conceptual implementation
-@pytest.hookimpl(hookwrapper=True)
-def pytest_runtest_call(item):
-    if is_small_test(item) and enforcement_enabled():
-        with block_network(), block_filesystem(), block_sleep():
-            yield
-    else:
-        yield
-```
-
-### Resource Blocking Strategies
-
-| Resource | Strategy | Fallback |
-|----------|----------|----------|
-| Network | Patch `socket.socket` | Raise `HermeticityViolationError` |
-| Filesystem | Patch `open`, `pathlib.Path` | Allow only temp dirs |
-| Sleep | Patch `time.sleep` | Raise or warn |
-
-### Future: dioxide Integration
-
-After enforcement is mature, **optional** DI integration:
-
-```python
-# Future feature - NOT in v1.0
-@pytest.mark.small  # dioxide auto-injects FakeHttpClient, FakeFileSystem
-def test_user_creation(user_service: UserService):
-    ...
-```
-
-This is a **premium feature** that depends on dioxide adoption.
-
-## pytest-test-impact Integration
-
-### The Value Proposition
-
-When pytest-test-impact is available, pytest-test-categories enables:
-
-```bash
-# Run only small tests that cover changed code
-pytest --impacted-by-diff origin/main -m small
-```
-
-### Integration Points
-
-1. **Size-filtered impact queries**: "Which small tests cover this file?"
-2. **Combined CI optimization**: Fast feedback on small tests, then medium/large
-3. **Mutation testing acceleration**: Only run fast, relevant tests against mutations
-
-### Implementation
-
-pytest-test-impact will query pytest-test-categories for test size metadata:
-
-```python
-# pytest-test-impact queries test sizes
-tests = impact_map.get_tests_for_line("src/auth/login.py", 42)
-small_tests = [t for t in tests if categories.get_size(t) == TestSize.SMALL]
-```
-
-## Mutation Testing Integration
-
-### The Killer Combo
-
-```bash
-pytest --mutate --impacted-by-diff origin/main -m small
-```
-
-This command:
-1. Finds code changed from `origin/main`
-2. Generates mutations for changed lines
-3. Queries pytest-test-impact for tests covering those lines
-4. Filters to only `@pytest.mark.small` tests (via pytest-test-categories)
-5. Runs those tests against mutations
-6. Reports mutation score
-
-**Result**: Mutation testing in 2 minutes instead of 2 hours.
-
-### Why This Matters
-
-pytest-test-categories is the **moat** around the commercial mutation testing tool:
-
-- Without test sizes: Must run all tests against all mutations (slow)
-- With test sizes: Run only fast, hermetic tests (10x faster)
-- With hermeticity enforcement: Results are reliable (no flakes)
-
 ## Feature Backlog
 
 ### High Priority (v1.0 Requirements)
 
-1. **Resource Isolation Enforcement**
-   - Network blocking for small tests
-   - Filesystem blocking for small tests
-   - Sleep blocking for small tests
-   - `warn` and `strict` enforcement modes
-   - Clear error messages with remediation
-
-2. **Configurable Time Limits**
+1. **Configurable Time Limits**
    - Allow users to override default limits
    - Support per-category configuration
    - Validate configuration at startup
 
-3. **Enhanced Reporting**
+2. **Sleep Blocking**
+   - `time.sleep()` blocked for small tests
+   - Warning/strict modes
+   - Clear error messages
+
+3. **Filesystem Isolation**
+   - Block filesystem access for small tests (except temp dirs)
+   - Configurable allowed paths
+   - ADR-002 and documentation already complete
+
+4. **Enhanced Reporting**
    - JSON export for CI integration
    - JUnit XML format with size metadata
    - Hermeticity violation reports
-
-4. **Documentation Improvements**
-   - Resource isolation guide
-   - Migration from v0.x guide
-   - Real-world case studies
-   - Integration guides
 
 ### Medium Priority (v1.x)
 
@@ -321,35 +202,26 @@ pytest-test-categories is the **moat** around the commercial mutation testing to
 
 ## Milestones
 
-### Milestone: v0.4.0 - Network Isolation (Target: December 2025)
+### Milestone: v0.7.0 - Configuration & Reporting (Target: December 2025)
 
 **Acceptance Criteria**:
-- [ ] Network access blocked for small tests in strict mode
-- [ ] Warning issued in warn mode
-- [ ] Clear error message with remediation guidance
-- [ ] Documentation for network isolation
-- [ ] Tests for isolation behavior
+- [ ] Configurable time limits via pyproject.toml/pytest.ini
+- [ ] Sleep blocking for small tests
+- [ ] JSON report export for CI integration
+- [ ] Documentation updates
 
-### Milestone: v0.5.0 - Filesystem Isolation (Target: December 2025)
+### Milestone: v0.8.0 - Filesystem Isolation (Target: December 2025)
 
 **Acceptance Criteria**:
 - [ ] Filesystem access blocked for small tests (except temp dirs)
 - [ ] Configurable allowed paths
 - [ ] Warning/strict modes
-- [ ] Documentation and examples
+- [ ] Integration with existing enforcement infrastructure
 
-### Milestone: v0.6.0 - Sleep Blocking (Target: January 2026)
-
-**Acceptance Criteria**:
-- [ ] `time.sleep()` blocked for small tests
-- [ ] Warning/strict modes
-- [ ] Clear error messages
-- [ ] Complete resource isolation suite
-
-### Milestone: v1.0.0 - Stable Release (Target: Late January 2026)
+### Milestone: v1.0.0 - Stable Release (Target: January 2026)
 
 **Acceptance Criteria**:
-- [ ] Full resource isolation (network, filesystem, sleep)
+- [ ] Full resource isolation (network, process, database, filesystem, sleep)
 - [ ] Configurable time limits
 - [ ] JSON/XML reporting
 - [ ] Comprehensive documentation
@@ -357,7 +229,7 @@ pytest-test-categories is the **moat** around the commercial mutation testing to
 - [ ] Security audit completed
 - [ ] Performance benchmarks
 
-### Milestone: v1.1.0 - Impact Integration (Target: Q2 2026)
+### Milestone: v1.1.0 - Impact Integration (Target: Q1 2026)
 
 **Acceptance Criteria**:
 - [ ] Size metadata API for pytest-test-impact
@@ -365,7 +237,7 @@ pytest-test-categories is the **moat** around the commercial mutation testing to
 - [ ] CI optimization examples
 - [ ] Integration test suite
 
-### Milestone: v2.0.0 - Advanced Features (Target: Q4 2026)
+### Milestone: v2.0.0 - Advanced Features (Target: Q3 2026)
 
 **Acceptance Criteria**:
 - [ ] Custom test categories
