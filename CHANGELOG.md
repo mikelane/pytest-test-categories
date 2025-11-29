@@ -22,6 +22,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `TimeLimitConfig` model with ordering validation (small < medium < large <= xlarge)
   - CLI options take precedence over INI options, which take precedence over defaults
 
+- **Sleep Blocking**: Block `time.sleep()` and `asyncio.sleep()` calls in small tests (#114, #118)
+  - `SleepBlockerPort` interface in `ports/sleep.py` following hexagonal architecture
+  - `SleepPatchingBlocker` production adapter that patches sleep functions
+  - `FakeSleepBlocker` test adapter for unit testing
+  - `SleepViolationError` exception with remediation guidance
+  - Enforces hermeticity by preventing artificial delays in small tests
+
 ## [0.6.0] - 2025-11-28
 
 ### Added

@@ -41,6 +41,7 @@ __all__ = [
     'FilesystemAccessViolationError',
     'HermeticityViolationError',
     'NetworkAccessViolationError',
+    'SleepViolationError',
     'SubprocessViolationError',
 ]
 
@@ -505,3 +506,93 @@ class DatabaseViolationError(HermeticityViolationError):
             suggestions.append('Change test category to @pytest.mark.medium (if database access is required)')
             return suggestions
         return []  # Medium/Large/XLarge tests have no database restrictions
+
+
+class SleepViolationError(HermeticityViolationError):
+    """Raised when a test calls time.sleep() or similar blocking functions.
+
+    This exception is raised when a test attempts to use sleep functions
+    that violate its size category's restrictions:
+    - Small tests: No sleep calls allowed (tests should be fast and deterministic)
+    - Medium/Large/XLarge: All sleep calls allowed
+
+    Small tests should be hermetic and not depend on wall-clock time.
+    Using sleep in tests indicates:
+    - Waiting for async operations (should use proper synchronization)
+    - Flaky timing assumptions
+    - Polling patterns (should use condition-based waiting)
+
+    Attributes:
+        function: The sleep function that was called (e.g., 'time.sleep').
+        duration: The sleep duration in seconds.
+
+    Example:
+        >>> raise SleepViolationError(
+        ...     test_size=TestSize.SMALL,
+        ...     test_nodeid='tests/test_timing.py::test_delay',
+        ...     function='time.sleep',
+        ...     duration=0.1
+        ... )
+
+    The error message includes:
+    - Test identification (nodeid, size category)
+    - Function and duration details
+    - Remediation suggestions (proper synchronization, mocking, size change)
+
+    """
+
+    _adr_reference: str = 'docs/architecture/adr-005-sleep-isolation.md'
+
+    def __init__(
+        self,
+        test_size: TestSize,
+        test_nodeid: str,
+        function: str,
+        duration: float,
+    ) -> None:
+        """Initialize a sleep violation error.
+
+        Args:
+            test_size: The test's size category.
+            test_nodeid: The pytest node ID of the violating test.
+            function: The sleep function that was called.
+            duration: The sleep duration in seconds.
+
+        """
+        self.function = function
+        self.duration = duration
+
+        remediation = self._get_remediation(test_size, function)
+
+        super().__init__(
+            test_size=test_size,
+            test_nodeid=test_nodeid,
+            violation_type='Sleep call attempted',
+            details=f'Called: {function}({duration})',
+            remediation=remediation,
+        )
+
+    @staticmethod
+    def _get_remediation(test_size: TestSize, function: str) -> list[str]:
+        """Get remediation suggestions based on test size and sleep function.
+
+        Args:
+            test_size: The test's size category.
+            function: The sleep function used.
+
+        Returns:
+            List of remediation suggestions.
+
+        """
+        if test_size == TestSize.SMALL:
+            suggestions = [
+                'Use proper synchronization instead of sleep (e.g., threading.Event)',
+                'Use condition-based waiting with polling and timeout',
+                f'Mock {function} using pytest-mock (mocker.patch)',
+                'Use a FakeTimer or controllable time abstraction',
+            ]
+            if 'asyncio' in function:
+                suggestions.append('Use asyncio.wait_for() with proper conditions instead')
+            suggestions.append('Change test category to @pytest.mark.medium (if timing is required)')
+            return suggestions
+        return []  # Medium/Large/XLarge tests have no sleep restrictions

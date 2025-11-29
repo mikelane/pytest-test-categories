@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import time
 from unittest.mock import patch
 
 import pytest
@@ -102,17 +101,16 @@ class DescribeWallTimer:
         with pytest.raises(RuntimeError, match='Timer was never stopped'):
             timer.duration()
 
-    def it_measures_actual_elapsed_time(self) -> None:
-        """Test that WallTimer measures real elapsed time."""
+    def it_measures_elapsed_time_using_mocked_clock(self) -> None:
+        """Test that WallTimer measures elapsed time using mocked clock."""
         timer = WallTimer()
 
-        timer.start()
-        time.sleep(0.01)  # Sleep for 10ms
-        timer.stop()
+        with patch('time.perf_counter', side_effect=[100.0, 100.01]):
+            timer.start()
+            timer.stop()
 
         duration = timer.duration()
-        assert duration >= 0.01  # Should be at least 10ms
-        assert duration < 0.1  # But not more than 100ms
+        assert duration == pytest.approx(0.01, rel=1e-9)
 
     def it_can_be_reused_after_reset(self) -> None:
         """Test that timer can be reused after reset."""
