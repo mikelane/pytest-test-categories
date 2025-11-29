@@ -30,6 +30,7 @@ from __future__ import annotations
 import tempfile
 from collections import defaultdict
 from contextlib import ExitStack
+from importlib.metadata import version
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
@@ -50,6 +51,7 @@ from pytest_test_categories.adapters.pytest_adapter import (
 )
 from pytest_test_categories.adapters.threading import ThreadPatchingMonitor
 from pytest_test_categories.distribution.stats import DistributionStats
+from pytest_test_categories.json_report import JsonReport
 from pytest_test_categories.ports.network import EnforcementMode
 from pytest_test_categories.services.distribution_validation import (
     DistributionValidationService,
@@ -69,7 +71,12 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
     import pytest_test_categories.types
+    from pytest_test_categories.adapters.pytest_adapter import PytestConfigAdapter as PytestConfigAdapterType
+    from pytest_test_categories.distribution.stats import DistributionStats as DistributionStatsType
     from pytest_test_categories.reporting import TestSizeReport
+
+# Package version for JSON report
+PLUGIN_VERSION = version('pytest-test-categories')
 
 # Valid enforcement modes for ini option validation
 _VALID_ENFORCEMENT_MODES = {'off', 'warn', 'strict'}
@@ -92,10 +99,16 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         '--test-size-report',
         action='store',
         default=None,
-        choices=[None, 'basic', 'detailed'],
+        choices=[None, 'basic', 'detailed', 'json'],
         nargs='?',
         const='basic',
-        help='Generate a report of test sizes (basic or detailed)',
+        help='Generate a report of test sizes (basic, detailed, or json)',
+    )
+    group.addoption(
+        '--test-size-report-file',
+        action='store',
+        default=None,
+        help='Output file path for JSON report (requires --test-size-report=json)',
     )
     group.addoption(
         '--test-categories-enforcement',
@@ -414,7 +427,9 @@ def pytest_terminal_summary(terminalreporter: pytest.TerminalReporter) -> None:
     if session_state.test_size_report is not None:
         test_report = cast('TestSizeReport', session_state.test_size_report)
         report_type = config_adapter.get_option('--test-size-report')
-        if report_type == 'detailed':
+        if report_type == 'json':
+            _write_json_report(test_report, stats, config_adapter, terminalreporter)
+        elif report_type == 'detailed':
             test_report.write_detailed_report(terminalreporter)
         else:
             test_report.write_basic_report(terminalreporter)
@@ -694,3 +709,36 @@ def _get_allowed_paths(item: pytest.Item) -> frozenset[Path]:
                 allowed.add(Path(stripped_path).expanduser().resolve())
 
     return frozenset(allowed)
+
+
+def _write_json_report(
+    test_report: TestSizeReport,
+    stats: DistributionStatsType,
+    config_adapter: PytestConfigAdapterType,
+    terminalreporter: pytest.TerminalReporter,
+) -> None:
+    """Write JSON report to file or stdout.
+
+    Args:
+        test_report: The test size report containing test data.
+        stats: The distribution statistics.
+        config_adapter: The config adapter for accessing options.
+        terminalreporter: The terminal reporter for output.
+
+    """
+    json_report = JsonReport.from_test_size_report(
+        test_report=test_report,
+        distribution_stats=stats,
+        version=PLUGIN_VERSION,
+    )
+
+    json_output = json_report.model_dump_json(indent=2)
+
+    file_path = config_adapter.get_option('--test-size-report-file')
+    if file_path:
+        output_path = Path(str(file_path))
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json_output)
+    else:
+        terminalreporter.write_line('')
+        terminalreporter.write_line(json_output)
