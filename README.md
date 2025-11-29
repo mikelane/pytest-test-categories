@@ -17,12 +17,33 @@ The test size categories and their time limits are based on recommendations from
 
 ## Test Size Categories and Time Limits
 
-| Size    | Time Limit  |
-|---------|-------------|
-| Small   | 1 second    |
-| Medium  | 5 minutes   |
-| Large   | 15 minutes  |
-| XLarge  | 15 minutes  |
+| Size    | Default Time Limit |
+|---------|-------------------|
+| Small   | 1 second          |
+| Medium  | 5 minutes         |
+| Large   | 15 minutes        |
+| XLarge  | 15 minutes        |
+
+### Configuring Custom Time Limits
+
+Time limits can be customized via `pyproject.toml` or CLI options:
+
+```toml
+[tool.pytest.ini_options]
+# Custom time limits (in seconds)
+test_categories_small_time_limit = "2.0"
+test_categories_medium_time_limit = "600.0"
+test_categories_large_time_limit = "1800.0"
+test_categories_xlarge_time_limit = "1800.0"
+```
+
+Or via command line (CLI options take precedence over ini settings):
+
+```bash
+pytest --test-categories-small-time-limit=2.0 --test-categories-medium-time-limit=600.0
+```
+
+Time limits must follow ordering constraints: `small < medium < large <= xlarge`
 
 ## Installation
 

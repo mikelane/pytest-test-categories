@@ -187,11 +187,6 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
     # Individual ini options for each size
     parser.addini(
-        'test_categories_time_limits',
-        help='Time limit configuration as dict (e.g., {small=2, medium=600})',
-        default='',
-    )
-    parser.addini(
         'test_categories_small_time_limit',
         help='Time limit in seconds for small tests (default: 1.0)',
         default='',
@@ -460,8 +455,6 @@ def pytest_runtest_makereport(item: pytest.Item) -> Generator[None, None, None]:
     # Validate timing if test has a size marker
     if test_size and duration is not None:
         try:
-            # Pass the time limit config from session state for configurable limits
-
             time_limit_config = cast('TimeLimitConfig', session_state.time_limit_config)
             timing_service.validate_timing(test_size, duration, config=time_limit_config)
         except TimingViolationError as e:

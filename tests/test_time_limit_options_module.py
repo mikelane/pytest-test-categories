@@ -20,25 +20,6 @@ from pytest_test_categories.timing import (
 class DescribePytestAddoptionTimeLimits:
     """Test that pytest_addoption registers time limit options."""
 
-    def it_registers_time_limits_ini_option(self) -> None:
-        """Test that pytest_addoption registers time_limits ini option."""
-        from pytest_test_categories import pytest_addoption
-
-        parser = Mock()
-        group = Mock()
-        parser.getgroup.return_value = group
-
-        pytest_addoption(parser)
-
-        # Find the time_limits ini call
-        time_limits_ini_call = None
-        for call in parser.addini.call_args_list:
-            if call[0][0] == 'test_categories_time_limits':
-                time_limits_ini_call = call
-                break
-        assert time_limits_ini_call is not None
-        assert 'Time limit configuration' in time_limits_ini_call[1]['help']
-
     def it_registers_individual_time_limit_ini_options(self) -> None:
         """Test that pytest_addoption registers individual time limit ini options."""
         from pytest_test_categories import pytest_addoption

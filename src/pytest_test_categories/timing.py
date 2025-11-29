@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import (
     Annotated,
-    Any,
     Self,
 )
 
@@ -117,33 +116,6 @@ class TimeLimitConfig(BaseModel):
             TestSize.XLARGE: self.xlarge,
         }
         return limits[size]
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> TimeLimitConfig:
-        """Create a TimeLimitConfig from a dictionary.
-
-        Handles type coercion from strings (as from ini files) and
-        ignores unknown keys. Uses defaults for missing values.
-
-        Args:
-            data: Dictionary with time limit values. Keys can be
-                'small', 'medium', 'large', 'xlarge'. Values can be
-                int, float, or string representations of numbers.
-
-        Returns:
-            A new TimeLimitConfig instance.
-
-        Example:
-            >>> TimeLimitConfig.from_dict({'small': '2.0', 'medium': 600})
-            TimeLimitConfig(small=2.0, medium=600.0, large=900.0, xlarge=900.0)
-
-        """
-        valid_keys = {'small', 'medium', 'large', 'xlarge'}
-        filtered = {}
-        for key, value in data.items():
-            if key in valid_keys:
-                filtered[key] = float(value)
-        return cls(**filtered)
 
 
 # Default configuration matching Google's test size definitions
