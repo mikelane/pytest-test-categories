@@ -187,9 +187,10 @@ class DescribePytestAddoption:
         pytest_addoption(parser)
 
         parser.getgroup.assert_called_once_with('test-categories')
-        # Now adds four options: --test-size-report, --test-categories-enforcement,
-        # --test-categories-allowed-paths, --test-categories-distribution-enforcement
-        assert group.addoption.call_count == 4
+        # Now adds five options: --test-size-report, --test-size-report-file,
+        # --test-categories-enforcement, --test-categories-allowed-paths,
+        # --test-categories-distribution-enforcement
+        assert group.addoption.call_count == 5
         # Find the test-size-report call
         test_size_report_call = None
         for call in group.addoption.call_args_list:
@@ -197,7 +198,7 @@ class DescribePytestAddoption:
                 test_size_report_call = call
                 break
         assert test_size_report_call is not None
-        assert test_size_report_call[1]['choices'] == [None, 'basic', 'detailed']
+        assert test_size_report_call[1]['choices'] == [None, 'basic', 'detailed', 'json']
 
     def it_adds_enforcement_cli_option(self) -> None:
         """Test that pytest_addoption adds the enforcement CLI option."""

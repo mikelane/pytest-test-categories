@@ -132,6 +132,71 @@ The plugin hooks into several pytest phases to:
 | Medium       | 15%               | 5%        |
 | Large/XLarge | 5%                | 3%        |
 
+## Reporting Options
+
+The plugin provides multiple reporting formats for analyzing test size distribution and timing.
+
+### Terminal Reports
+
+```bash
+# Basic summary report
+pytest --test-size-report=basic
+
+# Detailed report with per-test information
+pytest --test-size-report=detailed
+```
+
+### JSON Report Export
+
+For CI/CD integration and custom tooling, the plugin supports JSON report output:
+
+```bash
+# Output JSON report to terminal
+pytest --test-size-report=json
+
+# Write JSON report to a file
+pytest --test-size-report=json --test-size-report-file=report.json
+```
+
+#### JSON Report Structure
+
+The JSON report includes:
+
+```json
+{
+  "version": "0.7.0",
+  "timestamp": "2025-11-29T12:00:00.000000Z",
+  "summary": {
+    "total_tests": 150,
+    "distribution": {
+      "small": {"count": 120, "percentage": 80.0, "target": 80.0},
+      "medium": {"count": 22, "percentage": 14.67, "target": 15.0},
+      "large": {"count": 6, "percentage": 4.0, "target": 4.0},
+      "xlarge": {"count": 2, "percentage": 1.33, "target": 1.0}
+    },
+    "violations": {
+      "timing": 0,
+      "hermeticity": 0
+    }
+  },
+  "tests": [
+    {
+      "name": "tests/test_example.py::test_fast_function",
+      "size": "small",
+      "duration": 0.002,
+      "status": "passed",
+      "violations": []
+    }
+  ]
+}
+```
+
+This format enables:
+- **CI/CD Integration**: Parse results in GitHub Actions, GitLab CI, or other pipelines
+- **Dashboard Visualization**: Feed data into monitoring tools like Grafana or custom dashboards
+- **Trend Analysis**: Track test distribution and timing over time
+- **Quality Gates**: Enforce test size policies programmatically
+
 ## Resource Isolation
 
 The plugin enforces resource isolation for small tests to ensure test hermeticity. When enabled, small tests that attempt network or filesystem access will fail immediately or emit warnings, depending on the enforcement mode.

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **JSON Report Export**: Machine-readable JSON report format for CI/CD integration (#115)
+  - `--test-size-report=json` CLI option to output JSON report to terminal
+  - `--test-size-report-file=PATH` CLI option to write JSON report to a file
+  - JSON format includes plugin version, ISO 8601 timestamp, summary statistics, and per-test details
+  - Enables CI/CD pipeline integration, dashboard visualization, and custom tooling
+  - Built with Pydantic models for type-safe serialization
+
 ## [0.6.0] - 2025-11-28
 
 ### Added
