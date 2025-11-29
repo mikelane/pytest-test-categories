@@ -38,3 +38,4 @@ poetry.lock
 # Sphinx documentation
 docs/_build/
 docs/api/
+.worktrees/
