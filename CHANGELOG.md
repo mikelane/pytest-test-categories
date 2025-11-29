@@ -7,9 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2025-11-28
+
 ### Added
 
-- **Database Isolation**: Block database connections in small tests (#102)
+- **Process Isolation**: Block subprocess spawning in small tests (#101, #108)
+  - `ProcessBlockerPort` interface in `ports/process.py` following hexagonal architecture
+  - `ProcessPatchingBlocker` production adapter that patches subprocess and multiprocessing
+  - Intercepts `subprocess.Popen`, `subprocess.run`, `subprocess.call`, `subprocess.check_call`, `subprocess.check_output`
+  - Intercepts `os.system`, `os.popen`
+  - Intercepts `multiprocessing.Process`
+  - `SubprocessViolationError` exception with remediation guidance
+  - Architecture Decision Record (ADR-003) documenting the design
+
+- **Database Isolation**: Block database connections in small tests (#102, #110)
   - `DatabaseBlockerPort` interface in `ports/database.py` following hexagonal architecture
   - `DatabasePatchingBlocker` production adapter that patches `sqlite3.connect`
   - `FakeDatabaseBlocker` test adapter for unit testing
@@ -22,7 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - SQLAlchemy: `sqlalchemy.create_engine`
   - Integration with pytest hooks for automatic enforcement on small tests
   - In-memory SQLite (`:memory:`) is blocked (stricter interpretation of hermeticity)
-- **Medium Network Restriction**: Network access enforcement for medium tests (#103)
+
+- **Medium Network Restriction**: Network access enforcement for medium tests (#103, #111)
   - Medium tests now restricted to localhost-only network access
   - External network connections blocked for medium tests in strict/warn modes
   - `NetworkMode` enum added to `types.py` with values: `BLOCK_ALL`, `LOCALHOST_ONLY`, `ALLOW_ALL`
@@ -31,7 +43,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Medium: `LOCALHOST_ONLY` (localhost only)
     - Large/XLarge: `ALLOW_ALL` (full network access)
   - Follows Google's "Software Engineering at Google" test size definitions
-- **Thread Monitoring**: Warn when small tests use threading primitives (#105)
+
+- **Distribution Enforcement**: New enforcement modes for test distribution validation (#104, #109)
+  - `--test-categories-distribution-enforcement` CLI option with choices: `off`, `warn`, `strict`
+  - `test_categories_distribution_enforcement` ini option for configuration
+  - `off` mode: Skip validation entirely (default, backwards compatible)
+  - `warn` mode: Emit warnings but allow build to continue
+  - `strict` mode: Fail collection if distribution is outside acceptable range
+  - Actionable error messages with current distribution, targets, and remediation guidance
+  - `DistributionValidationService` for pure domain logic with hexagonal architecture
+  - Comprehensive user documentation with examples for each mode
+
+- **Thread Monitoring**: Warn when small tests use threading primitives (#105, #112)
   - `ThreadMonitorPort` interface defined in `ports/threading.py`
   - Production adapter `ThreadPatchingMonitor` in `adapters/threading.py`
   - Test adapter `FakeThreadMonitor` in `adapters/fake_threading.py`
@@ -42,26 +65,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Blocking threading could break legitimate test infrastructure
   - Warning message includes test name and suggests using `@pytest.mark.medium`
   - No impact on medium/large/xlarge tests (threading is expected for those sizes)
-- **Distribution Enforcement**: New enforcement modes for test distribution validation (#104)
-  - `--test-categories-distribution-enforcement` CLI option with choices: `off`, `warn`, `strict`
-  - `test_categories_distribution_enforcement` ini option for configuration
-  - `off` mode: Skip validation entirely (default, backwards compatible)
-  - `warn` mode: Emit warnings but allow build to continue
-  - `strict` mode: Fail collection if distribution is outside acceptable range
-  - Actionable error messages with current distribution, targets, and remediation guidance
-  - `DistributionValidationService` for pure domain logic with hexagonal architecture
-  - Comprehensive user documentation with examples for each mode
 
-## [0.5.0] - TBD
+- **Strict Enforcement Dogfooding**: Enable strict enforcement in project itself (#106, #107)
+  - Project now uses its own strict enforcement mode
+  - Validates the plugin works correctly on real-world codebase
+
+### Fixed
+
+- Recategorized pytester tests from small to medium (#99)
+
+## [0.5.0] - 2025-11-28
+
+> **Note**: This version was tagged for git history but not released to PyPI.
+> The features listed here are included in v0.6.0.
 
 ### Added
 
-- **Process Isolation**: New `SubprocessViolationError` exception and `ProcessBlockerPort` interface for blocking subprocess spawning in small tests (#101)
-  - Intercepts `subprocess.Popen`, `subprocess.run`, `subprocess.call`, `subprocess.check_call`, `subprocess.check_output`
-  - Intercepts `os.system`, `os.popen`
-  - Intercepts `multiprocessing.Process`
-  - Provides actionable error messages with remediation guidance
-  - Architecture Decision Record (ADR-003) documenting the design
 - **Filesystem Isolation Design**: Architecture Decision Record (ADR-002) documenting the design for filesystem isolation in small tests (#91, #95)
 - **Filesystem Isolation Documentation**: Comprehensive documentation for the filesystem isolation feature including:
   - User guide explaining filesystem isolation concepts and usage (#94)
