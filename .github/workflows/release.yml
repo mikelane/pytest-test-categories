@@ -148,6 +148,7 @@ jobs:
           pip install "$WHL_FILE"
 
       - name: Verify plugin registration
+        shell: bash
         run: |
           python -c "import pytest_test_categories; print(f'Successfully imported pytest_test_categories version {pytest_test_categories.__version__}')"
           pytest --co -q --collect-only 2>&1 | grep -i "test_categories" || echo "Plugin loaded successfully"
