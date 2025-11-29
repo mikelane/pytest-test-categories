@@ -7,6 +7,7 @@ from pytest_test_categories.adapters.fake_database import FakeDatabaseBlocker
 from pytest_test_categories.adapters.fake_filesystem import FakeFilesystemBlocker
 from pytest_test_categories.adapters.fake_network import FakeNetworkBlocker
 from pytest_test_categories.adapters.fake_process import FakeProcessBlocker
+from pytest_test_categories.adapters.fake_sleep import FakeSleepBlocker
 from pytest_test_categories.adapters.fake_threading import FakeThreadMonitor
 from pytest_test_categories.adapters.filesystem import FilesystemPatchingBlocker
 from pytest_test_categories.adapters.network import SocketPatchingNetworkBlocker
@@ -17,6 +18,7 @@ from pytest_test_categories.adapters.pytest_adapter import (
     PytestWarningAdapter,
     TerminalReporterAdapter,
 )
+from pytest_test_categories.adapters.sleep import SleepPatchingBlocker
 from pytest_test_categories.adapters.threading import ThreadPatchingMonitor
 
 __all__ = [
@@ -25,11 +27,13 @@ __all__ = [
     'FakeFilesystemBlocker',
     'FakeNetworkBlocker',
     'FakeProcessBlocker',
+    'FakeSleepBlocker',
     'FakeThreadMonitor',
     'FilesystemPatchingBlocker',
     'PytestConfigAdapter',
     'PytestItemAdapter',
     'PytestWarningAdapter',
+    'SleepPatchingBlocker',
     'SocketPatchingNetworkBlocker',
     'SubprocessPatchingBlocker',
     'TerminalReporterAdapter',

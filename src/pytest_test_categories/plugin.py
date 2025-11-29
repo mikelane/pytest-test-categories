@@ -49,6 +49,7 @@ from pytest_test_categories.adapters.pytest_adapter import (
     PytestWarningAdapter,
     TerminalReporterAdapter,
 )
+from pytest_test_categories.adapters.sleep import SleepPatchingBlocker
 from pytest_test_categories.adapters.threading import ThreadPatchingMonitor
 from pytest_test_categories.distribution.stats import DistributionStats
 from pytest_test_categories.json_report import JsonReport
@@ -405,6 +406,12 @@ def pytest_runtest_call(item: pytest.Item) -> Generator[None, None, None]:
             process_blocker.activate(test_size, enforcement_mode)
             stack.callback(_safe_deactivate_process, process_blocker)
 
+            # Activate sleep blocker
+            sleep_blocker = _get_sleep_blocker(item.config)
+            sleep_blocker.current_test_nodeid = item.nodeid
+            sleep_blocker.activate(test_size, enforcement_mode)
+            stack.callback(_safe_deactivate_sleep, sleep_blocker)
+
         # Activate database blocker
         database_blocker = _get_database_blocker(item.config)
         database_blocker.current_test_nodeid = item.nodeid
@@ -704,6 +711,39 @@ def _safe_deactivate_process(blocker: SubprocessPatchingBlocker) -> None:
 
     Args:
         blocker: The process blocker to deactivate.
+
+    """
+    if blocker.state.value == 'active':
+        blocker.deactivate()
+
+
+def _get_sleep_blocker(config: pytest.Config) -> SleepPatchingBlocker:
+    """Get or create the sleep blocker instance.
+
+    The blocker is stored on the config object to ensure proper lifecycle
+    management across test execution.
+
+    Args:
+        config: The pytest configuration object.
+
+    Returns:
+        The SleepPatchingBlocker instance.
+
+    """
+    blocker_attr = '_test_categories_sleep_blocker'
+    if not hasattr(config, blocker_attr):
+        blocker = SleepPatchingBlocker()
+        setattr(config, blocker_attr, blocker)
+    return cast('SleepPatchingBlocker', getattr(config, blocker_attr))
+
+
+def _safe_deactivate_sleep(blocker: SleepPatchingBlocker) -> None:
+    """Safely deactivate sleep blocker, handling edge cases.
+
+    This function is used as a callback in ExitStack to ensure cleanup.
+
+    Args:
+        blocker: The sleep blocker to deactivate.
 
     """
     if blocker.state.value == 'active':
