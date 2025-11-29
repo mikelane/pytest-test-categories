@@ -61,6 +61,10 @@ from pytest_test_categories.services.test_discovery import TestDiscoveryService
 from pytest_test_categories.services.test_reporting import TestReportingService
 from pytest_test_categories.services.timing_validation import TimingValidationService
 from pytest_test_categories.timers import WallTimer
+from pytest_test_categories.timing import (
+    DEFAULT_TIME_LIMIT_CONFIG,
+    TimeLimitConfig,
+)
 from pytest_test_categories.types import (
     TestSize,
     TimerState,
@@ -150,6 +154,59 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         default='off',
     )
 
+    # Time limit configuration options
+    # Individual CLI options for each size (override ini)
+    group.addoption(
+        '--test-categories-small-time-limit',
+        action='store',
+        type=float,
+        default=None,
+        help='Time limit in seconds for small tests (default: 1.0). Overrides ini option.',
+    )
+    group.addoption(
+        '--test-categories-medium-time-limit',
+        action='store',
+        type=float,
+        default=None,
+        help='Time limit in seconds for medium tests (default: 300.0). Overrides ini option.',
+    )
+    group.addoption(
+        '--test-categories-large-time-limit',
+        action='store',
+        type=float,
+        default=None,
+        help='Time limit in seconds for large tests (default: 900.0). Overrides ini option.',
+    )
+    group.addoption(
+        '--test-categories-xlarge-time-limit',
+        action='store',
+        type=float,
+        default=None,
+        help='Time limit in seconds for xlarge tests (default: 900.0). Overrides ini option.',
+    )
+
+    # Individual ini options for each size
+    parser.addini(
+        'test_categories_small_time_limit',
+        help='Time limit in seconds for small tests (default: 1.0)',
+        default='',
+    )
+    parser.addini(
+        'test_categories_medium_time_limit',
+        help='Time limit in seconds for medium tests (default: 300.0)',
+        default='',
+    )
+    parser.addini(
+        'test_categories_large_time_limit',
+        help='Time limit in seconds for large tests (default: 900.0)',
+        default='',
+    )
+    parser.addini(
+        'test_categories_xlarge_time_limit',
+        help='Time limit in seconds for xlarge tests (default: 900.0)',
+        default='',
+    )
+
 
 @pytest.hookimpl(tryfirst=True)
 def pytest_configure(config: pytest.Config) -> None:
@@ -169,6 +226,10 @@ def pytest_configure(config: pytest.Config) -> None:
         session_state.timer_factory = WallTimer
     if not hasattr(config, 'distribution_stats'):
         config.distribution_stats = session_state.distribution_stats  # type: ignore[attr-defined]
+
+    # Initialize time limit configuration from CLI and ini options
+    if session_state.time_limit_config is None:
+        session_state.time_limit_config = _get_time_limit_config(config)
 
     # Register size markers
     for size in TestSize:
@@ -394,7 +455,8 @@ def pytest_runtest_makereport(item: pytest.Item) -> Generator[None, None, None]:
     # Validate timing if test has a size marker
     if test_size and duration is not None:
         try:
-            timing_service.validate_timing(test_size, duration)
+            time_limit_config = cast('TimeLimitConfig', session_state.time_limit_config)
+            timing_service.validate_timing(test_size, duration, config=time_limit_config)
         except TimingViolationError as e:
             report.longrepr = str(e)
             report.outcome = 'failed'
@@ -499,6 +561,54 @@ def _get_distribution_enforcement_mode(config: pytest.Config) -> EnforcementMode
         return EnforcementMode(ini_value)
 
     return EnforcementMode.OFF
+
+
+def _get_time_limit_config(config: pytest.Config) -> TimeLimitConfig:
+    """Get the time limit configuration from CLI and ini options.
+
+    CLI options take precedence over ini settings. Individual size options
+    take precedence over the combined time_limits option.
+
+    Priority (highest to lowest):
+    1. CLI individual options (--test-categories-small-time-limit, etc.)
+    2. Ini individual options (test_categories_small_time_limit, etc.)
+    3. Default values from DEFAULT_TIME_LIMIT_CONFIG
+
+    Args:
+        config: The pytest configuration object.
+
+    Returns:
+        A TimeLimitConfig with the resolved time limits.
+
+    Raises:
+        ValueError: If the configured limits violate ordering constraints
+            (small < medium < large <= xlarge).
+
+    """
+    # Start with defaults
+    limits: dict[str, float] = {
+        'small': DEFAULT_TIME_LIMIT_CONFIG.small,
+        'medium': DEFAULT_TIME_LIMIT_CONFIG.medium,
+        'large': DEFAULT_TIME_LIMIT_CONFIG.large,
+        'xlarge': DEFAULT_TIME_LIMIT_CONFIG.xlarge,
+    }
+
+    # Size name mappings for option names
+    sizes = ['small', 'medium', 'large', 'xlarge']
+
+    # Override with ini values (lower priority)
+    for size in sizes:
+        ini_value = config.getini(f'test_categories_{size}_time_limit')
+        if ini_value and ini_value.strip():
+            limits[size] = float(ini_value)
+
+    # Override with CLI values (highest priority)
+    for size in sizes:
+        cli_value = config.getoption(f'--test-categories-{size}-time-limit', default=None)
+        if cli_value is not None:
+            limits[size] = float(cli_value)
+
+    return TimeLimitConfig(**limits)
 
 
 def _get_network_blocker(config: pytest.Config) -> SocketPatchingNetworkBlocker:

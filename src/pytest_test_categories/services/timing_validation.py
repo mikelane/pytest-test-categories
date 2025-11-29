@@ -37,6 +37,8 @@ from pytest_test_categories.types import (
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
 
+    from pytest_test_categories.timing import TimeLimitConfig
+
 
 class TimingValidationService:
     """Service for validating test timing constraints.
@@ -57,7 +59,12 @@ class TimingValidationService:
 
     """
 
-    def validate_timing(self, test_size: TestSize, duration: float) -> None:
+    def validate_timing(
+        self,
+        test_size: TestSize,
+        duration: float,
+        config: TimeLimitConfig | None = None,
+    ) -> None:
         """Validate that a test completed within its time limit.
 
         Delegates to the timing module's validate() function to check if
@@ -66,6 +73,8 @@ class TimingValidationService:
         Args:
             test_size: The size category of the test.
             duration: The test duration in seconds.
+            config: Optional time limit configuration. If None, uses
+                DEFAULT_TIME_LIMIT_CONFIG.
 
         Raises:
             TimingViolationError: If the test exceeded its time limit.
@@ -74,9 +83,13 @@ class TimingValidationService:
             >>> service = TimingValidationService()
             >>> service.validate_timing(TestSize.SMALL, 0.5)  # OK
             >>> service.validate_timing(TestSize.SMALL, 2.0)  # Raises TimingViolationError
+            >>> # With custom config:
+            >>> from pytest_test_categories.timing import TimeLimitConfig
+            >>> config = TimeLimitConfig(small=5.0)
+            >>> service.validate_timing(TestSize.SMALL, 3.0, config=config)  # OK with 5s limit
 
         """
-        timing.validate(test_size, duration)
+        timing.validate(test_size, duration, config=config)
 
     def get_test_duration(
         self,

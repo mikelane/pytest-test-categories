@@ -16,6 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Enables CI/CD pipeline integration, dashboard visualization, and custom tooling
   - Built with Pydantic models for type-safe serialization
 
+- **Configurable Time Limits**: Custom time limits per test size category (#113)
+  - CLI options: `--test-categories-small-time-limit`, `--test-categories-medium-time-limit`, `--test-categories-large-time-limit`, `--test-categories-xlarge-time-limit`
+  - INI options: `test_categories_small_time_limit`, `test_categories_medium_time_limit`, `test_categories_large_time_limit`, `test_categories_xlarge_time_limit`
+  - `TimeLimitConfig` model with ordering validation (small < medium < large <= xlarge)
+  - CLI options take precedence over INI options, which take precedence over defaults
+
 ## [0.6.0] - 2025-11-28
 
 ### Added
