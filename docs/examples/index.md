@@ -9,6 +9,7 @@ This section provides practical examples of using pytest-test-categories in vari
 
 network-isolation
 filesystem-isolation
+ide-configs/README
 ```
 
 ## Quick Examples
