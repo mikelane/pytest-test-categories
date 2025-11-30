@@ -185,25 +185,6 @@ test_categories_enforcement = "off"
 
 In off mode, sleep blocking is disabled entirely.
 
-## Per-Test Overrides
-
-Individual tests can override the global enforcement using markers:
-
-### Allow Sleep Calls
-
-```python
-import pytest
-
-@pytest.mark.small
-@pytest.mark.allow_sleep
-def test_special_case():
-    """This small test is allowed to use sleep."""
-    import time
-    time.sleep(0.01)  # Allowed for this test only
-```
-
-Use sparingly and document why the override is necessary.
-
 ## Common Remediation Strategies
 
 ### 1. Use threading.Event for Synchronization

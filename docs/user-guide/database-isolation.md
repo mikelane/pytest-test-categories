@@ -192,26 +192,6 @@ test_categories_enforcement = "off"
 
 In off mode, database isolation is disabled entirely.
 
-## Per-Test Overrides
-
-Individual tests can override the global enforcement using markers:
-
-### Allow Database Access
-
-```python
-import pytest
-
-@pytest.mark.small
-@pytest.mark.allow_database
-def test_special_case():
-    """This small test is allowed to access databases."""
-    import sqlite3
-    conn = sqlite3.connect(":memory:")
-    ...
-```
-
-Use sparingly and document why the override is necessary.
-
 ## Common Remediation Strategies
 
 ### 1. Use In-Memory Data Structures

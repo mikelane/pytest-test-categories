@@ -90,27 +90,26 @@ test_categories_enforcement = "strict"
 | `warn` | Violations emit warnings, tests continue |
 | `off` | No enforcement |
 
-### Common Per-Test Overrides
+### If a Test Needs Resources, Change Its Size
+
+The test size defines the constraints, not the other way around. If a test genuinely requires network, filesystem, or subprocess access, recategorize it:
 
 ```python
 import pytest
 
-# Allow network access for a specific small test
-@pytest.mark.small
-@pytest.mark.allow_network
-def test_special_network_case():
+# Tests that need network access should be medium or large
+@pytest.mark.medium  # Medium tests can access localhost
+def test_with_local_database():
     ...
 
-# Allow filesystem access for a specific small test
-@pytest.mark.small
-@pytest.mark.allow_filesystem
-def test_special_filesystem_case():
+@pytest.mark.large  # Large tests can access external networks
+def test_external_api_integration():
     ...
 
-# Allow subprocess spawning for a specific small test
+# Use mocking for small tests
 @pytest.mark.small
-@pytest.mark.allow_subprocess
-def test_special_subprocess_case():
+def test_api_client(mocker):
+    mocker.patch("requests.get", return_value=Mock(json=lambda: {"key": "value"}))
     ...
 ```
 

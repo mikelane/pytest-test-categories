@@ -185,26 +185,6 @@ test_categories_enforcement = "off"
 
 In off mode, process isolation is disabled entirely.
 
-## Per-Test Overrides
-
-Individual tests can override the global enforcement using markers:
-
-### Allow Subprocess Spawning
-
-```python
-import pytest
-
-@pytest.mark.small
-@pytest.mark.allow_subprocess
-def test_special_case():
-    """This small test is allowed to spawn subprocesses."""
-    import subprocess
-    result = subprocess.run(["echo", "hello"], capture_output=True)
-    assert result.returncode == 0
-```
-
-Use sparingly and document why the override is necessary.
-
 ## Common Remediation Strategies
 
 ### 1. Mock subprocess.run
