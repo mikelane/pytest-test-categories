@@ -90,6 +90,25 @@ class PytestItemAdapter(TestItemPort):
         """
         self._item._nodeid = nodeid  # noqa: SLF001
 
+    def get_marker_kwargs(self, name: str) -> dict[str, object]:
+        """Get keyword arguments from a marker.
+
+        Retrieves the kwargs dict from a pytest marker. This is useful for
+        extracting configuration options from markers like
+        @pytest.mark.medium(allow_external_systems=True).
+
+        Args:
+            name: The marker name to retrieve kwargs from.
+
+        Returns:
+            A dictionary of keyword arguments, or empty dict if marker not found.
+
+        """
+        marker = self._item.get_closest_marker(name)
+        if marker is None:
+            return {}
+        return dict(marker.kwargs)
+
 
 class TerminalReporterAdapter(OutputWriterPort):
     """Production adapter that wraps pytest.TerminalReporter.

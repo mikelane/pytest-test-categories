@@ -94,3 +94,25 @@ class FakeTestItem(TestItemPort):
 
         """
         self._nodeid = nodeid
+
+    def get_marker_kwargs(self, name: str) -> dict[str, object]:
+        """Get keyword arguments from a marker.
+
+        For FakeTestItem, markers can be configured with a kwargs attribute.
+        If the marker is a simple object without kwargs, returns empty dict.
+
+        Args:
+            name: The marker name to retrieve kwargs from.
+
+        Returns:
+            A dictionary of keyword arguments, or empty dict if marker not found
+            or marker has no kwargs.
+
+        """
+        marker = self._markers.get(name)
+        if marker is None:
+            return {}
+        # Support markers that have a kwargs attribute
+        if hasattr(marker, 'kwargs'):
+            return dict(marker.kwargs)
+        return {}

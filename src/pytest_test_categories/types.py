@@ -177,6 +177,23 @@ class TestItemPort(ABC):
 
         """
 
+    @abstractmethod
+    def get_marker_kwargs(self, name: str) -> dict[str, object]:
+        """Get the keyword arguments from a marker.
+
+        Args:
+            name: The marker name to retrieve kwargs from.
+
+        Returns:
+            A dictionary of keyword arguments, or empty dict if marker not found.
+
+        Example:
+            >>> # For @pytest.mark.medium(allow_external_systems=True)
+            >>> kwargs = item.get_marker_kwargs('medium')
+            >>> assert kwargs == {'allow_external_systems': True}
+
+        """
+
 
 class OutputWriterPort(ABC):
     """Abstract base class defining the output writer interface.

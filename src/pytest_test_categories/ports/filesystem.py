@@ -38,7 +38,7 @@ from abc import (
     abstractmethod,
 )
 from enum import StrEnum
-from pathlib import Path  # noqa: TC003 - Required at runtime for Pydantic
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from icontract import (
