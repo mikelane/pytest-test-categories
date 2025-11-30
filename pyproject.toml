@@ -149,6 +149,20 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 [tool.ruff.lint.isort]
 required-imports = ["from __future__ import annotations"]
 
+[tool.ruff.lint.flake8-type-checking]
+# Pydantic models need type annotations at runtime, not just for type checking
+# Include both BaseModel and our Port classes that extend it
+runtime-evaluated-base-classes = [
+    "pydantic.BaseModel",
+    "pytest_test_categories.ports.external_systems.ExternalSystemsDetectorPort",
+    "pytest_test_categories.ports.database.DatabaseBlockerPort",
+    "pytest_test_categories.ports.network.NetworkBlockerPort",
+    "pytest_test_categories.ports.filesystem.FilesystemBlockerPort",
+    "pytest_test_categories.ports.process.ProcessBlockerPort",
+    "pytest_test_categories.ports.sleep.SleepBlockerPort",
+    "pytest_test_categories.ports.threading.ThreadingBlockerPort",
+]
+
 [tool.ruff.lint.flake8-quotes]
 inline-quotes = "single"
 multiline-quotes = "double"

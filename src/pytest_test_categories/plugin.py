@@ -40,6 +40,7 @@ from typing import (
 import pytest
 
 from pytest_test_categories.adapters.database import DatabasePatchingBlocker
+from pytest_test_categories.adapters.external_systems import ExternalSystemsDetector
 from pytest_test_categories.adapters.filesystem import FilesystemPatchingBlocker
 from pytest_test_categories.adapters.network import SocketPatchingNetworkBlocker
 from pytest_test_categories.adapters.process import SubprocessPatchingBlocker
@@ -333,7 +334,7 @@ def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None) -> 
 
 
 @pytest.hookimpl(hookwrapper=True)
-def pytest_runtest_call(item: pytest.Item) -> Generator[None, None, None]:
+def pytest_runtest_call(item: pytest.Item) -> Generator[None, None, None]:  # noqa: PLR0915
     """Block resources based on test size during execution and monitor threading.
 
     This hook enforces resource isolation based on test size and enforcement
@@ -349,6 +350,10 @@ def pytest_runtest_call(item: pytest.Item) -> Generator[None, None, None]:
     - Small tests: Subprocess spawning blocked
     - Small tests: Database connections blocked
     - Small tests: Thread creation warnings emitted
+
+    External systems detection (medium tests only):
+    - Medium tests: Warn if testcontainers/docker imported (unless suppressed)
+    - Suppressed via @pytest.mark.medium(allow_external_systems=True)
 
     Note: Thread monitoring WARNS instead of blocking because many libraries
     use threading internally. Blocking would break legitimate test infrastructure.
@@ -424,7 +429,27 @@ def pytest_runtest_call(item: pytest.Item) -> Generator[None, None, None]:
         thread_monitor.activate(test_size, enforcement_mode)
         stack.callback(_safe_deactivate_thread_monitor, thread_monitor)
 
+        # External systems detection for MEDIUM tests only
+        # Per Google's test sizes, external systems are DISCOURAGED (not prohibited)
+        external_systems_detector: ExternalSystemsDetector | None = None
+        if test_size == TestSize.MEDIUM:
+            # Check if warning is suppressed via marker kwarg
+            marker_kwargs = item_adapter.get_marker_kwargs('medium')
+            allow_external = marker_kwargs.get('allow_external_systems', False)
+
+            if not allow_external:
+                external_systems_detector = _get_external_systems_detector(item.config)
+                external_systems_detector.current_test_nodeid = item.nodeid
+                external_systems_detector.activate(test_size, enforcement_mode)
+                stack.callback(_safe_deactivate_external_systems, external_systems_detector)
+
         yield
+
+        # After test execution, check for external systems imports (medium tests only)
+        if external_systems_detector is not None and external_systems_detector.is_active:
+            detected = external_systems_detector.check_external_systems_detected()
+            if detected:
+                external_systems_detector.on_external_systems_detected(detected, item.nodeid)
 
 
 @pytest.hookimpl(hookwrapper=True)
@@ -814,6 +839,39 @@ def _safe_deactivate_thread_monitor(monitor: ThreadPatchingMonitor) -> None:
     """
     if monitor.state.value == 'active':
         monitor.deactivate()
+
+
+def _get_external_systems_detector(config: pytest.Config) -> ExternalSystemsDetector:
+    """Get or create the external systems detector instance.
+
+    The detector is stored on the config object to ensure proper lifecycle
+    management across test execution.
+
+    Args:
+        config: The pytest configuration object.
+
+    Returns:
+        The ExternalSystemsDetector instance.
+
+    """
+    detector_attr = '_test_categories_external_systems_detector'
+    if not hasattr(config, detector_attr):
+        detector = ExternalSystemsDetector()
+        setattr(config, detector_attr, detector)
+    return cast('ExternalSystemsDetector', getattr(config, detector_attr))
+
+
+def _safe_deactivate_external_systems(detector: ExternalSystemsDetector) -> None:
+    """Safely deactivate external systems detector, handling edge cases.
+
+    This function is used as a callback in ExitStack to ensure cleanup.
+
+    Args:
+        detector: The external systems detector to deactivate.
+
+    """
+    if detector.state.value == 'active':
+        detector.deactivate()
 
 
 def _get_allowed_paths(item: pytest.Item) -> frozenset[Path]:

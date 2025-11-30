@@ -26,7 +26,7 @@ See Also:
 
 from __future__ import annotations
 
-from pathlib import Path  # noqa: TC003 - Required at runtime for Pydantic and function signatures
+from pathlib import Path
 
 from pydantic import Field
 
