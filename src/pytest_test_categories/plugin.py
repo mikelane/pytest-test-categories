@@ -52,7 +52,10 @@ from pytest_test_categories.adapters.pytest_adapter import (
 )
 from pytest_test_categories.adapters.sleep import SleepPatchingBlocker
 from pytest_test_categories.adapters.threading import ThreadPatchingMonitor
-from pytest_test_categories.distribution.stats import DistributionStats
+from pytest_test_categories.distribution.stats import (
+    DistributionStats,
+    TestCounts,
+)
 from pytest_test_categories.json_report import JsonReport
 from pytest_test_categories.ports.network import EnforcementMode
 from pytest_test_categories.services.distribution_validation import (
@@ -71,6 +74,15 @@ from pytest_test_categories.timing import (
 from pytest_test_categories.types import (
     TestSize,
     TimerState,
+)
+from pytest_test_categories.xdist_compat import (
+    WORKEROUTPUT_DISTRIBUTION_KEY,
+    WORKEROUTPUT_REPORT_KEY,
+    deserialize_distribution_counts,
+    is_xdist_worker,
+    merge_report_data,
+    serialize_distribution_counts,
+    serialize_report_data,
 )
 
 if TYPE_CHECKING:
@@ -527,6 +539,104 @@ def pytest_terminal_summary(terminalreporter: pytest.TerminalReporter) -> None:
             test_report.write_detailed_report(terminalreporter)
         else:
             test_report.write_basic_report(terminalreporter)
+
+
+# =============================================================================
+# pytest-xdist Compatibility Hooks
+# =============================================================================
+
+
+@pytest.hookimpl
+def pytest_sessionfinish(session: pytest.Session) -> None:
+    """Send distribution stats and report data to controller when running as xdist worker.
+
+    When running with pytest-xdist, workers collect and run tests but the terminal
+    summary is displayed by the controller. This hook sends the worker's stats back
+    to the controller via the workeroutput mechanism.
+
+    Args:
+        session: The pytest session object.
+
+    """
+    if not is_xdist_worker():
+        return
+
+    # Get config and check for workeroutput (only present on workers)
+    config = session.config
+    workeroutput = getattr(config, 'workeroutput', None)
+    if workeroutput is None:
+        return
+
+    config_adapter = PytestConfigAdapter(config)
+    session_state = config_adapter.get_plugin_state()
+    stats = config_adapter.get_distribution_stats()
+
+    # Serialize and send distribution counts
+    if stats is not None:
+        workeroutput[WORKEROUTPUT_DISTRIBUTION_KEY] = serialize_distribution_counts(stats.counts)
+
+    # Serialize and send report data if reporting is enabled
+    if session_state.test_size_report is not None:
+        test_report = cast('TestSizeReport', session_state.test_size_report)
+        workeroutput[WORKEROUTPUT_REPORT_KEY] = serialize_report_data(test_report)
+
+
+@pytest.hookimpl
+def pytest_testnodedown(node: object, error: object | None) -> None:  # noqa: ARG001
+    """Aggregate distribution stats from a worker when it shuts down.
+
+    This xdist hook is called on the controller when a worker node completes.
+    We use it to aggregate the distribution counts and report data from all workers.
+
+    Args:
+        node: The xdist WorkerController node that shut down.
+        error: Error if the worker crashed, None otherwise.
+
+    """
+    # This hook only runs on controller, but verify we're not a worker
+    if is_xdist_worker():
+        return
+
+    # Access workeroutput from the node
+    workeroutput = getattr(node, 'workeroutput', None)
+    if workeroutput is None:
+        return
+
+    # Get controller's config from the node
+    config = getattr(node, 'config', None)
+    if config is None:
+        return
+
+    config_adapter = PytestConfigAdapter(config)
+    session_state = config_adapter.get_plugin_state()
+
+    # Get distribution counts from worker
+    # With xdist, each worker collects ALL tests but only runs assigned ones.
+    # The distribution counts from any worker represent the full test suite,
+    # so we only need to take the counts from the first worker (controller starts at 0).
+    worker_dist_data = workeroutput.get(WORKEROUTPUT_DISTRIBUTION_KEY)
+    if worker_dist_data is not None:
+        worker_counts = deserialize_distribution_counts(worker_dist_data)
+        current_stats = config_adapter.get_distribution_stats()
+
+        # Only update if controller hasn't been populated yet (counts are all 0)
+        # This ensures we use the first worker's counts and don't double-count
+        current_total = (
+            current_stats.counts.small
+            + current_stats.counts.medium
+            + current_stats.counts.large
+            + current_stats.counts.xlarge
+        )
+
+        if current_total == 0:
+            updated_stats = DistributionStats(counts=TestCounts(**worker_counts))
+            config_adapter.set_distribution_stats(updated_stats)
+
+    # Aggregate report data from worker
+    worker_report_data = workeroutput.get(WORKEROUTPUT_REPORT_KEY)
+    if worker_report_data is not None and session_state.test_size_report is not None:
+        test_report = cast('TestSizeReport', session_state.test_size_report)
+        merge_report_data(test_report, worker_report_data)
 
 
 def _ensure_discovery_service(session_state: pytest_test_categories.types.PluginState) -> TestDiscoveryService:
