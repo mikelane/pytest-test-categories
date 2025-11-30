@@ -42,6 +42,7 @@ lint = [
     "ruff>=0.14.4",
 ]
 dev = [
+    "bandit>=1.9.2",
     "commitizen>=4.1.0",
     "tox>=4.32.0",
     "tox-uv>=1.29.0",
