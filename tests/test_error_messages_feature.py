@@ -227,7 +227,8 @@ class DescribeFilesystemAccessViolationError:
             operation=FilesystemOperation.READ,
         )
 
-        assert '/etc/passwd' in str(exc)
+        # Use str(Path()) for cross-platform path representation (Unix: /etc/passwd, Windows: \etc\passwd)
+        assert str(Path('/etc/passwd')) in str(exc)
         assert 'read' in str(exc).lower()
 
     def it_includes_remediation(self) -> None:
