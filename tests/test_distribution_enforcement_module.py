@@ -102,7 +102,9 @@ class DescribeDistributionValidationServiceEnforcement:
         with pytest.raises(DistributionViolationError) as exc_info:
             service.validate_distribution(stats, warning_system, enforcement_mode=EnforcementMode.STRICT)
 
-        assert 'Distribution violation' in str(exc_info.value)
+        # Error message now uses the standardized format with error code
+        assert '[TC007]' in str(exc_info.value)
+        assert 'Test Distribution Warning' in str(exc_info.value)
 
     def it_does_not_raise_for_valid_distribution_in_strict_mode(self) -> None:
         """STRICT mode does not raise for valid distribution."""

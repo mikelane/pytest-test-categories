@@ -136,16 +136,26 @@ class DescribeTimerStateEnumIteration:
 class DescribeTimingViolationErrorException:
     """Test TimingViolationError exception class."""
 
-    def it_raises_with_custom_message(self) -> None:
-        """Test that TimingViolationError can be raised with a custom message."""
-        message = 'Test execution exceeded 1.0s time limit'
-        with pytest.raises(TimingViolationError, match=message):
-            raise TimingViolationError(message)
+    def it_raises_with_timing_details(self) -> None:
+        """Test that TimingViolationError can be raised with timing details."""
+        with pytest.raises(TimingViolationError, match='exceeded time limit'):
+            raise TimingViolationError(
+                test_size=TestSize.SMALL,
+                test_nodeid='tests/test_slow.py::test_compute',
+                limit=1.0,
+                actual=2.5,
+            )
 
-    def it_raises_without_message(self) -> None:
-        """Test that TimingViolationError can be raised without a message."""
-        with pytest.raises(TimingViolationError):
-            raise TimingViolationError
+    def it_includes_error_code_in_message(self) -> None:
+        """Test that TimingViolationError includes the error code in its message."""
+        exc = TimingViolationError(
+            test_size=TestSize.SMALL,
+            test_nodeid='tests/test_slow.py::test_compute',
+            limit=1.0,
+            actual=2.5,
+        )
+
+        assert 'TC006' in str(exc)
 
 
 @pytest.mark.small

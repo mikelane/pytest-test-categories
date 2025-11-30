@@ -65,11 +65,11 @@ from pytest_test_categories.timers import WallTimer
 from pytest_test_categories.timing import (
     DEFAULT_TIME_LIMIT_CONFIG,
     TimeLimitConfig,
+    TimingViolationError,
 )
 from pytest_test_categories.types import (
     TestSize,
     TimerState,
-    TimingViolationError,
 )
 
 if TYPE_CHECKING:

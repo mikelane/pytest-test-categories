@@ -60,15 +60,33 @@ class DescribeTimerState:
 class DescribeTimingViolationError:
     """Test the TimingViolationError exception."""
 
-    def it_can_be_raised_with_message(self) -> None:
-        """Test that TimingViolationError can be raised with a message."""
-        message = 'Test exceeded time limit'
-        with pytest.raises(TimingViolationError, match=message):
-            raise TimingViolationError(message)
+    def it_can_be_raised_with_proper_arguments(self) -> None:
+        """Test that TimingViolationError can be raised with proper arguments."""
+        with pytest.raises(TimingViolationError, match='exceeded time limit'):
+            raise TimingViolationError(
+                test_size=TestSize.SMALL,
+                test_nodeid='tests/test_slow.py::test_compute',
+                limit=1.0,
+                actual=2.5,
+            )
 
     def it_inherits_from_exception(self) -> None:
         """Test that TimingViolationError inherits from Exception."""
         assert issubclass(TimingViolationError, Exception)
+
+    def it_stores_timing_attributes(self) -> None:
+        """Test that TimingViolationError stores the timing attributes."""
+        exc = TimingViolationError(
+            test_size=TestSize.SMALL,
+            test_nodeid='tests/test_slow.py::test_compute',
+            limit=1.0,
+            actual=2.5,
+        )
+
+        assert exc.test_size == TestSize.SMALL
+        assert exc.test_nodeid == 'tests/test_slow.py::test_compute'
+        assert exc.limit == 1.0
+        assert exc.actual == 2.5
 
 
 @pytest.mark.small

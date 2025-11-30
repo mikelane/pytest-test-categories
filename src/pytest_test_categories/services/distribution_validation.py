@@ -29,13 +29,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from pytest_test_categories.errors import ERROR_CODES
 from pytest_test_categories.ports.network import EnforcementMode
 
 if TYPE_CHECKING:
     from pytest_test_categories.distribution.stats import DistributionStats
     from pytest_test_categories.types import WarningSystemPort
 
-DISTRIBUTION_WARNING_PREFIX = 'Test distribution does not meet targets: '
+# Error code for distribution warnings
+_DISTRIBUTION_ERROR_CODE = ERROR_CODES['distribution_warning']
+
+DISTRIBUTION_WARNING_PREFIX = f'[{_DISTRIBUTION_ERROR_CODE.code}] Test distribution does not meet targets: '
 
 
 class DistributionViolationError(Exception):
@@ -147,12 +151,15 @@ class DistributionValidationService:
         """Format a detailed error message for distribution violations.
 
         Creates a comprehensive error message that includes:
+        - Error code for grep-friendly CI log parsing
         - The violation header
         - Current distribution percentages
         - Target ranges
         - The original validation error
+        - Why distribution matters
         - Actionable recommendations
         - Bypass instructions
+        - Documentation link
 
         Args:
             stats: The distribution stats that failed validation.
@@ -163,23 +170,35 @@ class DistributionValidationService:
 
         """
         percentages = stats.calculate_percentages()
+        error_code = _DISTRIBUTION_ERROR_CODE
 
         lines = [
-            'Distribution violation: Test pyramid requirements not met',
+            '',
+            '=' * 70,
+            f'[{error_code.code}] {error_code.title}',
+            '=' * 70,
+            '',
+            'What happened:',
+            f'  {original_error}',
             '',
             'Current Distribution:',
             f'  Small:        {percentages.small:5.1f}% (target: 80% +/-5%)',
             f'  Medium:       {percentages.medium:5.1f}% (target: 15% +/-5%)',
             f'  Large/XLarge: {percentages.large + percentages.xlarge:5.1f}% (target: 5% +/-3%)',
             '',
-            f'Validation Error: {original_error}',
+            'Why it matters:',
+            f'  {error_code.why_it_matters}',
             '',
-            'Recommendations:',
-            '  - Convert medium tests to small tests (mock external dependencies)',
-            '  - Convert large tests to medium tests (use localhost services)',
-            '  - See docs for guidance on test categorization',
+            'To fix this:',
+            '  1. Convert medium tests to small tests (mock external dependencies)',
+            '  2. Convert large tests to medium tests (use localhost services)',
+            '  3. Split large tests into smaller, focused tests',
+            '  4. Use @pytest.mark.small for truly unit-level tests',
+            '',
+            f'See: {error_code.doc_url}',
             '',
             'To bypass: pytest --test-categories-distribution-enforcement=off',
+            '=' * 70,
         ]
 
         return '\n'.join(lines)

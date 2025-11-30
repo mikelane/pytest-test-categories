@@ -10,12 +10,12 @@ Exception Hierarchy:
     +-- FilesystemAccessViolationError
     +-- SubprocessViolationError
     +-- DatabaseViolationError
-    +-- SleepViolationError (future)
+    +-- SleepViolationError
 
-The base HermeticityViolationError provides common functionality:
-- Test context (size, nodeid)
-- Remediation guidance
-- Formatted error messages
+All exceptions use the centralized error registry (errors.py) for:
+- Consistent error codes (TC001-TC099)
+- Standardized message format with "what happened", "why it matters", "how to fix"
+- Documentation links for each error type
 
 Example:
     >>> raise NetworkAccessViolationError(
@@ -24,17 +24,27 @@ Example:
     ...     host='api.example.com',
     ...     port=443
     ... )
-    NetworkAccessViolationError: Small tests cannot access the network.
-    Test attempted to connect to: api.example.com:443
+    [TC001] Network Access Violation
+    Test: test_module.py::test_function
+    Category: SMALL
+    ...
 
 See Also:
+    - errors.py: Centralized error code registry
     - ADR-001: docs/architecture/adr-001-network-isolation.md
     - ADR-002: docs/architecture/adr-002-filesystem-isolation.md
-    - TimingViolationError: Existing exception in types.py (similar pattern)
 
 """
 
 from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from pytest_test_categories.errors import (
+    ERROR_CODES,
+    format_error_message,
+)
+from pytest_test_categories.types import TestSize
 
 __all__ = [
     'DatabaseViolationError',
@@ -45,13 +55,10 @@ __all__ = [
     'SubprocessViolationError',
 ]
 
-from typing import TYPE_CHECKING
-
-from pytest_test_categories.types import TestSize
-
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from pytest_test_categories.errors import ErrorCode
     from pytest_test_categories.ports.filesystem import FilesystemOperation as FsOp
 
 
@@ -64,89 +71,47 @@ class HermeticityViolationError(Exception):
     Subclasses should provide:
     - Specific violation details (host, path, command, etc.)
     - Appropriate remediation suggestions
-    - Formatted error message
+    - Reference to the appropriate error code
 
     Attributes:
         test_size: The test's size category.
         test_nodeid: The pytest node ID of the violating test.
-        violation_type: A short description of the violation type.
-        details: Specific details about the violation.
-        remediation: List of suggestions for fixing the violation.
-
-    Example:
-        >>> class CustomViolation(HermeticityViolationError):
-        ...     _adr_reference = 'docs/architecture/adr-003-custom-isolation.md'
-        ...     def __init__(self, test_size, test_nodeid, custom_detail):
-        ...         super().__init__(
-        ...             test_size=test_size,
-        ...             test_nodeid=test_nodeid,
-        ...             violation_type='Custom resource access',
-        ...             details=f'Accessed: {custom_detail}',
-        ...             remediation=['Fix suggestion 1', 'Fix suggestion 2']
-        ...         )
+        error_code: The ErrorCode instance for this violation type.
 
     """
-
-    _adr_reference: str = 'docs/architecture/adr-001-network-isolation.md'
 
     def __init__(
         self,
         test_size: TestSize,
         test_nodeid: str,
-        violation_type: str,
-        details: str,
-        remediation: list[str] | None = None,
+        error_code: ErrorCode,
+        what_happened: str,
+        remediation: list[str],
     ) -> None:
         """Initialize a hermeticity violation error.
 
         Args:
             test_size: The test's size category.
             test_nodeid: The pytest node ID of the violating test.
-            violation_type: A short description of the violation type.
-            details: Specific details about the violation.
+            error_code: The ErrorCode instance for this violation type.
+            what_happened: Description of the specific violation.
             remediation: List of suggestions for fixing the violation.
 
         """
         self.test_size = test_size
         self.test_nodeid = test_nodeid
-        self.violation_type = violation_type
-        self.details = details
-        self.remediation = remediation or []
+        self.error_code = error_code
+        self.what_happened = what_happened
+        self.remediation = remediation
 
-        message = self._format_message()
+        message = format_error_message(
+            error_code=error_code,
+            what_happened=what_happened,
+            remediation=remediation,
+            test_nodeid=test_nodeid,
+            test_size=test_size.name,
+        )
         super().__init__(message)
-
-    def _format_message(self) -> str:
-        """Format the error message with full context.
-
-        Returns:
-            A formatted multi-line error message.
-
-        """
-        lines = [
-            '',
-            '=' * 60,
-            'HermeticityViolationError',
-            '=' * 60,
-            f'Test: {self.test_nodeid}',
-            f'Category: {self.test_size.name}',
-            f'Violation: {self.violation_type}',
-            '',
-            'Details:',
-            f'  {self.details}',
-            '',
-        ]
-
-        if self.remediation:
-            lines.append(f'{self.test_size.name.capitalize()} tests have restricted resource access. Options:')
-            for i, suggestion in enumerate(self.remediation, 1):
-                lines.append(f'  {i}. {suggestion}')
-            lines.append('')
-
-        lines.append(f'Documentation: See {self._adr_reference}')
-        lines.append('=' * 60)
-
-        return '\n'.join(lines)
 
 
 class NetworkAccessViolationError(HermeticityViolationError):
@@ -161,19 +126,6 @@ class NetworkAccessViolationError(HermeticityViolationError):
     Attributes:
         host: The attempted destination host.
         port: The attempted destination port.
-
-    Example:
-        >>> raise NetworkAccessViolationError(
-        ...     test_size=TestSize.SMALL,
-        ...     test_nodeid='tests/test_api.py::test_fetch_user',
-        ...     host='api.example.com',
-        ...     port=443
-        ... )
-
-    The error message includes:
-    - Test identification (nodeid, size category)
-    - Connection details (host:port)
-    - Remediation suggestions (mocking, DI, size change)
 
     """
 
@@ -197,31 +149,24 @@ class NetworkAccessViolationError(HermeticityViolationError):
         self.port = port
 
         remediation = self._get_remediation(test_size)
+        what_happened = f'Attempted network connection to {host}:{port}'
 
         super().__init__(
             test_size=test_size,
             test_nodeid=test_nodeid,
-            violation_type='Network access attempted',
-            details=f'Attempted connection to: {host}:{port}',
+            error_code=ERROR_CODES['network_violation'],
+            what_happened=what_happened,
             remediation=remediation,
         )
 
     @staticmethod
     def _get_remediation(test_size: TestSize) -> list[str]:
-        """Get remediation suggestions based on test size.
-
-        Args:
-            test_size: The test's size category.
-
-        Returns:
-            List of remediation suggestions.
-
-        """
+        """Get remediation suggestions based on test size."""
         if test_size == TestSize.SMALL:
             return [
                 'Mock the network call using responses, httpretty, or respx',
                 'Use dependency injection to provide a fake HTTP client',
-                'Change test category to @pytest.mark.medium (if network is required)',
+                'Change test category to @pytest.mark.medium (if network access is required)',
             ]
         if test_size == TestSize.MEDIUM:
             return [
@@ -229,7 +174,7 @@ class NetworkAccessViolationError(HermeticityViolationError):
                 'Mock the external service call',
                 'Change test category to @pytest.mark.large (if external network is required)',
             ]
-        return []  # Large/XLarge tests have no network restrictions
+        return []
 
 
 class FilesystemAccessViolationError(HermeticityViolationError):
@@ -244,22 +189,7 @@ class FilesystemAccessViolationError(HermeticityViolationError):
         path: The attempted path.
         operation: The type of operation attempted.
 
-    Example:
-        >>> raise FilesystemAccessViolationError(
-        ...     test_size=TestSize.SMALL,
-        ...     test_nodeid='tests/test_file.py::test_save',
-        ...     path=Path('/etc/passwd'),
-        ...     operation=FilesystemOperation.READ
-        ... )
-
-    The error message includes:
-    - Test identification (nodeid, size category)
-    - Path and operation details
-    - Remediation suggestions (tmp_path, mocking, size change)
-
     """
-
-    _adr_reference: str = 'docs/architecture/adr-002-filesystem-isolation.md'
 
     def __init__(
         self,
@@ -277,34 +207,23 @@ class FilesystemAccessViolationError(HermeticityViolationError):
             operation: The type of operation attempted.
 
         """
-        # Import locally to avoid circular dependency
-
         self.path = path
         self.operation: FsOp = operation
 
         remediation = self._get_remediation(test_size, operation)
+        what_happened = f'Attempted {operation.value} on filesystem path: {path}'
 
         super().__init__(
             test_size=test_size,
             test_nodeid=test_nodeid,
-            violation_type='Filesystem access attempted',
-            details=f'Attempted {operation.value} on: {path}',
+            error_code=ERROR_CODES['filesystem_violation'],
+            what_happened=what_happened,
             remediation=remediation,
         )
 
     @staticmethod
     def _get_remediation(test_size: TestSize, operation: FsOp) -> list[str]:
-        """Get remediation suggestions based on test size and operation.
-
-        Args:
-            test_size: The test's size category.
-            operation: The type of operation attempted.
-
-        Returns:
-            List of remediation suggestions.
-
-        """
-        # Import locally to avoid circular dependency
+        """Get remediation suggestions based on test size and operation."""
         from pytest_test_categories.ports.filesystem import FilesystemOperation as FsOp  # noqa: PLC0415
 
         if test_size == TestSize.SMALL:
@@ -317,7 +236,7 @@ class FilesystemAccessViolationError(HermeticityViolationError):
                 suggestions.append('Embed test data as Python constants or use importlib.resources')
             suggestions.append('Change test category to @pytest.mark.medium (if filesystem access is required)')
             return suggestions
-        return []  # Medium/Large/XLarge tests have no filesystem restrictions
+        return []
 
 
 class SubprocessViolationError(HermeticityViolationError):
@@ -328,34 +247,12 @@ class SubprocessViolationError(HermeticityViolationError):
     - Small tests: No subprocess spawning allowed
     - Medium/Large/XLarge: All subprocess spawning allowed
 
-    Small tests should run in a single process according to Google's
-    test size definitions. Subprocess spawning introduces:
-    - Non-determinism from external process behavior
-    - I/O overhead from process creation
-    - Timing variability that can cause flaky tests
-
     Attributes:
         command: The command that was attempted.
         command_args: The arguments passed to the command.
-        method: The method used to spawn (e.g., 'subprocess.run', 'os.system').
-
-    Example:
-        >>> raise SubprocessViolationError(
-        ...     test_size=TestSize.SMALL,
-        ...     test_nodeid='tests/test_cli.py::test_run_command',
-        ...     command='python',
-        ...     command_args=('script.py', '--verbose'),
-        ...     method='subprocess.run'
-        ... )
-
-    The error message includes:
-    - Test identification (nodeid, size category)
-    - Command and arguments details
-    - Remediation suggestions (mocking, DI, size change)
+        method: The method used to spawn (e.g., 'subprocess.run').
 
     """
-
-    _adr_reference: str = 'docs/architecture/adr-003-process-isolation.md'
 
     def __init__(
         self,
@@ -381,27 +278,19 @@ class SubprocessViolationError(HermeticityViolationError):
 
         args_str = ' '.join(command_args) if command_args else '(no args)'
         remediation = self._get_remediation(test_size, method)
+        what_happened = f'Attempted {method}: {command} {args_str}'
 
         super().__init__(
             test_size=test_size,
             test_nodeid=test_nodeid,
-            violation_type='Subprocess spawn attempted',
-            details=f'Attempted {method}: {command} {args_str}',
+            error_code=ERROR_CODES['subprocess_violation'],
+            what_happened=what_happened,
             remediation=remediation,
         )
 
     @staticmethod
     def _get_remediation(test_size: TestSize, method: str) -> list[str]:
-        """Get remediation suggestions based on test size and spawn method.
-
-        Args:
-            test_size: The test's size category.
-            method: The spawn method used.
-
-        Returns:
-            List of remediation suggestions.
-
-        """
+        """Get remediation suggestions based on test size and spawn method."""
         if test_size == TestSize.SMALL:
             suggestions = [
                 f'Mock {method} using pytest-mock (mocker.patch)',
@@ -413,7 +302,7 @@ class SubprocessViolationError(HermeticityViolationError):
             else:
                 suggestions.append('Change test category to @pytest.mark.medium (if subprocess is required)')
             return suggestions
-        return []  # Medium/Large/XLarge tests have no subprocess restrictions
+        return []
 
 
 class DatabaseViolationError(HermeticityViolationError):
@@ -424,34 +313,11 @@ class DatabaseViolationError(HermeticityViolationError):
     - Small tests: No database access allowed (including :memory:)
     - Medium/Large/XLarge: All database access allowed
 
-    Small tests should be hermetic and run entirely in memory without
-    any I/O operations. Database connections, even to in-memory databases
-    like sqlite3 :memory:, introduce:
-    - I/O operations via the database engine
-    - External state dependencies
-    - Non-deterministic behavior potential
-    - Additional process complexity
-
     Attributes:
         library: The database library name (e.g., 'sqlite3', 'psycopg2').
         connection_string: The connection string or database path.
 
-    Example:
-        >>> raise DatabaseViolationError(
-        ...     test_size=TestSize.SMALL,
-        ...     test_nodeid='tests/test_db.py::test_query',
-        ...     library='sqlite3',
-        ...     connection_string=':memory:'
-        ... )
-
-    The error message includes:
-    - Test identification (nodeid, size category)
-    - Library and connection details
-    - Remediation suggestions (mocking, DI, size change)
-
     """
-
-    _adr_reference: str = 'docs/architecture/adr-004-database-isolation.md'
 
     def __init__(
         self,
@@ -473,27 +339,19 @@ class DatabaseViolationError(HermeticityViolationError):
         self.connection_string = connection_string
 
         remediation = self._get_remediation(test_size, library)
+        what_happened = f'Attempted {library} database connection to: {connection_string}'
 
         super().__init__(
             test_size=test_size,
             test_nodeid=test_nodeid,
-            violation_type='Database access attempted',
-            details=f'Attempted {library} connection to: {connection_string}',
+            error_code=ERROR_CODES['database_violation'],
+            what_happened=what_happened,
             remediation=remediation,
         )
 
     @staticmethod
     def _get_remediation(test_size: TestSize, library: str) -> list[str]:
-        """Get remediation suggestions based on test size and database library.
-
-        Args:
-            test_size: The test's size category.
-            library: The database library used.
-
-        Returns:
-            List of remediation suggestions.
-
-        """
+        """Get remediation suggestions based on test size and database library."""
         if test_size == TestSize.SMALL:
             suggestions = [
                 f'Mock {library}.connect using pytest-mock (mocker.patch)',
@@ -505,7 +363,7 @@ class DatabaseViolationError(HermeticityViolationError):
                 suggestions.append('Consider using SQLAlchemy events or a fake engine')
             suggestions.append('Change test category to @pytest.mark.medium (if database access is required)')
             return suggestions
-        return []  # Medium/Large/XLarge tests have no database restrictions
+        return []
 
 
 class SleepViolationError(HermeticityViolationError):
@@ -516,32 +374,11 @@ class SleepViolationError(HermeticityViolationError):
     - Small tests: No sleep calls allowed (tests should be fast and deterministic)
     - Medium/Large/XLarge: All sleep calls allowed
 
-    Small tests should be hermetic and not depend on wall-clock time.
-    Using sleep in tests indicates:
-    - Waiting for async operations (should use proper synchronization)
-    - Flaky timing assumptions
-    - Polling patterns (should use condition-based waiting)
-
     Attributes:
         function: The sleep function that was called (e.g., 'time.sleep').
         duration: The sleep duration in seconds.
 
-    Example:
-        >>> raise SleepViolationError(
-        ...     test_size=TestSize.SMALL,
-        ...     test_nodeid='tests/test_timing.py::test_delay',
-        ...     function='time.sleep',
-        ...     duration=0.1
-        ... )
-
-    The error message includes:
-    - Test identification (nodeid, size category)
-    - Function and duration details
-    - Remediation suggestions (proper synchronization, mocking, size change)
-
     """
-
-    _adr_reference: str = 'docs/architecture/adr-005-sleep-isolation.md'
 
     def __init__(
         self,
@@ -563,27 +400,19 @@ class SleepViolationError(HermeticityViolationError):
         self.duration = duration
 
         remediation = self._get_remediation(test_size, function)
+        what_happened = f'Called {function}({duration}) - attempted to sleep for {duration} seconds'
 
         super().__init__(
             test_size=test_size,
             test_nodeid=test_nodeid,
-            violation_type='Sleep call attempted',
-            details=f'Called: {function}({duration})',
+            error_code=ERROR_CODES['sleep_violation'],
+            what_happened=what_happened,
             remediation=remediation,
         )
 
     @staticmethod
     def _get_remediation(test_size: TestSize, function: str) -> list[str]:
-        """Get remediation suggestions based on test size and sleep function.
-
-        Args:
-            test_size: The test's size category.
-            function: The sleep function used.
-
-        Returns:
-            List of remediation suggestions.
-
-        """
+        """Get remediation suggestions based on test size and sleep function."""
         if test_size == TestSize.SMALL:
             suggestions = [
                 'Use proper synchronization instead of sleep (e.g., threading.Event)',
@@ -595,4 +424,4 @@ class SleepViolationError(HermeticityViolationError):
                 suggestions.append('Use asyncio.wait_for() with proper conditions instead')
             suggestions.append('Change test category to @pytest.mark.medium (if timing is required)')
             return suggestions
-        return []  # Medium/Large/XLarge tests have no sleep restrictions
+        return []
