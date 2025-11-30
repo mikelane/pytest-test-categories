@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Feat
 
+- Add comprehensive example project demonstrating test categorization best practices (#126)
 - Add performance benchmark suite validating zero-overhead claims (#127)
 - Add external systems warning for medium tests (#119)
 - Extend filesystem isolation to block pathlib, os, and shutil operations (#120)
