@@ -7,10 +7,26 @@ This section provides practical examples of using pytest-test-categories in vari
 ```{toctree}
 :maxdepth: 2
 
+migration-guide
+common-patterns
+ci-integration
 network-isolation
 filesystem-isolation
 ide-configs/README
 ```
+
+## Getting Started
+
+If you are new to pytest-test-categories, start with these guides:
+
+1. **[Migration Guide](migration-guide.md)** - Step-by-step process for adding pytest-test-categories to an existing project
+2. **[Common Patterns](common-patterns.md)** - Fixture patterns, mocking strategies, and test organization
+3. **[CI Integration](ci-integration.md)** - GitHub Actions, GitLab CI, and Jenkins examples
+
+For isolation-specific examples, see:
+
+- **[Network Isolation](network-isolation.md)** - Mocking HTTP, databases, and other network calls
+- **[Filesystem Isolation](filesystem-isolation.md)** - Using tmp_path and mocking file operations
 
 ## Quick Examples
 
