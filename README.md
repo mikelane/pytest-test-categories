@@ -3,7 +3,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/pytest-test-categories.svg)](https://pypi.org/project/pytest-test-categories/)
 [![Python versions](https://img.shields.io/pypi/pyversions/pytest-test-categories.svg)](https://pypi.org/project/pytest-test-categories/)
 [![Documentation Status](https://readthedocs.org/projects/pytest-test-categories/badge/?version=latest)](https://pytest-test-categories.readthedocs.io/en/latest/?badge=latest)
-[![License](https://img.shields.io/badge/license-CC%20BY--NC%204.0-lightgrey.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A pytest plugin that enforces test timing constraints, resource isolation, and validates test size distributions based on Google's "Software Engineering at Google" best practices.
 
@@ -341,13 +341,7 @@ We welcome contributions! Please read our [CONTRIBUTING.md](CONTRIBUTING.md) for
 
 ## License
 
-This project is available under a dual-license model:
-
-- **Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0):** Free for non-commercial use with attribution.
-
-- **Commercial License:** Contact [mikelane@gmail.com](mailto:mikelane@gmail.com) for commercial licensing.
-
-See the [LICENSE](LICENSE) file for details.
+This project is licensed under the [MIT License](LICENSE).
 
 ---
 
