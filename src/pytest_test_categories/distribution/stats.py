@@ -70,7 +70,10 @@ class TestPercentages(BaseModel):
     """Distribution percentages of tests by size."""
 
     _TOTAL_ERROR: ClassVar[str] = 'Percentages must sum to 100% (within rounding error) unless all are 0'
-    ROUNDING_TOLERANCE: ClassVar[float] = 0.01
+    # Tolerance needs to account for up to 4 values each potentially being off by 0.005 after rounding
+    # Maximum error from rounding 4 values: 4 * 0.005 = 0.02
+    # Using 0.03 to provide a small safety margin
+    ROUNDING_TOLERANCE: ClassVar[float] = 0.03
 
     small: float = Field(ge=0.0, le=ONE_HUNDRED_PERCENT, default=0.0)
     medium: float = Field(ge=0.0, le=ONE_HUNDRED_PERCENT, default=0.0)
