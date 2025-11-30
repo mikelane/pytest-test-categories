@@ -2,12 +2,29 @@
 
 ## Status
 
-Implemented
+**Implemented** (v0.7.0)
 
-> **Implementation Progress**: The core implementation is complete in PR #110.
-> This includes `DatabaseBlockerPort` interface, `DatabasePatchingBlocker` adapter,
-> `FakeDatabaseBlocker` test adapter, and `DatabaseViolationError` exception.
-> Track progress in Issue #102.
+> **Implementation Complete**: All components are fully implemented and production-ready:
+> - `DatabaseBlockerPort` interface with state machine
+> - `DatabasePatchingBlocker` production adapter
+> - `FakeDatabaseBlocker` test adapter
+> - `DatabaseViolationError` exception with remediation guidance
+> - Pytest hook integration with enforcement modes
+> - Supports sqlite3 (always) plus optional psycopg2, pymysql, pymongo, redis, sqlalchemy
+
+### No Override Markers - By Design
+
+This plugin intentionally provides **no per-test override markers** (e.g., `@pytest.mark.allow_database`).
+This is a deliberate architectural decision, not a missing feature.
+
+**Rationale:**
+- Small tests must be hermetic. Period. No escape hatches.
+- If a test needs database access, it should be `@pytest.mark.medium`, not a small test with an exception.
+- Even in-memory SQLite (`:memory:`) is blocked - it still represents database patterns that should be mocked.
+- Override markers would undermine the entire philosophy and make enforcement meaningless.
+- The correct remediation is to use fakes/mocks or upgrade the test category.
+
+**If you need database access in a test, change `@pytest.mark.small` to `@pytest.mark.medium`.**
 
 ## Context
 

@@ -2,11 +2,28 @@
 
 ## Status
 
-Proposed
+**Implemented** (v0.7.0)
 
-> **Implementation Progress**: This ADR documents the design for filesystem isolation.
-> Implementation will follow in Issue #92 (port interface), Issue #93 (adapters),
-> and Issue #94 (pytest integration). Track progress in Epic #66.
+> **Implementation Complete**: All components are fully implemented and production-ready:
+> - `FilesystemBlockerPort` interface with state machine
+> - `FilesystemPatchingBlocker` production adapter
+> - `FakeFilesystemBlocker` test adapter
+> - `FilesystemAccessViolationError` exception with remediation guidance
+> - Pytest hook integration with `--test-categories-allowed-paths` CLI option
+> - Small tests: filesystem blocked except for allowed paths (tmp_path, tempdir)
+
+### No Override Markers - By Design
+
+This plugin intentionally provides **no per-test override markers** (e.g., `@pytest.mark.allow_filesystem`).
+This is a deliberate architectural decision, not a missing feature.
+
+**Rationale:**
+- Small tests must be hermetic. Period. No escape hatches.
+- If a test needs filesystem access beyond temp directories, it should be `@pytest.mark.medium`.
+- Override markers would undermine the entire philosophy and make enforcement meaningless.
+- The correct remediation is to use `tmp_path`, mock filesystem operations, or upgrade the test category.
+
+**If you need filesystem access in a test, use `tmp_path` fixture or change to `@pytest.mark.medium`.**
 
 ## Context
 

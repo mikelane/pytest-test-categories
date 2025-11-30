@@ -2,12 +2,27 @@
 
 ## Status
 
-Implemented
+**Implemented** (v0.7.0)
 
-> **Implementation Progress**: The core implementation is complete in PR #108.
-> This includes `ProcessBlockerPort` interface, `SubprocessPatchingBlocker` adapter,
-> `FakeProcessBlocker` test adapter, and `SubprocessViolationError` exception.
-> Track progress in Issue #101.
+> **Implementation Complete**: All components are fully implemented and production-ready:
+> - `ProcessBlockerPort` interface with state machine
+> - `SubprocessPatchingBlocker` production adapter
+> - `FakeProcessBlocker` test adapter
+> - `SubprocessViolationError` exception with remediation guidance
+> - Pytest hook integration with enforcement modes
+
+### No Override Markers - By Design
+
+This plugin intentionally provides **no per-test override markers** (e.g., `@pytest.mark.allow_subprocess`).
+This is a deliberate architectural decision, not a missing feature.
+
+**Rationale:**
+- Small tests must be hermetic and single-process. Period. No escape hatches.
+- If a test needs to spawn subprocesses, it should be `@pytest.mark.medium`, not a small test with an exception.
+- Override markers would undermine the entire philosophy and make enforcement meaningless.
+- The correct remediation is to mock subprocess calls or upgrade the test category.
+
+**If you need subprocess access in a test, change `@pytest.mark.small` to `@pytest.mark.medium`.**
 
 ## Context
 

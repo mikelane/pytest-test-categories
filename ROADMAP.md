@@ -50,61 +50,88 @@ This integration provides 10x faster mutation testing by combining:
 5. **Performance**: Zero-overhead test categorization and timing
 6. **Extensibility**: Pluggable architecture for custom categories and resource policies
 
-## Current State (v0.6.0) - November 2025
+## Current State (v0.7.0) - November 2025
 
 ### Completed Capabilities
 
 - ✅ Four test size categories (small, medium, large, xlarge)
-- ✅ Timing enforcement with fixed limits (1s/300s/900s)
+- ✅ Timing enforcement with configurable limits (default: 1s/300s/900s/900s)
 - ✅ Distribution validation with target percentages (80/15/5)
 - ✅ **Distribution enforcement modes** (off/warn/strict)
-- ✅ Test size reporting (basic and detailed)
+- ✅ Test size reporting (basic, detailed, and JSON)
 - ✅ Base test classes for easy categorization
 - ✅ Comprehensive test coverage (100%)
 - ✅ CI/CD pipeline with multi-version Python support (3.11, 3.12, 3.13, 3.14)
 - ✅ Pre-commit hooks for quality enforcement
 - ✅ Hexagonal architecture (Ports and Adapters pattern throughout)
 
-### Resource Isolation (Phase 1 Complete)
+### Resource Isolation - COMPLETE
 
-- ✅ **Network Isolation** - Block all network access for small tests
-- ✅ **Medium Network Restriction** - Localhost-only for medium tests
+All resource isolation features are **fully implemented** and production-ready:
+
+- ✅ **Network Isolation** - Block all network access for small tests, localhost-only for medium
+- ✅ **Filesystem Isolation** - Block filesystem access for small tests (except tmp_path, tempdir)
 - ✅ **Process Isolation** - Block subprocess spawning in small tests
-- ✅ **Database Isolation** - Block database connections in small tests
+- ✅ **Database Isolation** - Block database connections in small tests (including in-memory SQLite)
+- ✅ **Sleep Blocking** - Block time.sleep() and asyncio.sleep() in small tests
 - ✅ **Thread Monitoring** - Warn when small tests use threading primitives
-- ✅ **Enforcement modes** - `warn` (default) and `strict` modes
+- ✅ **External Systems Detection** - Warn when medium tests use testcontainers/docker
+- ✅ **Enforcement modes** - `off` (default), `warn`, and `strict` modes
+- ✅ **Configurable allowed paths** - `--test-categories-allowed-paths` CLI option
+
+### Design Philosophy: No Override Markers
+
+This plugin intentionally provides **NO per-test override markers** (e.g., `@pytest.mark.allow_network`).
+This is a deliberate architectural decision, not a missing feature.
+
+**Rationale:**
+- Small tests must be hermetic. Period. No escape hatches.
+- If a test needs external resources, it should be `@pytest.mark.medium`, not a small test with an exception.
+- Override markers would undermine the entire philosophy and make enforcement meaningless.
+- The correct remediation is always to either mock the dependency or upgrade the test category.
+
+See each ADR in `docs/architecture/` for detailed rationale per resource type.
 
 ### Remaining for v1.0.0
 
-- Filesystem isolation implementation (ADR + docs complete)
-- Sleep blocking for small tests
-- Configurable time limits
-- JSON/XML report export
+- ✅ ~~Filesystem isolation implementation~~ DONE
+- ✅ ~~Sleep blocking for small tests~~ DONE
+- ✅ ~~Configurable time limits~~ DONE
+- ✅ ~~JSON report export~~ DONE
+- Comprehensive documentation review
+- Final testing and polish
 
 ## Revised Timeline (Velocity-Based)
 
 Based on development velocity with Claude Code assistance, the project is **~6 weeks ahead of schedule**.
 
 ### Phase 1: Resource Isolation (Q4 2025) ✅ COMPLETE
-**Delivered: v0.4.0 - v0.6.0**
+**Delivered: v0.4.0 - v0.7.0**
 
 - ✅ Network access blocking for small tests
 - ✅ Localhost-only restriction for medium tests
 - ✅ Process/subprocess blocking for small tests
 - ✅ Database connection blocking for small tests
+- ✅ Filesystem isolation for small tests
+- ✅ Sleep blocking for small tests
 - ✅ Thread monitoring with warnings
-- ✅ Enforcement modes: `warn` (default) and `strict`
+- ✅ External systems detection for medium tests
+- ✅ Enforcement modes: `off` (default), `warn`, and `strict`
 - ✅ Clear error messages with remediation guidance
+- ✅ Configurable time limits via CLI and ini options
+- ✅ JSON report export
 
-### Phase 2: Configuration & Polish (December 2025)
-**Target: v0.7.0 - v0.9.0**
+### Phase 2: Documentation & Polish (November-December 2025) ✅ COMPLETE
+**Delivered: v0.7.0**
 
-**Scope:**
-- User-configurable time limits via pytest configuration
-- Sleep blocking for small tests
-- Filesystem isolation implementation
-- JSON/XML report export for CI integration
-- Documentation overhaul with real-world examples
+- ✅ Comprehensive user guide documentation
+- ✅ Architecture documentation with ADRs
+- ✅ Migration guide and common patterns
+- ✅ API reference documentation
+- ✅ Ecosystem integration guides
+- ✅ Real-world example test suite
+- ✅ Performance benchmarks
+- ✅ Security audit
 
 ### Phase 3: v1.0 Stable Release (January 2026)
 **Target: v1.0.0**
@@ -113,16 +140,16 @@ Based on development velocity with Claude Code assistance, the project is **~6 w
 - [x] Network isolation enforcement
 - [x] Process isolation enforcement
 - [x] Database isolation enforcement
+- [x] Filesystem isolation enforcement
+- [x] Sleep blocking for small tests
 - [x] Thread monitoring
 - [x] Distribution enforcement modes
-- [ ] Filesystem isolation enforcement
-- [ ] Sleep blocking for small tests
-- [ ] Configurable time limits and tolerances
-- [ ] JSON/XML reporting
-- [ ] Comprehensive documentation
-- [ ] Zero known critical bugs
-- [ ] Security audit completed
-- [ ] Performance benchmarks published
+- [x] Configurable time limits and tolerances
+- [x] JSON reporting
+- [x] Comprehensive documentation
+- [ ] Zero known critical bugs (final verification)
+- [x] Security audit completed
+- [x] Performance benchmarks published
 
 ### Phase 4: Ecosystem Integration (Q1-Q2 2026)
 **Target: v1.1.0 - v1.3.0**
@@ -144,26 +171,25 @@ Based on development velocity with Claude Code assistance, the project is **~6 w
 
 ## Feature Backlog
 
-### High Priority (v1.0 Requirements)
+### Completed (v0.7.0)
 
-1. **Configurable Time Limits**
+1. ✅ **Configurable Time Limits**
    - Allow users to override default limits
-   - Support per-category configuration
+   - Support per-category configuration via CLI and ini
    - Validate configuration at startup
 
-2. **Sleep Blocking**
-   - `time.sleep()` blocked for small tests
+2. ✅ **Sleep Blocking**
+   - `time.sleep()` and `asyncio.sleep()` blocked for small tests
    - Warning/strict modes
-   - Clear error messages
+   - Clear error messages with remediation
 
-3. **Filesystem Isolation**
+3. ✅ **Filesystem Isolation**
    - Block filesystem access for small tests (except temp dirs)
-   - Configurable allowed paths
-   - ADR-002 and documentation already complete
+   - Configurable allowed paths via `--test-categories-allowed-paths`
+   - Full implementation matching ADR-002
 
-4. **Enhanced Reporting**
-   - JSON export for CI integration
-   - JUnit XML format with size metadata
+4. ✅ **Enhanced Reporting**
+   - JSON export for CI integration via `--test-size-report=json`
    - Hermeticity violation reports
 
 ### Medium Priority (v1.x)
@@ -202,32 +228,28 @@ Based on development velocity with Claude Code assistance, the project is **~6 w
 
 ## Milestones
 
-### Milestone: v0.7.0 - Configuration & Reporting (Target: December 2025)
+### Milestone: v0.7.0 - Complete Resource Isolation ✅ DELIVERED
 
-**Acceptance Criteria**:
-- [ ] Configurable time limits via pyproject.toml/pytest.ini
-- [ ] Sleep blocking for small tests
-- [ ] JSON report export for CI integration
-- [ ] Documentation updates
-
-### Milestone: v0.8.0 - Filesystem Isolation (Target: December 2025)
-
-**Acceptance Criteria**:
-- [ ] Filesystem access blocked for small tests (except temp dirs)
-- [ ] Configurable allowed paths
-- [ ] Warning/strict modes
-- [ ] Integration with existing enforcement infrastructure
+**Acceptance Criteria** (ALL COMPLETE):
+- [x] Configurable time limits via pyproject.toml/pytest.ini
+- [x] Sleep blocking for small tests
+- [x] Filesystem isolation for small tests
+- [x] JSON report export for CI integration
+- [x] Comprehensive documentation
+- [x] All ADRs updated to "Implemented" status
 
 ### Milestone: v1.0.0 - Stable Release (Target: January 2026)
 
 **Acceptance Criteria**:
-- [ ] Full resource isolation (network, process, database, filesystem, sleep)
-- [ ] Configurable time limits
-- [ ] JSON/XML reporting
-- [ ] Comprehensive documentation
-- [ ] Zero critical bugs
-- [ ] Security audit completed
-- [ ] Performance benchmarks
+- [x] Full resource isolation (network, process, database, filesystem, sleep)
+- [x] Configurable time limits
+- [x] JSON reporting
+- [x] Comprehensive documentation
+- [ ] Final testing and bug verification
+- [x] Security audit completed
+- [x] Performance benchmarks
+
+**Note**: All v1.0.0 features are implemented. Release is pending final testing and polish.
 
 ### Milestone: v1.1.0 - Impact Integration (Target: Q1 2026)
 
@@ -300,5 +322,5 @@ This roadmap is a living document that evolves based on:
 
 ---
 
-*Last Updated: November 2025*
-*Next Review: December 2025*
+*Last Updated: November 30, 2025*
+*Next Review: January 2026 (v1.0.0 Release)*

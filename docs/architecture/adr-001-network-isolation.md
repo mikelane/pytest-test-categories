@@ -2,11 +2,28 @@
 
 ## Status
 
-Proposed
+**Implemented** (v0.7.0)
 
-> **Implementation Progress**: The core interfaces (`NetworkBlockerPort`, exception hierarchy,
-> `EnforcementMode`) are implemented in PR #74. Pytest hook integration (CLI options, config
-> parsing, markers) is planned for PR #69. Track progress in Issue #70.
+> **Implementation Complete**: All components are fully implemented and production-ready:
+> - `NetworkBlockerPort` interface with state machine
+> - `SocketPatchingNetworkBlocker` production adapter
+> - `FakeNetworkBlocker` test adapter
+> - `NetworkAccessViolationError` exception with remediation guidance
+> - Pytest hook integration with `--test-categories-enforcement` CLI option
+> - Small tests: all network blocked; Medium tests: localhost-only
+
+### No Override Markers - By Design
+
+This plugin intentionally provides **no per-test override markers** (e.g., `@pytest.mark.allow_network`).
+This is a deliberate architectural decision, not a missing feature.
+
+**Rationale:**
+- Small tests must be hermetic. Period. No escape hatches.
+- If a test needs network access, it should be `@pytest.mark.medium`, not a small test with an exception.
+- Override markers would undermine the entire philosophy and make enforcement meaningless.
+- The correct remediation is always to either mock the dependency or upgrade the test category.
+
+**If you need network access in a test, change `@pytest.mark.small` to `@pytest.mark.medium`.**
 
 ## Context
 

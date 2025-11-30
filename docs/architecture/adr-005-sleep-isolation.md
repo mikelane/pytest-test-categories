@@ -2,11 +2,27 @@
 
 ## Status
 
-Accepted
+**Implemented** (v0.7.0)
 
-> **Implementation Progress**: The core interfaces (`SleepBlockerPort`, `SleepViolationError`,
-> `EnforcementMode`) and adapters (`SleepPatchingBlocker`, `FakeSleepBlocker`) are implemented.
-> Track progress in Issue #114.
+> **Implementation Complete**: All components are fully implemented and production-ready:
+> - `SleepBlockerPort` interface with state machine
+> - `SleepPatchingBlocker` production adapter (patches `time.sleep` and `asyncio.sleep`)
+> - `FakeSleepBlocker` test adapter
+> - `SleepViolationError` exception with remediation guidance
+> - Pytest hook integration with enforcement modes
+
+### No Override Markers - By Design
+
+This plugin intentionally provides **no per-test override markers** (e.g., `@pytest.mark.allow_sleep`).
+This is a deliberate architectural decision, not a missing feature.
+
+**Rationale:**
+- Small tests must be hermetic. Period. No escape hatches.
+- Sleep in tests indicates improper synchronization that should be fixed, not exempted.
+- Override markers would undermine the entire philosophy and make enforcement meaningless.
+- The correct remediation is to use proper synchronization, mock sleep, or upgrade the test category.
+
+**If you need sleep in a test, use proper synchronization primitives or change to `@pytest.mark.medium`.**
 
 ## Context
 
