@@ -18,18 +18,12 @@ from pytest_test_categories.services.test_discovery import TestDiscoveryService
 from pytest_test_categories.types import TestSize
 from tests._fixtures.test_item import FakeTestItem
 from tests._fixtures.warning_system import FakeWarningSystem
+from tests.benchmarks.conftest import FakeMarker
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from pytest_benchmark.fixture import BenchmarkFixture
-
-
-class FakeMarker:
-    """Fake marker for benchmark tests."""
-
-    def __init__(self, name: str) -> None:
-        self.name = name
 
 
 class DescribeBenchCollectionOverhead:
