@@ -4,25 +4,28 @@
 
 ## Overview
 
-**Pytest Test Categories** is a plugin designed to help developers enforce test timing constraints and size distributions in their test suites. This plugin provides an effective way to categorize tests by their execution time and ensures that the test distribution meets predefined targets for different test sizes.
+**pytest-test-categories** is a pytest plugin that enforces test timing constraints, resource isolation, and validates test size distributions based on Google's "Software Engineering at Google" best practices. The plugin helps you maintain a fast, reliable, and hermetic test suite.
 
-The test size categories and their time limits are based on recommendations from Google's "Software Engineering at Google" book. The plugin offers size markers such as `small`, `medium`, `large`, and `xlarge`, each with specific time constraints.
+The test size categories and their constraints are based on Google's test taxonomy. The plugin offers size markers (`small`, `medium`, `large`, and `xlarge`), each with specific time limits and resource access rules.
 
 ## Features
 
-- **Categorization of tests by size:** Mark tests with predefined size markers to categorize them based on execution time.
-- **Time limit enforcement:** Automatically fail tests that exceed their allocated time limit.
-- **Test distribution validation:** Ensure that your test suite's size distribution adheres to best practices.
-- **Plugin configuration and hooks:** Integrates with pytest's hook system to provide seamless functionality.
+- **Test size categorization**: Mark tests with `@pytest.mark.small`, `@pytest.mark.medium`, `@pytest.mark.large`, or `@pytest.mark.xlarge`
+- **Configurable time limits**: Enforce size-specific time limits with customizable thresholds
+- **Resource isolation**: Block network, filesystem, database, subprocess, and sleep access in small tests
+- **Distribution validation**: Ensure your test suite follows the recommended 80/15/5 test pyramid
+- **JSON/XML reporting**: Export test size reports for CI integration and dashboards
+- **Zero overhead**: Less than 1% performance impact on test execution
+- **Parallel execution**: Full pytest-xdist compatibility for distributed testing
 
-## Test Size Categories and Time Limits
+## Test Size Categories
 
-| Size    | Default Time Limit |
-|---------|-------------------|
-| Small   | 1 second          |
-| Medium  | 5 minutes         |
-| Large   | 15 minutes        |
-| XLarge  | 15 minutes        |
+| Size | Time Limit | Network | Filesystem | Database | Subprocess | Sleep |
+|------|------------|---------|------------|----------|------------|-------|
+| Small | 1 second | Blocked | tmp_path only | Blocked | Blocked | Blocked |
+| Medium | 5 minutes | Localhost | Allowed | Allowed | Allowed | Allowed |
+| Large | 15 minutes | Allowed | Allowed | Allowed | Allowed | Allowed |
+| XLarge | 15 minutes | Allowed | Allowed | Allowed | Allowed | Allowed |
 
 ### Configuring Custom Time Limits
 
@@ -181,11 +184,10 @@ pytest --test-size-report=json --test-size-report-file=report.json
 
 #### JSON Report Structure
 
-The JSON report includes:
+The JSON report includes comprehensive test size and timing data:
 
 ```json
 {
-  "version": "0.7.0",
   "timestamp": "2025-11-29T12:00:00.000000Z",
   "summary": {
     "total_tests": 150,
@@ -261,21 +263,32 @@ pytest --test-categories-allowed-paths=tests/fixtures/
 | `warn` | Emit warnings but allow tests to continue |
 | `off` | Disable isolation enforcement (default) |
 
-### Per-Test Override (Planned)
+### Philosophy: No Escape Hatches
 
-The `allow_network` and `allow_filesystem` markers will allow access for specific tests:
+pytest-test-categories intentionally does **not** provide per-test override markers like `@pytest.mark.allow_network`. This is by design.
+
+If a test needs network access, filesystem access, or other resources, it should be marked with the appropriate size:
 
 ```python
+# Wrong: Trying to bypass restrictions
 @pytest.mark.small
-@pytest.mark.allow_network  # Planned - not yet available
-def test_special_case_network():
+@pytest.mark.allow_network  # This marker does not exist
+def test_api_call():
     ...
 
+# Correct: Use the appropriate test size
+@pytest.mark.medium  # Medium tests can access localhost
+def test_api_call():
+    ...
+
+# Or mock the dependency for small tests
 @pytest.mark.small
-@pytest.mark.allow_filesystem  # Planned - not yet available
-def test_special_case_filesystem():
+def test_api_call(httpx_mock):
+    httpx_mock.add_response(url="https://api.example.com/", json={"status": "ok"})
     ...
 ```
+
+See [Design Philosophy](docs/architecture/design-philosophy.md) for the reasoning behind this approach.
 
 ### Documentation
 

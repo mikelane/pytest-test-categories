@@ -152,4 +152,6 @@ class TestUserRepository(MediumTest):
 - Learn about [timing enforcement](user-guide/timing-enforcement.md)
 - Configure [distribution validation](user-guide/distribution-validation.md)
 - Set up [test reporting](user-guide/reporting.md)
-- Explore [network isolation](user-guide/network-isolation.md) (planned feature)
+- Understand [resource isolation](user-guide/index.md#resource-isolation) for hermetic tests
+- Explore [network isolation](user-guide/network-isolation.md) enforcement
+- See [common patterns](examples/common-patterns.md) for mocking strategies
