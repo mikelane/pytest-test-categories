@@ -52,6 +52,10 @@ from pytest_test_categories.adapters.pytest_adapter import (
 )
 from pytest_test_categories.adapters.sleep import SleepPatchingBlocker
 from pytest_test_categories.adapters.threading import ThreadPatchingMonitor
+from pytest_test_categories.distribution.config import (
+    DEFAULT_DISTRIBUTION_CONFIG,
+    DistributionConfig,
+)
 from pytest_test_categories.distribution.stats import (
     DistributionStats,
     TestCounts,
@@ -221,6 +225,58 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         default='',
     )
 
+    # Distribution target configuration options
+    group.addoption(
+        '--test-categories-small-target',
+        action='store',
+        type=float,
+        default=None,
+        help='Target percentage for small tests (default: 80.0). Overrides ini option.',
+    )
+    group.addoption(
+        '--test-categories-medium-target',
+        action='store',
+        type=float,
+        default=None,
+        help='Target percentage for medium tests (default: 15.0). Overrides ini option.',
+    )
+    group.addoption(
+        '--test-categories-large-target',
+        action='store',
+        type=float,
+        default=None,
+        help='Target percentage for large/xlarge tests (default: 5.0). Overrides ini option.',
+    )
+    group.addoption(
+        '--test-categories-tolerance',
+        action='store',
+        type=float,
+        default=None,
+        help='Tolerance percentage for all sizes (default: 5.0 small/medium, 3.0 large). Overrides ini.',
+    )
+
+    # Distribution target ini options
+    parser.addini(
+        'test_categories_small_target',
+        help='Target percentage for small tests (default: 80.0)',
+        default='',
+    )
+    parser.addini(
+        'test_categories_medium_target',
+        help='Target percentage for medium tests (default: 15.0)',
+        default='',
+    )
+    parser.addini(
+        'test_categories_large_target',
+        help='Target percentage for large/xlarge tests (default: 5.0)',
+        default='',
+    )
+    parser.addini(
+        'test_categories_tolerance',
+        help='Tolerance percentage for all test sizes (default: 5.0 for small/medium, 3.0 for large)',
+        default='',
+    )
+
 
 @pytest.hookimpl(tryfirst=True)
 def pytest_configure(config: pytest.Config) -> None:
@@ -244,6 +300,10 @@ def pytest_configure(config: pytest.Config) -> None:
     # Initialize time limit configuration from CLI and ini options
     if session_state.time_limit_config is None:
         session_state.time_limit_config = _get_time_limit_config(config)
+
+    # Initialize distribution configuration from CLI and ini options
+    if session_state.distribution_config is None:
+        session_state.distribution_config = _get_distribution_config(config)
 
     # Register size markers
     for size in TestSize:
@@ -299,13 +359,17 @@ def pytest_collection_finish(session: pytest.Session) -> None:
 
     """
     config_adapter = PytestConfigAdapter(session.config)
+    session_state = config_adapter.get_plugin_state()
     stats = config_adapter.get_distribution_stats()
     warning_system = PytestWarningAdapter()
     validation_service = DistributionValidationService()
     enforcement_mode = _get_distribution_enforcement_mode(session.config)
 
+    # Get distribution config from session state (initialized in pytest_configure)
+    distribution_config = cast('DistributionConfig | None', session_state.distribution_config)
+
     try:
-        validation_service.validate_distribution(stats, warning_system, enforcement_mode)
+        validation_service.validate_distribution(stats, warning_system, enforcement_mode, config=distribution_config)
     except DistributionViolationError as e:
         raise pytest.UsageError(str(e)) from e
 
@@ -751,6 +815,64 @@ def _get_time_limit_config(config: pytest.Config) -> TimeLimitConfig:
             limits[size] = float(cli_value)
 
     return TimeLimitConfig(**limits)
+
+
+def _get_distribution_config(config: pytest.Config) -> DistributionConfig:
+    """Get the distribution target configuration from CLI and ini options.
+
+    CLI options take precedence over ini settings.
+
+    Priority (highest to lowest):
+    1. CLI options (--test-categories-small-target, etc.)
+    2. Ini options (test_categories_small_target, etc.)
+    3. Default values from DEFAULT_DISTRIBUTION_CONFIG
+
+    Args:
+        config: The pytest configuration object.
+
+    Returns:
+        A DistributionConfig with the resolved targets and tolerances.
+
+    """
+    # Start with defaults
+    targets: dict[str, float] = {
+        'small_target': DEFAULT_DISTRIBUTION_CONFIG.small_target,
+        'medium_target': DEFAULT_DISTRIBUTION_CONFIG.medium_target,
+        'large_target': DEFAULT_DISTRIBUTION_CONFIG.large_target,
+        'small_tolerance': DEFAULT_DISTRIBUTION_CONFIG.small_tolerance,
+        'medium_tolerance': DEFAULT_DISTRIBUTION_CONFIG.medium_tolerance,
+        'large_tolerance': DEFAULT_DISTRIBUTION_CONFIG.large_tolerance,
+    }
+
+    # Override with ini values for targets (lower priority)
+    for category in ['small', 'medium', 'large']:
+        ini_value = config.getini(f'test_categories_{category}_target')
+        if ini_value and ini_value.strip():
+            targets[f'{category}_target'] = float(ini_value)
+
+    # Override with ini tolerance (applies to all sizes)
+    ini_tolerance = config.getini('test_categories_tolerance')
+    if ini_tolerance and ini_tolerance.strip():
+        tolerance_value = float(ini_tolerance)
+        targets['small_tolerance'] = tolerance_value
+        targets['medium_tolerance'] = tolerance_value
+        targets['large_tolerance'] = tolerance_value
+
+    # Override with CLI values for targets (highest priority)
+    for category in ['small', 'medium', 'large']:
+        cli_value = config.getoption(f'--test-categories-{category}-target', default=None)
+        if cli_value is not None:
+            targets[f'{category}_target'] = float(cli_value)
+
+    # Override with CLI tolerance (applies to all sizes)
+    cli_tolerance = config.getoption('--test-categories-tolerance', default=None)
+    if cli_tolerance is not None:
+        tolerance_value = float(cli_tolerance)
+        targets['small_tolerance'] = tolerance_value
+        targets['medium_tolerance'] = tolerance_value
+        targets['large_tolerance'] = tolerance_value
+
+    return DistributionConfig(**targets)
 
 
 def _get_network_blocker(config: pytest.Config) -> SocketPatchingNetworkBlocker:

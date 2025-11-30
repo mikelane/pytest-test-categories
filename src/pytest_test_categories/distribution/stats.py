@@ -24,6 +24,7 @@ from pydantic import (
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+    from pytest_test_categories.distribution.config import DistributionConfig
     from pytest_test_categories.types import TestSize
 
 ONE_HUNDRED_PERCENT: Final[float] = 100.0
@@ -149,12 +150,28 @@ class DistributionStats(BaseModel):
                 )
             )
 
-    def validate_distribution(self) -> None:
-        """Validate test distribution against target ranges."""
+    def validate_distribution(self, config: DistributionConfig | None = None) -> None:
+        """Validate test distribution against target ranges.
+
+        Args:
+            config: Optional DistributionConfig with custom targets and tolerances.
+                If not provided, uses DEFAULT_DISTRIBUTION_CONFIG.
+
+        Raises:
+            ValueError: If the distribution is outside the configured target ranges.
+
+        """
+        if config is None:
+            from pytest_test_categories.distribution.config import DEFAULT_DISTRIBUTION_CONFIG  # noqa: PLC0415
+
+            effective_config = DEFAULT_DISTRIBUTION_CONFIG
+        else:
+            effective_config = config
+
         percentages = self.calculate_percentages()
 
-        self._validate_range(percentages.small, DISTRIBUTION_TARGETS['small'], 'Small')
-        self._validate_range(percentages.medium, DISTRIBUTION_TARGETS['medium'], 'Medium')
+        self._validate_range(percentages.small, effective_config.get_small_range(), 'Small')
+        self._validate_range(percentages.medium, effective_config.get_medium_range(), 'Medium')
         self._validate_range(
-            percentages.large + percentages.xlarge, DISTRIBUTION_TARGETS['large_xlarge'], 'Large/XLarge'
+            percentages.large + percentages.xlarge, effective_config.get_large_xlarge_range(), 'Large/XLarge'
         )

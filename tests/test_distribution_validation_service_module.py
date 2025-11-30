@@ -266,3 +266,82 @@ class DescribeDistributionValidationService:
         warning_system.get_warnings()
         # Note: This will likely fail validation because percentages don't sum to 100
         # The test verifies the service delegates to stats.validate_distribution()
+
+
+@pytest.mark.small
+class DescribeDistributionValidationServiceWithCustomConfig:
+    """Test DistributionValidationService with custom configuration."""
+
+    def it_validates_with_custom_config(self) -> None:
+        """Validate distribution using custom config."""
+        from pytest_test_categories.distribution.config import DistributionConfig
+
+        service = DistributionValidationService()
+        warning_system = FakeWarningSystem()
+        # 70% small would fail with defaults but pass with custom config
+        stats = DistributionStats.update_counts(
+            {
+                TestSize.SMALL: 70,
+                TestSize.MEDIUM: 20,
+                TestSize.LARGE: 10,
+                TestSize.XLARGE: 0,
+            }
+        )
+
+        custom_config = DistributionConfig(
+            small_target=70.0,
+            medium_target=20.0,
+            large_target=10.0,
+        )
+
+        service.validate_distribution(stats, warning_system, config=custom_config)
+
+        warnings = warning_system.get_warnings()
+        assert len(warnings) == 0  # Should pass with custom config
+
+    def it_fails_with_default_config_for_relaxed_distribution(self) -> None:
+        """Fail validation for distribution outside default targets."""
+        service = DistributionValidationService()
+        warning_system = FakeWarningSystem()
+        # 70% small fails with default 80% target
+        stats = DistributionStats.update_counts(
+            {
+                TestSize.SMALL: 70,
+                TestSize.MEDIUM: 20,
+                TestSize.LARGE: 10,
+                TestSize.XLARGE: 0,
+            }
+        )
+
+        service.validate_distribution(stats, warning_system)  # No config = defaults
+
+        warnings = warning_system.get_warnings()
+        assert len(warnings) == 1
+        assert DISTRIBUTION_WARNING_PREFIX in warnings[0][0]
+
+    def it_uses_custom_tolerance(self) -> None:
+        """Use custom tolerance when validating distribution."""
+        from pytest_test_categories.distribution.config import DistributionConfig
+
+        service = DistributionValidationService()
+        warning_system = FakeWarningSystem()
+        # 73% small is outside default 75-85% but within custom 70-90%
+        stats = DistributionStats.update_counts(
+            {
+                TestSize.SMALL: 73,
+                TestSize.MEDIUM: 17,
+                TestSize.LARGE: 10,
+                TestSize.XLARGE: 0,
+            }
+        )
+
+        custom_config = DistributionConfig(
+            small_tolerance=10.0,  # Allows 70-90%
+            medium_tolerance=10.0,
+            large_tolerance=8.0,  # Allows 0-13% (within now)
+        )
+
+        service.validate_distribution(stats, warning_system, config=custom_config)
+
+        warnings = warning_system.get_warnings()
+        assert len(warnings) == 0  # Should pass with custom tolerance

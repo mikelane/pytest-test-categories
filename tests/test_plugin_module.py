@@ -187,13 +187,15 @@ class DescribePytestAddoption:
         pytest_addoption(parser)
 
         parser.getgroup.assert_called_once_with('test-categories')
-        # Now adds nine CLI options:
+        # Now adds thirteen CLI options:
         # --test-size-report, --test-size-report-file,
         # --test-categories-enforcement, --test-categories-allowed-paths,
         # --test-categories-distribution-enforcement,
         # --test-categories-small-time-limit, --test-categories-medium-time-limit,
-        # --test-categories-large-time-limit, --test-categories-xlarge-time-limit
-        assert group.addoption.call_count == 9
+        # --test-categories-large-time-limit, --test-categories-xlarge-time-limit,
+        # --test-categories-small-target, --test-categories-medium-target,
+        # --test-categories-large-target, --test-categories-tolerance
+        assert group.addoption.call_count == 13
         # Find the test-size-report call
         test_size_report_call = None
         for call in group.addoption.call_args_list:
@@ -343,6 +345,8 @@ class DescribePytestCollectionFinish:
 
     def it_validates_distribution_and_warns_on_failure(self) -> None:
         """Test that pytest_collection_finish validates distribution and warns on failure."""
+        from pytest_test_categories.distribution.config import DEFAULT_DISTRIBUTION_CONFIG
+
         session = Mock()
         session.config.distribution_stats = DistributionStats()
         # Set up distribution that will fail validation
@@ -351,12 +355,16 @@ class DescribePytestCollectionFinish:
         )
         # Configure enforcement mode to WARN for validation
         session.config.getoption.return_value = 'warn'
+        # Set up distribution config in plugin state
+        session.config._test_categories_state.distribution_config = DEFAULT_DISTRIBUTION_CONFIG
 
         with pytest.warns(UserWarning, match='Test distribution does not meet targets'):
             pytest_collection_finish(session)
 
     def it_does_not_warn_when_distribution_is_valid(self) -> None:
         """Test that pytest_collection_finish doesn't warn when distribution is valid."""
+        from pytest_test_categories.distribution.config import DEFAULT_DISTRIBUTION_CONFIG
+
         session = Mock()
         session.config.distribution_stats = DistributionStats()
         # Set up valid distribution (80% small, 15% medium, 5% large)
@@ -365,6 +373,8 @@ class DescribePytestCollectionFinish:
         )
         # Configure enforcement mode to WARN for validation
         session.config.getoption.return_value = 'warn'
+        # Set up distribution config in plugin state
+        session.config._test_categories_state.distribution_config = DEFAULT_DISTRIBUTION_CONFIG
 
         with warnings.catch_warnings(record=True) as warning_list:
             warnings.simplefilter('always')

@@ -33,6 +33,7 @@ from pytest_test_categories.errors import ERROR_CODES
 from pytest_test_categories.ports.network import EnforcementMode
 
 if TYPE_CHECKING:
+    from pytest_test_categories.distribution.config import DistributionConfig
     from pytest_test_categories.distribution.stats import DistributionStats
     from pytest_test_categories.types import WarningSystemPort
 
@@ -107,6 +108,7 @@ class DistributionValidationService:
         stats: DistributionStats,
         warning_system: WarningSystemPort,
         enforcement_mode: EnforcementMode = EnforcementMode.WARN,
+        config: DistributionConfig | None = None,
     ) -> None:
         """Validate test distribution based on enforcement mode.
 
@@ -120,6 +122,8 @@ class DistributionValidationService:
             warning_system: Port for emitting warnings.
             enforcement_mode: How to handle validation failures. Defaults to WARN
                 for backwards compatibility with existing behavior.
+            config: Optional DistributionConfig with custom targets and tolerances.
+                If not provided, uses DEFAULT_DISTRIBUTION_CONFIG.
 
         Raises:
             DistributionViolationError: If enforcement_mode is STRICT and
@@ -138,23 +142,28 @@ class DistributionValidationService:
             return
 
         try:
-            stats.validate_distribution()
+            stats.validate_distribution(config=config)
         except ValueError as e:
             if enforcement_mode == EnforcementMode.STRICT:
-                error_message = self._format_violation_error(stats, str(e))
+                error_message = self._format_violation_error(stats, str(e), config)
                 raise DistributionViolationError(error_message) from e
 
             warning_message = f'{DISTRIBUTION_WARNING_PREFIX}{e}'
             warning_system.warn(warning_message)
 
-    def _format_violation_error(self, stats: DistributionStats, original_error: str) -> str:
+    def _format_violation_error(
+        self,
+        stats: DistributionStats,
+        original_error: str,
+        config: DistributionConfig | None = None,
+    ) -> str:
         """Format a detailed error message for distribution violations.
 
         Creates a comprehensive error message that includes:
         - Error code for grep-friendly CI log parsing
         - The violation header
         - Current distribution percentages
-        - Target ranges
+        - Target ranges (based on provided config or defaults)
         - The original validation error
         - Why distribution matters
         - Actionable recommendations
@@ -164,13 +173,36 @@ class DistributionValidationService:
         Args:
             stats: The distribution stats that failed validation.
             original_error: The original error message from validate_distribution().
+            config: Optional DistributionConfig with custom targets and tolerances.
+                If not provided, uses DEFAULT_DISTRIBUTION_CONFIG.
 
         Returns:
             A formatted error message string.
 
         """
+        if config is None:
+            from pytest_test_categories.distribution.config import DEFAULT_DISTRIBUTION_CONFIG  # noqa: PLC0415
+
+            effective_config = DEFAULT_DISTRIBUTION_CONFIG
+        else:
+            effective_config = config
+
         percentages = stats.calculate_percentages()
         error_code = _DISTRIBUTION_ERROR_CODE
+
+        # Build target range strings from config
+        small_range = effective_config.get_small_range()
+        medium_range = effective_config.get_medium_range()
+        large_range = effective_config.get_large_xlarge_range()
+
+        # Build formatted lines for each category
+        small_line = f'  Small:        {percentages.small:5.1f}%'
+        small_line += f' (target: {small_range.target:.0f}% +/-{small_range.tolerance:.0f}%)'
+        medium_line = f'  Medium:       {percentages.medium:5.1f}%'
+        medium_line += f' (target: {medium_range.target:.0f}% +/-{medium_range.tolerance:.0f}%)'
+        large_xlarge_pct = percentages.large + percentages.xlarge
+        large_line = f'  Large/XLarge: {large_xlarge_pct:5.1f}%'
+        large_line += f' (target: {large_range.target:.0f}% +/-{large_range.tolerance:.0f}%)'
 
         lines = [
             '',
@@ -182,9 +214,9 @@ class DistributionValidationService:
             f'  {original_error}',
             '',
             'Current Distribution:',
-            f'  Small:        {percentages.small:5.1f}% (target: 80% +/-5%)',
-            f'  Medium:       {percentages.medium:5.1f}% (target: 15% +/-5%)',
-            f'  Large/XLarge: {percentages.large + percentages.xlarge:5.1f}% (target: 5% +/-3%)',
+            small_line,
+            medium_line,
+            large_line,
             '',
             'Why it matters:',
             f'  {error_code.why_it_matters}',
