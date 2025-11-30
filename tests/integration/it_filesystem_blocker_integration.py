@@ -9,7 +9,10 @@ but do not require external resources.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import builtins
+import os
+import shutil
+from pathlib import Path
 
 import pytest
 
@@ -17,9 +20,6 @@ from pytest_test_categories.adapters.filesystem import FilesystemPatchingBlocker
 from pytest_test_categories.exceptions import FilesystemAccessViolationError
 from pytest_test_categories.ports.network import EnforcementMode
 from pytest_test_categories.types import TestSize
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 @pytest.mark.medium
@@ -187,8 +187,6 @@ class DescribeFilesystemPatchingBlockerIntegration:
 
     def it_restores_open_after_deactivation(self, tmp_path: Path) -> None:
         """Verify open() is fully restored after deactivation."""
-        import builtins
-
         original_open = builtins.open
         blocker = FilesystemPatchingBlocker()
 
@@ -212,8 +210,6 @@ class DescribeFilesystemPatchingBlockerIntegration:
 
     def it_handles_multiple_activate_deactivate_cycles(self, tmp_path: Path) -> None:
         """Verify blocker works correctly through multiple cycles."""
-        import builtins
-
         original_open = builtins.open
         blocker = FilesystemPatchingBlocker()
         test_file = tmp_path / 'cycles' / 'test.txt'
@@ -279,8 +275,6 @@ class DescribeFilesystemPatchingBlockerEdgeCases:
 
     def it_cleans_up_on_reset_even_if_active(self, tmp_path: Path) -> None:
         """Verify reset() properly cleans up even when blocker is active."""
-        import builtins
-
         original_open = builtins.open
         blocker = FilesystemPatchingBlocker()
 
@@ -351,13 +345,11 @@ class DescribeFilesystemPatchingBlockerEdgeCases:
 
 
 @pytest.mark.medium
-class DescribePathlibPathBlocking:
+class DescribePathBlocking:
     """Integration tests for blocking pathlib.Path operations."""
 
     def it_blocks_path_read_text_for_small_tests(self, tmp_path: Path) -> None:
         """Verify Path.read_text() is blocked for small tests."""
-        from pathlib import Path as PathlibPath
-
         blocker = FilesystemPatchingBlocker()
         test_file = tmp_path / 'pathlib_test' / 'read.txt'
         test_file.parent.mkdir(parents=True, exist_ok=True)
@@ -367,7 +359,7 @@ class DescribePathlibPathBlocking:
             blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, frozenset())
 
             with pytest.raises(FilesystemAccessViolationError) as exc_info:
-                PathlibPath(test_file).read_text()
+                Path(test_file).read_text()
 
             assert exc_info.value.test_size == TestSize.SMALL
             assert 'read' in str(exc_info.value.operation)
@@ -377,8 +369,6 @@ class DescribePathlibPathBlocking:
 
     def it_blocks_path_write_text_for_small_tests(self, tmp_path: Path) -> None:
         """Verify Path.write_text() is blocked for small tests."""
-        from pathlib import Path as PathlibPath
-
         blocker = FilesystemPatchingBlocker()
         test_file = tmp_path / 'pathlib_test' / 'write.txt'
         test_file.parent.mkdir(parents=True, exist_ok=True)
@@ -387,7 +377,7 @@ class DescribePathlibPathBlocking:
             blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, frozenset())
 
             with pytest.raises(FilesystemAccessViolationError) as exc_info:
-                PathlibPath(test_file).write_text('test')
+                Path(test_file).write_text('test')
 
             assert exc_info.value.test_size == TestSize.SMALL
             assert 'write' in str(exc_info.value.operation)
@@ -397,8 +387,6 @@ class DescribePathlibPathBlocking:
 
     def it_blocks_path_read_bytes_for_small_tests(self, tmp_path: Path) -> None:
         """Verify Path.read_bytes() is blocked for small tests."""
-        from pathlib import Path as PathlibPath
-
         blocker = FilesystemPatchingBlocker()
         test_file = tmp_path / 'pathlib_test' / 'bytes.txt'
         test_file.parent.mkdir(parents=True, exist_ok=True)
@@ -408,7 +396,7 @@ class DescribePathlibPathBlocking:
             blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, frozenset())
 
             with pytest.raises(FilesystemAccessViolationError) as exc_info:
-                PathlibPath(test_file).read_bytes()
+                Path(test_file).read_bytes()
 
             assert exc_info.value.test_size == TestSize.SMALL
             assert 'read' in str(exc_info.value.operation)
@@ -418,8 +406,6 @@ class DescribePathlibPathBlocking:
 
     def it_blocks_path_write_bytes_for_small_tests(self, tmp_path: Path) -> None:
         """Verify Path.write_bytes() is blocked for small tests."""
-        from pathlib import Path as PathlibPath
-
         blocker = FilesystemPatchingBlocker()
         test_file = tmp_path / 'pathlib_test' / 'write_bytes.txt'
         test_file.parent.mkdir(parents=True, exist_ok=True)
@@ -428,7 +414,7 @@ class DescribePathlibPathBlocking:
             blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, frozenset())
 
             with pytest.raises(FilesystemAccessViolationError) as exc_info:
-                PathlibPath(test_file).write_bytes(b'test')
+                Path(test_file).write_bytes(b'test')
 
             assert exc_info.value.test_size == TestSize.SMALL
             assert 'write' in str(exc_info.value.operation)
@@ -438,8 +424,6 @@ class DescribePathlibPathBlocking:
 
     def it_blocks_path_unlink_for_small_tests(self, tmp_path: Path) -> None:
         """Verify Path.unlink() is blocked for small tests."""
-        from pathlib import Path as PathlibPath
-
         blocker = FilesystemPatchingBlocker()
         test_file = tmp_path / 'pathlib_test' / 'delete.txt'
         test_file.parent.mkdir(parents=True, exist_ok=True)
@@ -449,7 +433,7 @@ class DescribePathlibPathBlocking:
             blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, frozenset())
 
             with pytest.raises(FilesystemAccessViolationError) as exc_info:
-                PathlibPath(test_file).unlink()
+                Path(test_file).unlink()
 
             assert exc_info.value.test_size == TestSize.SMALL
             assert 'delete' in str(exc_info.value.operation)
@@ -459,8 +443,6 @@ class DescribePathlibPathBlocking:
 
     def it_blocks_path_mkdir_for_small_tests(self, tmp_path: Path) -> None:
         """Verify Path.mkdir() is blocked for small tests."""
-        from pathlib import Path as PathlibPath
-
         blocker = FilesystemPatchingBlocker()
         test_dir = tmp_path / 'pathlib_test' / 'new_dir'
         test_dir.parent.mkdir(parents=True, exist_ok=True)
@@ -469,7 +451,7 @@ class DescribePathlibPathBlocking:
             blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, frozenset())
 
             with pytest.raises(FilesystemAccessViolationError) as exc_info:
-                PathlibPath(test_dir).mkdir()
+                Path(test_dir).mkdir()
 
             assert exc_info.value.test_size == TestSize.SMALL
             assert 'create' in str(exc_info.value.operation)
@@ -479,8 +461,6 @@ class DescribePathlibPathBlocking:
 
     def it_blocks_path_rmdir_for_small_tests(self, tmp_path: Path) -> None:
         """Verify Path.rmdir() is blocked for small tests."""
-        from pathlib import Path as PathlibPath
-
         blocker = FilesystemPatchingBlocker()
         test_dir = tmp_path / 'pathlib_test' / 'empty_dir'
         test_dir.mkdir(parents=True, exist_ok=True)
@@ -489,7 +469,7 @@ class DescribePathlibPathBlocking:
             blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, frozenset())
 
             with pytest.raises(FilesystemAccessViolationError) as exc_info:
-                PathlibPath(test_dir).rmdir()
+                Path(test_dir).rmdir()
 
             assert exc_info.value.test_size == TestSize.SMALL
             assert 'delete' in str(exc_info.value.operation)
@@ -499,8 +479,6 @@ class DescribePathlibPathBlocking:
 
     def it_blocks_path_rename_for_small_tests(self, tmp_path: Path) -> None:
         """Verify Path.rename() is blocked for small tests."""
-        from pathlib import Path as PathlibPath
-
         blocker = FilesystemPatchingBlocker()
         test_file = tmp_path / 'pathlib_test' / 'rename_source.txt'
         test_file.parent.mkdir(parents=True, exist_ok=True)
@@ -511,7 +489,7 @@ class DescribePathlibPathBlocking:
             blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, frozenset())
 
             with pytest.raises(FilesystemAccessViolationError) as exc_info:
-                PathlibPath(test_file).rename(target)
+                Path(test_file).rename(target)
 
             assert exc_info.value.test_size == TestSize.SMALL
             assert 'modify' in str(exc_info.value.operation)
@@ -521,8 +499,6 @@ class DescribePathlibPathBlocking:
 
     def it_blocks_path_open_for_small_tests(self, tmp_path: Path) -> None:
         """Verify Path.open() is blocked for small tests."""
-        from pathlib import Path as PathlibPath
-
         blocker = FilesystemPatchingBlocker()
         test_file = tmp_path / 'pathlib_test' / 'open_test.txt'
         test_file.parent.mkdir(parents=True, exist_ok=True)
@@ -532,15 +508,13 @@ class DescribePathlibPathBlocking:
             blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, frozenset())
 
             with pytest.raises(FilesystemAccessViolationError):
-                PathlibPath(test_file).open()  # noqa: SIM115
+                Path(test_file).open()  # noqa: SIM115
 
         finally:
             blocker.reset()
 
     def it_allows_pathlib_on_allowed_paths_for_small_tests(self, tmp_path: Path) -> None:
         """Verify pathlib operations are allowed on allowed paths for small tests."""
-        from pathlib import Path as PathlibPath
-
         blocker = FilesystemPatchingBlocker()
         allowed_dir = tmp_path / 'allowed_pathlib'
         allowed_dir.mkdir(parents=True, exist_ok=True)
@@ -551,8 +525,8 @@ class DescribePathlibPathBlocking:
         try:
             blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, allowed_paths)
 
-            PathlibPath(test_file).write_text('allowed content')
-            content = PathlibPath(test_file).read_text()
+            Path(test_file).write_text('allowed content')
+            content = Path(test_file).read_text()
 
             assert content == 'allowed content'
 
@@ -561,8 +535,6 @@ class DescribePathlibPathBlocking:
 
     def it_allows_pathlib_for_medium_tests(self, tmp_path: Path) -> None:
         """Verify pathlib operations are allowed for medium tests."""
-        from pathlib import Path as PathlibPath
-
         blocker = FilesystemPatchingBlocker()
         test_file = tmp_path / 'medium_pathlib' / 'test.txt'
         test_file.parent.mkdir(parents=True, exist_ok=True)
@@ -570,8 +542,8 @@ class DescribePathlibPathBlocking:
         try:
             blocker.activate(TestSize.MEDIUM, EnforcementMode.STRICT, frozenset())
 
-            PathlibPath(test_file).write_text('medium content')
-            content = PathlibPath(test_file).read_text()
+            Path(test_file).write_text('medium content')
+            content = Path(test_file).read_text()
 
             assert content == 'medium content'
 
@@ -585,8 +557,6 @@ class DescribeShutilBlocking:
 
     def it_blocks_shutil_copy_for_small_tests(self, tmp_path: Path) -> None:
         """Verify shutil.copy() is blocked for small tests."""
-        import shutil
-
         blocker = FilesystemPatchingBlocker()
         source = tmp_path / 'shutil_test' / 'source.txt'
         source.parent.mkdir(parents=True, exist_ok=True)
@@ -606,8 +576,6 @@ class DescribeShutilBlocking:
 
     def it_blocks_shutil_copy2_for_small_tests(self, tmp_path: Path) -> None:
         """Verify shutil.copy2() is blocked for small tests."""
-        import shutil
-
         blocker = FilesystemPatchingBlocker()
         source = tmp_path / 'shutil_test' / 'source2.txt'
         source.parent.mkdir(parents=True, exist_ok=True)
@@ -627,8 +595,6 @@ class DescribeShutilBlocking:
 
     def it_blocks_shutil_copytree_for_small_tests(self, tmp_path: Path) -> None:
         """Verify shutil.copytree() is blocked for small tests."""
-        import shutil
-
         blocker = FilesystemPatchingBlocker()
         source_dir = tmp_path / 'shutil_test' / 'source_dir'
         source_dir.mkdir(parents=True, exist_ok=True)
@@ -648,8 +614,6 @@ class DescribeShutilBlocking:
 
     def it_blocks_shutil_move_for_small_tests(self, tmp_path: Path) -> None:
         """Verify shutil.move() is blocked for small tests."""
-        import shutil
-
         blocker = FilesystemPatchingBlocker()
         source = tmp_path / 'shutil_test' / 'move_source.txt'
         source.parent.mkdir(parents=True, exist_ok=True)
@@ -669,8 +633,6 @@ class DescribeShutilBlocking:
 
     def it_blocks_shutil_rmtree_for_small_tests(self, tmp_path: Path) -> None:
         """Verify shutil.rmtree() is blocked for small tests."""
-        import shutil
-
         blocker = FilesystemPatchingBlocker()
         target_dir = tmp_path / 'shutil_test' / 'rmtree_target'
         target_dir.mkdir(parents=True, exist_ok=True)
@@ -690,8 +652,6 @@ class DescribeShutilBlocking:
 
     def it_allows_shutil_on_allowed_paths_for_small_tests(self, tmp_path: Path) -> None:
         """Verify shutil operations are allowed on allowed paths for small tests."""
-        import shutil
-
         blocker = FilesystemPatchingBlocker()
         allowed_dir = tmp_path / 'allowed_shutil'
         allowed_dir.mkdir(parents=True, exist_ok=True)
@@ -713,8 +673,6 @@ class DescribeShutilBlocking:
 
     def it_allows_shutil_for_medium_tests(self, tmp_path: Path) -> None:
         """Verify shutil operations are allowed for medium tests."""
-        import shutil
-
         blocker = FilesystemPatchingBlocker()
         source = tmp_path / 'medium_shutil' / 'source.txt'
         source.parent.mkdir(parents=True, exist_ok=True)
@@ -738,8 +696,6 @@ class DescribeOsModuleBlocking:
 
     def it_blocks_os_remove_for_small_tests(self, tmp_path: Path) -> None:
         """Verify os.remove() is blocked for small tests."""
-        import os
-
         blocker = FilesystemPatchingBlocker()
         test_file = tmp_path / 'os_test' / 'remove.txt'
         test_file.parent.mkdir(parents=True, exist_ok=True)
@@ -759,8 +715,6 @@ class DescribeOsModuleBlocking:
 
     def it_blocks_os_unlink_for_small_tests(self, tmp_path: Path) -> None:
         """Verify os.unlink() is blocked for small tests."""
-        import os
-
         blocker = FilesystemPatchingBlocker()
         test_file = tmp_path / 'os_test' / 'unlink.txt'
         test_file.parent.mkdir(parents=True, exist_ok=True)
@@ -780,8 +734,6 @@ class DescribeOsModuleBlocking:
 
     def it_blocks_os_mkdir_for_small_tests(self, tmp_path: Path) -> None:
         """Verify os.mkdir() is blocked for small tests."""
-        import os
-
         blocker = FilesystemPatchingBlocker()
         test_dir = tmp_path / 'os_test' / 'new_dir'
         test_dir.parent.mkdir(parents=True, exist_ok=True)
@@ -800,8 +752,6 @@ class DescribeOsModuleBlocking:
 
     def it_blocks_os_makedirs_for_small_tests(self, tmp_path: Path) -> None:
         """Verify os.makedirs() is blocked for small tests."""
-        import os
-
         blocker = FilesystemPatchingBlocker()
         test_dir = tmp_path / 'os_test' / 'deep' / 'nested' / 'dir'
 
@@ -819,8 +769,6 @@ class DescribeOsModuleBlocking:
 
     def it_blocks_os_rmdir_for_small_tests(self, tmp_path: Path) -> None:
         """Verify os.rmdir() is blocked for small tests."""
-        import os
-
         blocker = FilesystemPatchingBlocker()
         test_dir = tmp_path / 'os_test' / 'empty_dir'
         test_dir.mkdir(parents=True, exist_ok=True)
@@ -839,8 +787,6 @@ class DescribeOsModuleBlocking:
 
     def it_blocks_os_rename_for_small_tests(self, tmp_path: Path) -> None:
         """Verify os.rename() is blocked for small tests."""
-        import os
-
         blocker = FilesystemPatchingBlocker()
         source = tmp_path / 'os_test' / 'rename_src.txt'
         source.parent.mkdir(parents=True, exist_ok=True)
@@ -861,8 +807,6 @@ class DescribeOsModuleBlocking:
 
     def it_blocks_os_replace_for_small_tests(self, tmp_path: Path) -> None:
         """Verify os.replace() is blocked for small tests."""
-        import os
-
         blocker = FilesystemPatchingBlocker()
         source = tmp_path / 'os_test' / 'replace_src.txt'
         source.parent.mkdir(parents=True, exist_ok=True)
@@ -883,8 +827,6 @@ class DescribeOsModuleBlocking:
 
     def it_allows_os_operations_on_allowed_paths_for_small_tests(self, tmp_path: Path) -> None:
         """Verify os operations are allowed on allowed paths for small tests."""
-        import os
-
         blocker = FilesystemPatchingBlocker()
         allowed_dir = tmp_path / 'allowed_os'
         allowed_dir.mkdir(parents=True, exist_ok=True)
@@ -904,8 +846,6 @@ class DescribeOsModuleBlocking:
 
     def it_allows_os_operations_for_medium_tests(self, tmp_path: Path) -> None:
         """Verify os operations are allowed for medium tests."""
-        import os
-
         blocker = FilesystemPatchingBlocker()
         test_dir = tmp_path / 'medium_os' / 'new_dir'
         test_dir.parent.mkdir(parents=True, exist_ok=True)
@@ -922,8 +862,6 @@ class DescribeOsModuleBlocking:
 
     def it_allows_os_rename_on_allowed_paths_for_small_tests(self, tmp_path: Path) -> None:
         """Verify os.rename() is allowed on allowed paths for small tests."""
-        import os
-
         blocker = FilesystemPatchingBlocker()
         allowed_dir = tmp_path / 'allowed_rename'
         allowed_dir.mkdir(parents=True, exist_ok=True)
@@ -952,8 +890,6 @@ class DescribeShutilRmtreeCoverage:
 
     def it_allows_shutil_rmtree_for_medium_tests(self, tmp_path: Path) -> None:
         """Verify shutil.rmtree() is allowed for medium tests."""
-        import shutil
-
         blocker = FilesystemPatchingBlocker()
         target_dir = tmp_path / 'to_delete'
         target_dir.mkdir(parents=True, exist_ok=True)

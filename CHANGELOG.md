@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Feat
 
+- Extend filesystem isolation to block pathlib, os, and shutil operations (#120)
 - Integrate network blocking with pytest hooks (#76)
 - Implement NetworkBlockerPort adapters for network isolation (#74)
 - Add NetworkBlockerPort interface for network isolation (#72)
