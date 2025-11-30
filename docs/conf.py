@@ -96,14 +96,52 @@ html_static_path = ['_static']
 html_title = 'pytest-test-categories'
 html_short_title = 'pytest-test-categories'
 
+# Favicon
+html_favicon = '_static/favicon.svg'
+
+# Google Fonts (loaded before custom CSS)
+html_css_files = [
+    (
+        'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Roboto+Slab:wght@500;600;700;800;900&display=swap',
+        {'rel': 'stylesheet'},
+    ),
+    'custom.css',
+]
+
 # Furo theme options
 html_theme_options = {
-    'sidebar_hide_name': False,
+    'sidebar_hide_name': True,  # We'll use custom CSS for the title
     'navigation_with_keys': True,
     'top_of_page_buttons': ['view', 'edit'],
     'source_repository': 'https://github.com/mikelane/pytest-test-categories/',
     'source_branch': 'main',
     'source_directory': 'docs/',
+    # Light/dark mode logo variants (Furo-specific)
+    'light_logo': 'logo.svg',
+    'dark_logo': 'logo-dark.svg',
+    # Color and font customization using our brand palette
+    'light_css_variables': {
+        # Colors
+        'color-brand-primary': '#1E3A5F',  # Navy blue
+        'color-brand-content': '#1E3A5F',
+        'color-announcement-background': '#E5A323',  # Amber
+        'color-announcement-text': '#1E3A5F',
+        # Fonts (Google Fonts loaded via html_css_files)
+        'font-stack': 'Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif',
+        'font-stack--monospace': 'JetBrains Mono, Fira Code, Consolas, Monaco, monospace',
+        'font-stack--headings': 'Roboto Slab, Rockwell, Georgia, serif',
+    },
+    'dark_css_variables': {
+        # Colors
+        'color-brand-primary': '#F0B840',  # Light amber for dark mode
+        'color-brand-content': '#F0B840',
+        'color-announcement-background': '#2D9D5D',  # Green
+        'color-announcement-text': '#ffffff',
+        # Fonts (inherited from light mode, but can override if needed)
+        'font-stack': 'Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif',
+        'font-stack--monospace': 'JetBrains Mono, Fira Code, Consolas, Monaco, monospace',
+        'font-stack--headings': 'Roboto Slab, Rockwell, Georgia, serif',
+    },
 }
 
 # -- Options for autodoc -----------------------------------------------------

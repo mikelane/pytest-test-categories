@@ -1,0 +1,423 @@
+/*
+ * pytest-test-categories Documentation Theme
+ *
+ * Color Palette (from Testing Pyramid logo):
+ * - Navy Blue (Small tests): #1E3A5F
+ * - Amber/Gold (Medium tests): #E5A323
+ * - Green (Large tests): #2D9D5D
+ *
+ * Typography:
+ * - Roboto Slab (slab serif) - headings and branding
+ * - Inter (sans-serif) - body copy
+ * - JetBrains Mono - code
+ *
+ * Fonts are loaded via conf.py html_css_files
+ */
+
+/* ==========================================================================
+   CSS Custom Properties - Light Mode
+   ========================================================================== */
+
+:root {
+  /* Primary brand colors */
+  --color-navy: #1E3A5F;
+  --color-navy-light: #2A4A73;
+  --color-navy-dark: #152940;
+  --color-amber: #E5A323;
+  --color-amber-light: #F0B840;
+  --color-amber-dark: #C88D1C;
+  --color-green: #2D9D5D;
+  --color-green-light: #3CB371;
+  --color-green-dark: #228B4A;
+
+  /* Furo theme overrides - Light mode */
+  --color-brand-primary: var(--color-navy);
+  --color-brand-content: var(--color-navy);
+
+  /* Sidebar */
+  --color-sidebar-background: #f8f9fb;
+  --color-sidebar-background-border: var(--color-navy-light);
+  --color-sidebar-brand-text: var(--color-navy);
+  --color-sidebar-link-text: var(--color-navy);
+  --color-sidebar-link-text--top-level: var(--color-navy);
+  --color-sidebar-item-background--current: rgba(30, 58, 95, 0.1);
+  --color-sidebar-item-background--hover: rgba(30, 58, 95, 0.08);
+  --color-sidebar-item-expander-background--hover: rgba(30, 58, 95, 0.1);
+
+  /* Links */
+  --color-link: var(--color-navy);
+  --color-link--hover: var(--color-navy-light);
+  --color-link--visited: var(--color-navy-dark);
+
+  /* Admonitions - use our brand colors */
+  --color-admonition-title--note: var(--color-navy);
+  --color-admonition-title-background--note: rgba(30, 58, 95, 0.15);
+  --color-admonition-title--tip: var(--color-green);
+  --color-admonition-title-background--tip: rgba(45, 157, 93, 0.15);
+  --color-admonition-title--warning: var(--color-amber);
+  --color-admonition-title-background--warning: rgba(229, 163, 35, 0.2);
+  --color-admonition-title--important: var(--color-amber-dark);
+  --color-admonition-title-background--important: rgba(229, 163, 35, 0.15);
+
+  /* Code blocks */
+  --color-code-background: #f5f7fa;
+  --color-inline-code-background: rgba(30, 58, 95, 0.08);
+
+  /* Headers */
+  --color-content-foreground: var(--color-navy-dark);
+
+  /* API docs */
+  --color-api-background: #f8f9fb;
+  --color-api-overall: var(--color-navy);
+  --color-api-name: var(--color-navy);
+
+  /* Highlighted text */
+  --color-highlighted-background: rgba(229, 163, 35, 0.25);
+  --color-highlighted-text: var(--color-navy-dark);
+
+  /* Typography is set via conf.py html_theme_options light_css_variables */
+}
+
+/* ==========================================================================
+   CSS Custom Properties - Dark Mode
+   ========================================================================== */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-brand-primary: var(--color-amber-light);
+    --color-brand-content: var(--color-amber-light);
+
+    /* Sidebar - Dark */
+    --color-sidebar-background: #1a1d24;
+    --color-sidebar-background-border: var(--color-navy);
+    --color-sidebar-brand-text: var(--color-amber-light);
+    --color-sidebar-link-text: #c9cdd4;
+    --color-sidebar-link-text--top-level: var(--color-amber-light);
+    --color-sidebar-item-background--current: rgba(240, 184, 64, 0.15);
+    --color-sidebar-item-background--hover: rgba(240, 184, 64, 0.1);
+
+    /* Links - Dark */
+    --color-link: var(--color-amber-light);
+    --color-link--hover: var(--color-amber);
+    --color-link--visited: #d4a84a;
+
+    /* Code - Dark */
+    --color-code-background: #1e2229;
+    --color-inline-code-background: rgba(240, 184, 64, 0.12);
+
+    /* Headers - Dark */
+    --color-content-foreground: #e8eaed;
+
+    /* Highlighted - Dark */
+    --color-highlighted-background: rgba(240, 184, 64, 0.2);
+    --color-highlighted-text: #f0f0f0;
+  }
+}
+
+/* Dark mode body class override (for Furo toggle) */
+body[data-theme="dark"] {
+  --color-brand-primary: var(--color-amber-light);
+  --color-brand-content: var(--color-amber-light);
+  --color-sidebar-background: #1a1d24;
+  --color-sidebar-brand-text: var(--color-amber-light);
+  --color-sidebar-link-text: #c9cdd4;
+  --color-sidebar-link-text--top-level: var(--color-amber-light);
+  --color-sidebar-item-background--current: rgba(240, 184, 64, 0.15);
+  --color-sidebar-item-background--hover: rgba(240, 184, 64, 0.1);
+  --color-link: var(--color-amber-light);
+  --color-link--hover: var(--color-amber);
+  --color-code-background: #1e2229;
+  --color-inline-code-background: rgba(240, 184, 64, 0.12);
+  --color-highlighted-background: rgba(240, 184, 64, 0.2);
+}
+
+/* ==========================================================================
+   Typography
+   ========================================================================== */
+
+/* Apply fonts */
+body {
+  font-family: var(--font-stack);
+  font-feature-settings: 'kern' 1, 'liga' 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6,
+.sidebar-brand-text,
+article.bd-article h1 {
+  font-family: var(--font-stack--headings);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+h1 {
+  font-weight: 800;
+  font-size: 2.25rem;
+  letter-spacing: -0.03em;
+}
+
+h2 {
+  font-weight: 700;
+  font-size: 1.75rem;
+  margin-top: 2rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid rgba(30, 58, 95, 0.1);
+}
+
+body[data-theme="dark"] h2 {
+  border-bottom-color: rgba(240, 184, 64, 0.2);
+}
+
+h3 {
+  font-weight: 600;
+  font-size: 1.35rem;
+}
+
+/* Code */
+code, pre, .highlight {
+  font-family: var(--font-stack--monospace);
+  font-size: 0.9em;
+  font-feature-settings: 'liga' 1;
+}
+
+/* ==========================================================================
+   Logo & Branding
+   ========================================================================== */
+
+/* Sidebar logo styling */
+.sidebar-brand {
+  padding: 1rem 0.5rem 0.5rem 0.5rem;
+  text-align: center;
+}
+
+.sidebar-logo {
+  max-width: 200px;
+  width: 100%;
+  margin-bottom: 0.25rem;
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+}
+
+.sidebar-brand-text {
+  font-size: 1.1rem;
+  color: var(--color-sidebar-brand-text);
+}
+
+/* Custom brand title (since we hide the default) */
+.sidebar-brand::after {
+  content: "Pytest Test Categories";
+  display: block;
+  font-family: var(--font-stack--headings);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--color-sidebar-brand-text);
+  text-align: center;
+  margin-top: 0.5rem;
+  line-height: 1.3;
+}
+
+/* ==========================================================================
+   Test Size Badges (for documentation examples)
+   ========================================================================== */
+
+.badge-small,
+.badge-medium,
+.badge-large,
+.badge-xlarge {
+  display: inline-block;
+  padding: 0.2em 0.6em;
+  font-size: 0.75em;
+  font-weight: 600;
+  font-family: var(--font-stack--monospace);
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.badge-small {
+  background-color: var(--color-navy);
+  color: white;
+}
+
+.badge-medium {
+  background-color: var(--color-amber);
+  color: var(--color-navy-dark);
+}
+
+.badge-large,
+.badge-xlarge {
+  background-color: var(--color-green);
+  color: white;
+}
+
+/* ==========================================================================
+   Admonitions & Callouts
+   ========================================================================== */
+
+/* Custom admonition styles */
+.admonition {
+  border-radius: 8px;
+  border-left-width: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.admonition-title {
+  font-family: var(--font-stack--headings);
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   Code Blocks
+   ========================================================================== */
+
+/* Enhanced code block styling */
+pre {
+  border-radius: 8px;
+  border: 1px solid rgba(30, 58, 95, 0.1);
+}
+
+body[data-theme="dark"] pre {
+  border-color: rgba(240, 184, 64, 0.15);
+}
+
+/* Inline code */
+code.literal {
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  font-size: 0.875em;
+}
+
+/* ==========================================================================
+   Tables
+   ========================================================================== */
+
+/* Better table styling */
+table {
+  border-collapse: collapse;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+table thead {
+  background-color: var(--color-navy);
+  color: white;
+}
+
+table thead th {
+  font-family: var(--font-stack--headings);
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  text-align: left;
+}
+
+table tbody tr:nth-child(even) {
+  background-color: rgba(30, 58, 95, 0.03);
+}
+
+table tbody td {
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid rgba(30, 58, 95, 0.08);
+}
+
+body[data-theme="dark"] table thead {
+  background-color: var(--color-navy-light);
+}
+
+body[data-theme="dark"] table tbody tr:nth-child(even) {
+  background-color: rgba(240, 184, 64, 0.03);
+}
+
+body[data-theme="dark"] table tbody td {
+  border-bottom-color: rgba(240, 184, 64, 0.1);
+}
+
+/* ==========================================================================
+   Navigation & TOC
+   ========================================================================== */
+
+/* Table of contents styling */
+.toc-tree a {
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.toc-tree a:hover {
+  color: var(--color-brand-primary);
+}
+
+/* Current page indicator */
+.toc-tree .current > a {
+  font-weight: 600;
+  color: var(--color-brand-primary);
+}
+
+/* ==========================================================================
+   Buttons & Interactive Elements
+   ========================================================================== */
+
+/* Copy button in code blocks */
+button.copybtn {
+  border-radius: 4px;
+  transition: background-color 0.15s ease;
+}
+
+button.copybtn:hover {
+  background-color: var(--color-amber-light);
+}
+
+/* ==========================================================================
+   Footer
+   ========================================================================== */
+
+.footer {
+  border-top: 2px solid rgba(30, 58, 95, 0.1);
+  padding-top: 1.5rem;
+}
+
+body[data-theme="dark"] .footer {
+  border-top-color: rgba(240, 184, 64, 0.15);
+}
+
+/* ==========================================================================
+   Responsive Adjustments
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  h1 {
+    font-size: 1.75rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+  }
+
+  h3 {
+    font-size: 1.25rem;
+  }
+
+  .sidebar-logo {
+    max-width: 60px;
+  }
+}
+
+/* ==========================================================================
+   Print Styles
+   ========================================================================== */
+
+@media print {
+  :root {
+    --color-brand-primary: var(--color-navy);
+    --color-link: var(--color-navy);
+  }
+
+  h1, h2, h3 {
+    color: var(--color-navy);
+  }
+
+  pre, code {
+    border: 1px solid #ddd;
+  }
+}

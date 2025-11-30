@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 132" width="200" height="132">
+  <!-- Testing Pyramid Logo for pytest-test-categories -->
+  <!-- Clean stacked bars version - scaled up -->
+  <!-- Original ratios: 30% (top), 56% (middle), 82% (bottom) of 100px = 30, 56, 82 -->
+  <!-- Scaled to 200px base: 73px (top), 137px (middle), 200px (bottom) -->
+
+  <!-- Large tests (top) - Green - narrowest bar (73px, ~37% of bottom) -->
+  <rect x="63.5" y="0" width="73" height="36" rx="6" ry="6" fill="#2D9D5D"/>
+
+  <!-- Medium tests (middle) - Amber/Gold (137px, ~68% of bottom) -->
+  <rect x="31.5" y="48" width="137" height="36" rx="6" ry="6" fill="#E5A323"/>
+
+  <!-- Small tests (bottom) - Navy Blue - widest bar (200px) -->
+  <rect x="0" y="96" width="200" height="36" rx="6" ry="6" fill="#1E3A5F"/>
+</svg>

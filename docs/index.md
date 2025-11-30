@@ -1,4 +1,4 @@
-# pytest-test-categories
+# Pytest Test Categories
 
 A pytest plugin that enforces test timing constraints, resource isolation, and validates test size distributions based on Google's "Software Engineering at Google" best practices.
 

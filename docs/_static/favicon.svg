@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Favicon: Compact testing pyramid -->
+
+  <!-- Large tests (top) - Green -->
+  <rect x="11" y="2" width="10" height="6" rx="1.5" ry="1.5" fill="#2D9D5D"/>
+
+  <!-- Medium tests (middle) - Amber/Gold -->
+  <rect x="7" y="10" width="18" height="6" rx="1.5" ry="1.5" fill="#E5A323"/>
+
+  <!-- Small tests (bottom) - Navy Blue -->
+  <rect x="3" y="18" width="26" height="6" rx="1.5" ry="1.5" fill="#1E3A5F"/>
+</svg>
