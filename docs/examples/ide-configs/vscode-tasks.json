@@ -1,0 +1,105 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run All Tests",
+            "type": "shell",
+            "command": "pytest",
+            "args": ["-v"],
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "Run Small Tests",
+            "type": "shell",
+            "command": "pytest",
+            "args": ["-m", "small", "-v"],
+            "group": "test",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "Run Medium Tests",
+            "type": "shell",
+            "command": "pytest",
+            "args": ["-m", "medium", "-v"],
+            "group": "test",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "Run Large Tests",
+            "type": "shell",
+            "command": "pytest",
+            "args": ["-m", "large or xlarge", "-v"],
+            "group": "test",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "Run Fast Tests (Small + Medium)",
+            "type": "shell",
+            "command": "pytest",
+            "args": ["-m", "small or medium", "-v", "-n", "auto"],
+            "group": "test",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "Run Tests with Coverage",
+            "type": "shell",
+            "command": "coverage",
+            "args": ["run", "-m", "pytest", "-v"],
+            "group": "test",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "Show Coverage Report",
+            "type": "shell",
+            "command": "coverage",
+            "args": ["report", "--show-missing"],
+            "group": "test",
+            "problemMatcher": [],
+            "dependsOn": "Run Tests with Coverage",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "Generate Coverage XML",
+            "type": "shell",
+            "command": "coverage",
+            "args": ["xml"],
+            "group": "test",
+            "problemMatcher": [],
+            "dependsOn": "Run Tests with Coverage",
+            "presentation": {
+                "reveal": "silent"
+            }
+        }
+    ]
+}

@@ -72,6 +72,7 @@ user-guide/index
 :caption: Configuration
 
 configuration
+ide-integration
 ```
 
 ```{toctree}
