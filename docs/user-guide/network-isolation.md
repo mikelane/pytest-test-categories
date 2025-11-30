@@ -185,27 +185,6 @@ In off mode, network isolation is disabled entirely. Use this for:
 - Specific test runs that require network access
 - Debugging network-related test issues
 
-## Per-Test Overrides
-
-> **Planned Marker** - The `@pytest.mark.allow_network` marker is not yet implemented.
-
-Individual tests will be able to override the global enforcement using markers:
-
-### Allow Network Access (Planned)
-
-```python
-import pytest
-
-@pytest.mark.small
-@pytest.mark.allow_network  # Planned - not yet available
-def test_special_case_requiring_network():
-    """This small test is allowed to access the network."""
-    # Network access is permitted for this test only
-    ...
-```
-
-Use sparingly and document why the override is necessary.
-
 ## Best Practices
 
 ### 1. Start with WARN Mode

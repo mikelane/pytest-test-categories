@@ -139,30 +139,6 @@ def test_extended():
     pass
 ```
 
-### Resource Isolation Overrides (Planned)
-
-Override network or filesystem isolation for specific tests:
-
-```python
-@pytest.mark.small
-@pytest.mark.allow_network  # Planned - not yet available
-def test_special_case_network():
-    """This small test is allowed to access the network."""
-    pass
-
-@pytest.mark.small
-@pytest.mark.allow_filesystem  # Planned - not yet available
-def test_special_case_filesystem():
-    """This small test is allowed to access the filesystem."""
-    pass
-
-@pytest.mark.small
-@pytest.mark.allow_filesystem_paths('/specific/path')  # Planned - not yet available
-def test_with_specific_path():
-    """This small test can access a specific path."""
-    pass
-```
-
 ## Time Limits
 
 Each test size has a predefined time limit:

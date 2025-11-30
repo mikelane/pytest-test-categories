@@ -474,19 +474,18 @@ coverage report --show-missing
 
 ## Temporary Workarounds
 
-### Allow Filesystem for Specific Test
+### Recategorize the Test
 
-If you cannot immediately fix a test, use the `allow_filesystem` marker (when available):
+If a test genuinely requires filesystem access beyond tmp_path, it's not a small test - recategorize it:
 
 ```python
-@pytest.mark.small
-@pytest.mark.allow_filesystem  # TODO: Remove after fixing #123
-def test_legacy_file_operation():
-    """Temporary workaround until mocking is implemented."""
+@pytest.mark.medium  # Recategorized: requires filesystem access
+def test_file_integration():
+    """This test needs filesystem access, so it's a medium test."""
     ...
 ```
 
-Always add a TODO comment and track the technical debt.
+The test size defines the constraints, not the other way around.
 
 ### Skip in CI Only
 

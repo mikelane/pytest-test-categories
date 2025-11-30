@@ -189,15 +189,6 @@ pytest --network-enforcement=strict|warn|off
 pytest --allow-network-hosts=host1,host2
 ```
 
-And per-test markers:
-
-```python
-@pytest.mark.small
-@pytest.mark.allow_network  # Override: allow network for this test
-def test_special_case():
-    ...
-```
-
 ### 7. Integration Points
 
 The network blocker integrates via pytest hooks:

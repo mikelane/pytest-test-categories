@@ -355,19 +355,18 @@ Review all fixtures used by the failing test.
 
 ## Temporary Workarounds
 
-### Allow Network for Specific Test
+### Recategorize the Test
 
-If you cannot immediately fix a test, use the `allow_network` marker:
+If a test genuinely requires network access, it's not a small test - recategorize it:
 
 ```python
-@pytest.mark.small
-@pytest.mark.allow_network  # TODO: Remove after fixing #123
-def test_legacy_api_call():
-    """Temporary workaround until mocking is implemented."""
+@pytest.mark.medium  # Recategorized: requires network access
+def test_api_integration():
+    """This test needs network access, so it's a medium test."""
     ...
 ```
 
-Always add a TODO comment and track the technical debt.
+The test size defines the constraints, not the other way around.
 
 ### Skip in CI Only
 

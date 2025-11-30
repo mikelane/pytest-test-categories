@@ -39,3 +39,4 @@ poetry.lock
 docs/_build/
 docs/api/
 .worktrees/
+.worktrees/

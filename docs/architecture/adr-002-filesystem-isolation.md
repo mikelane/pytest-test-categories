@@ -519,20 +519,6 @@ pytest --test-categories-enforcement=strict|warn|off
 pytest --test-categories-allowed-paths=path1,path2
 ```
 
-Per-test marker:
-
-```python
-@pytest.mark.small
-@pytest.mark.allow_filesystem  # Override: allow filesystem for this test
-def test_special_case():
-    ...
-
-@pytest.mark.small
-@pytest.mark.allow_filesystem_paths('/specific/path')  # Allow specific paths
-def test_with_fixture_file():
-    ...
-```
-
 ### 9. Integration Points
 
 The filesystem blocker integrates via pytest hooks:
@@ -728,7 +714,6 @@ Estimated overhead: <1ms per filesystem operation (dominated by actual I/O in pr
 - Add `--test-categories-allowed-paths` CLI option
 - Add `test_categories_allowed_paths` ini option
 - Implement allowed path detection (tmp_path, basetemp)
-- Add `@pytest.mark.allow_filesystem` marker
 - Hook into `pytest_runtest_call`
 - End-to-end tests with pytester
 

@@ -563,7 +563,6 @@ markers = [
     "medium: Integration tests with local services (< 5min)",
     "large: End-to-end tests (< 15min)",
     "xlarge: Extended tests (< 15min)",
-    "allow_network: Override network blocking for specific test",
 ]
 
 # Enable strict network isolation
@@ -579,7 +578,6 @@ markers =
     medium: Integration tests with local services (< 5min)
     large: End-to-end tests (< 15min)
     xlarge: Extended tests (< 15min)
-    allow_network: Override network blocking for specific test
 
 test_categories_enforcement = strict
 ```

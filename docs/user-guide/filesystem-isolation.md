@@ -263,35 +263,6 @@ Paths can be:
 - Relative paths: `tests/fixtures/` (resolved from project root)
 - User-relative paths: `~/project/data/` (expanded with `~`)
 
-## Per-Test Overrides
-
-> **Planned Markers** - The markers below are not yet implemented.
-
-Individual tests can override the global enforcement using markers:
-
-### Allow All Filesystem Access
-
-```python
-@pytest.mark.small
-@pytest.mark.allow_filesystem  # Planned - not yet available
-def test_special_case():
-    """This small test is allowed to access the filesystem."""
-    # Filesystem access is permitted for this test only
-    ...
-```
-
-### Allow Specific Paths
-
-```python
-@pytest.mark.small
-@pytest.mark.allow_filesystem_paths('/specific/path')  # Planned - not yet available
-def test_with_fixture_file():
-    """This small test can access a specific path."""
-    ...
-```
-
-Use these markers sparingly and document why the override is necessary.
-
 ## Understanding Error Messages
 
 When a filesystem violation occurs, the error message provides:

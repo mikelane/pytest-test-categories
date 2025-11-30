@@ -159,11 +159,6 @@ small.filesystem_read_paths = [
     "tests/fixtures/",
     "src/*/test_data/",
 ]
-
-# Exempt specific tests from enforcement (escape hatch)
-exempt_tests = [
-    "tests/legacy/test_old_integration.py::test_needs_network",
-]
 ```
 
 ### 8. Enforcement Modes
@@ -214,14 +209,6 @@ pytest --resource-enforcement=off
 
 # Show which resources each test accessed (debugging)
 pytest --show-resource-access
-```
-
-**New markers (optional, for per-test overrides):**
-```python
-@pytest.mark.small
-@pytest.mark.allow_network  # Override: allow network for this specific test
-def test_special_case():
-    ...
 ```
 
 ### 11. Reporting

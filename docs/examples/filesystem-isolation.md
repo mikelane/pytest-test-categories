@@ -611,7 +611,6 @@ markers = [
     "medium: Integration tests with local services (< 5min)",
     "large: End-to-end tests (< 15min)",
     "xlarge: Extended tests (< 15min)",
-    "allow_filesystem: Override filesystem blocking for specific test",
 ]
 
 # Enable strict filesystem and network isolation
@@ -633,7 +632,6 @@ markers =
     medium: Integration tests with local services (< 5min)
     large: End-to-end tests (< 15min)
     xlarge: Extended tests (< 15min)
-    allow_filesystem: Override filesystem blocking for specific test
 
 test_categories_enforcement = strict
 test_categories_allowed_paths = tests/fixtures/,tests/data/
