@@ -159,8 +159,8 @@ class SleepPatchingBlocker(SleepBlockerPort):
         """Handle a sleep violation based on enforcement mode.
 
         Behavior:
-        - STRICT: Raise SleepViolationError
-        - WARN: Log warning (future: integrate with pytest warning system)
+        - STRICT: Record violation and raise SleepViolationError
+        - WARN: Record violation, allow sleep to proceed
         - OFF: Do nothing
 
         Args:
@@ -172,7 +172,16 @@ class SleepPatchingBlocker(SleepBlockerPort):
             SleepViolationError: If enforcement mode is STRICT.
 
         """
-        if self.current_enforcement_mode == EnforcementMode.STRICT:
+        is_strict = self.current_enforcement_mode == EnforcementMode.STRICT
+        details = f'Attempted {function} for {duration:.3f}s'
+
+        # Record violation via callback if set
+        if self.violation_callback is not None:
+            callback = self.violation_callback
+            if callable(callback):
+                callback('sleep', test_nodeid, details, failed=is_strict)
+
+        if is_strict:
             raise SleepViolationError(
                 test_size=self.current_test_size,  # type: ignore[arg-type]
                 test_nodeid=test_nodeid,
