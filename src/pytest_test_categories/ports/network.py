@@ -37,17 +37,28 @@ from abc import (
     ABC,
     abstractmethod,
 )
+from collections.abc import Callable
 from enum import StrEnum
-from typing import TYPE_CHECKING
+from typing import (
+    TYPE_CHECKING,
+    Any,
+)
 
 from icontract import (
     ensure,
     require,
 )
-from pydantic import BaseModel
+from pydantic import (
+    BaseModel,
+    Field,
+)
 
 if TYPE_CHECKING:
     from pytest_test_categories.types import TestSize
+
+# Define ViolationCallback at runtime for Pydantic compatibility
+# Using Any to avoid circular imports while still providing type hints
+ViolationCallback = Callable[[str, Any], None]
 
 
 class EnforcementMode(StrEnum):
@@ -145,6 +156,8 @@ class NetworkBlockerPort(BaseModel, ABC):
 
     Attributes:
         state: Current blocker state (INACTIVE or ACTIVE).
+        violation_callback: Optional callback invoked when a violation occurs.
+            The callback receives (test_nodeid, ViolationType) for tracking.
 
     Example:
         >>> class FakeNetworkBlocker(NetworkBlockerPort):
@@ -164,7 +177,10 @@ class NetworkBlockerPort(BaseModel, ABC):
 
     """
 
+    model_config = {'arbitrary_types_allowed': True}
+
     state: BlockerState = BlockerState.INACTIVE
+    violation_callback: ViolationCallback | None = Field(default=None, description='Callback for violation tracking')
 
     @require(lambda self: self.state == BlockerState.INACTIVE, 'Blocker must be INACTIVE to activate')
     @ensure(lambda self: self.state == BlockerState.ACTIVE, 'Blocker must be ACTIVE after activation')
@@ -304,6 +320,9 @@ class NetworkBlockerPort(BaseModel, ABC):
         - WARN: Emit warning via pytest's warning system
         - OFF: Do nothing (should not be called in OFF mode)
 
+        If a violation_callback is set, it will be called to record the
+        violation for JSON report tracking.
+
         Args:
             host: The attempted destination host.
             port: The attempted destination port.
@@ -319,6 +338,10 @@ class NetworkBlockerPort(BaseModel, ABC):
             HermeticityViolationError: Small tests cannot access the network...
 
         """
+        if self.violation_callback is not None:
+            from pytest_test_categories.violations import ViolationType  # noqa: PLC0415
+
+            self.violation_callback(test_nodeid, ViolationType.NETWORK)
         self._do_on_violation(host, port, test_nodeid)
 
     @abstractmethod

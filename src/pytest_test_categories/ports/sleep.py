@@ -49,11 +49,15 @@ from icontract import (
     ensure,
     require,
 )
-from pydantic import BaseModel
+from pydantic import (
+    BaseModel,
+    Field,
+)
 
 from pytest_test_categories.ports.network import (
     BlockerState,
     EnforcementMode,
+    ViolationCallback,
 )
 
 if TYPE_CHECKING:
@@ -131,7 +135,10 @@ class SleepBlockerPort(BaseModel, ABC):
 
     """
 
+    model_config = {'arbitrary_types_allowed': True}
+
     state: BlockerState = BlockerState.INACTIVE
+    violation_callback: ViolationCallback | None = Field(default=None, description='Callback for violation tracking')
 
     @require(lambda self: self.state == BlockerState.INACTIVE, 'Blocker must be INACTIVE to activate')
     @ensure(lambda self: self.state == BlockerState.ACTIVE, 'Blocker must be ACTIVE after activation')
@@ -269,6 +276,9 @@ class SleepBlockerPort(BaseModel, ABC):
         - WARN: Emit warning via pytest's warning system
         - OFF: Do nothing (should not be called in OFF mode)
 
+        If a violation_callback is set, it will be called to record the
+        violation for JSON report tracking.
+
         Args:
             function: The sleep function name.
             duration: The sleep duration in seconds.
@@ -284,6 +294,10 @@ class SleepBlockerPort(BaseModel, ABC):
             SleepViolationError: Small tests cannot use time.sleep()...
 
         """
+        if self.violation_callback is not None:
+            from pytest_test_categories.violations import ViolationType  # noqa: PLC0415
+
+            self.violation_callback(test_nodeid, ViolationType.SLEEP)
         self._do_on_violation(function, duration, test_nodeid)
 
     @abstractmethod

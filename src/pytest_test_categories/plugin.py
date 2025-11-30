@@ -890,7 +890,12 @@ def _get_network_blocker(config: pytest.Config) -> SocketPatchingNetworkBlocker:
     """
     blocker_attr = '_test_categories_network_blocker'
     if not hasattr(config, blocker_attr):
-        blocker = SocketPatchingNetworkBlocker()
+        config_adapter = PytestConfigAdapter(config)
+        session_state = config_adapter.get_plugin_state()
+        violation_tracker = session_state.violation_tracker
+        blocker = SocketPatchingNetworkBlocker(
+            violation_callback=violation_tracker.record_violation if violation_tracker else None,
+        )
         setattr(config, blocker_attr, blocker)
     return cast('SocketPatchingNetworkBlocker', getattr(config, blocker_attr))
 
@@ -910,7 +915,12 @@ def _get_filesystem_blocker(config: pytest.Config) -> FilesystemPatchingBlocker:
     """
     blocker_attr = '_test_categories_filesystem_blocker'
     if not hasattr(config, blocker_attr):
-        blocker = FilesystemPatchingBlocker()
+        config_adapter = PytestConfigAdapter(config)
+        session_state = config_adapter.get_plugin_state()
+        violation_tracker = session_state.violation_tracker
+        blocker = FilesystemPatchingBlocker(
+            violation_callback=violation_tracker.record_violation if violation_tracker else None,
+        )
         setattr(config, blocker_attr, blocker)
     return cast('FilesystemPatchingBlocker', getattr(config, blocker_attr))
 
@@ -956,7 +966,12 @@ def _get_process_blocker(config: pytest.Config) -> SubprocessPatchingBlocker:
     """
     blocker_attr = '_test_categories_process_blocker'
     if not hasattr(config, blocker_attr):
-        blocker = SubprocessPatchingBlocker()
+        config_adapter = PytestConfigAdapter(config)
+        session_state = config_adapter.get_plugin_state()
+        violation_tracker = session_state.violation_tracker
+        blocker = SubprocessPatchingBlocker(
+            violation_callback=violation_tracker.record_violation if violation_tracker else None,
+        )
         setattr(config, blocker_attr, blocker)
     return cast('SubprocessPatchingBlocker', getattr(config, blocker_attr))
 
@@ -989,7 +1004,12 @@ def _get_sleep_blocker(config: pytest.Config) -> SleepPatchingBlocker:
     """
     blocker_attr = '_test_categories_sleep_blocker'
     if not hasattr(config, blocker_attr):
-        blocker = SleepPatchingBlocker()
+        config_adapter = PytestConfigAdapter(config)
+        session_state = config_adapter.get_plugin_state()
+        violation_tracker = session_state.violation_tracker
+        blocker = SleepPatchingBlocker(
+            violation_callback=violation_tracker.record_violation if violation_tracker else None,
+        )
         setattr(config, blocker_attr, blocker)
     return cast('SleepPatchingBlocker', getattr(config, blocker_attr))
 
@@ -1022,7 +1042,12 @@ def _get_database_blocker(config: pytest.Config) -> DatabasePatchingBlocker:
     """
     blocker_attr = '_test_categories_database_blocker'
     if not hasattr(config, blocker_attr):
-        blocker = DatabasePatchingBlocker()
+        config_adapter = PytestConfigAdapter(config)
+        session_state = config_adapter.get_plugin_state()
+        violation_tracker = session_state.violation_tracker
+        blocker = DatabasePatchingBlocker(
+            violation_callback=violation_tracker.record_violation if violation_tracker else None,
+        )
         setattr(config, blocker_attr, blocker)
     return cast('DatabasePatchingBlocker', getattr(config, blocker_attr))
 
@@ -1166,10 +1191,14 @@ def _write_json_report(
         terminalreporter: The terminal reporter for output.
 
     """
+    session_state = config_adapter.get_plugin_state()
+    violation_tracker = session_state.violation_tracker
+
     json_report = JsonReport.from_test_size_report(
         test_report=test_report,
         distribution_stats=stats,
         version=PLUGIN_VERSION,
+        violation_tracker=violation_tracker,
     )
 
     json_output = json_report.model_dump_json(indent=2)

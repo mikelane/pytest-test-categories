@@ -236,7 +236,7 @@ class DatabasePatchingBlocker(DatabaseBlockerPort):
 
             """
             if not blocker._do_check_connection_allowed('sqlite3', database):  # noqa: SLF001
-                blocker._do_on_violation('sqlite3', database, blocker.current_test_nodeid)  # noqa: SLF001
+                blocker.on_violation('sqlite3', database, blocker.current_test_nodeid)
 
             return original_connect(database, *args, **kwargs)
 
@@ -398,7 +398,7 @@ class DatabasePatchingBlocker(DatabaseBlockerPort):
             connection_string = str(args[0]) if args else str(kwargs)
 
             if not blocker._do_check_connection_allowed(library, connection_string):  # noqa: SLF001
-                blocker._do_on_violation(library, connection_string, blocker.current_test_nodeid)  # noqa: SLF001
+                blocker.on_violation(library, connection_string, blocker.current_test_nodeid)
 
             return original_connect(*args, **kwargs)
 
@@ -424,7 +424,7 @@ class DatabasePatchingBlocker(DatabaseBlockerPort):
                 connection_string = host or 'localhost'
 
                 if not blocker._do_check_connection_allowed('pymongo', connection_string):  # noqa: SLF001
-                    blocker._do_on_violation('pymongo', connection_string, blocker.current_test_nodeid)  # noqa: SLF001
+                    blocker.on_violation('pymongo', connection_string, blocker.current_test_nodeid)
 
                 super().__init__(host, *args, **kwargs)
 
@@ -452,7 +452,7 @@ class DatabasePatchingBlocker(DatabaseBlockerPort):
                 connection_string = f'{host}:{kwargs.get("port", 6379)}'
 
                 if not blocker._do_check_connection_allowed(library, connection_string):  # noqa: SLF001
-                    blocker._do_on_violation(library, connection_string, blocker.current_test_nodeid)  # noqa: SLF001
+                    blocker.on_violation(library, connection_string, blocker.current_test_nodeid)
 
                 super().__init__(host, *args, **kwargs)
 
@@ -477,7 +477,7 @@ class DatabasePatchingBlocker(DatabaseBlockerPort):
             connection_string = str(url)
 
             if not blocker._do_check_connection_allowed('sqlalchemy', connection_string):  # noqa: SLF001
-                blocker._do_on_violation('sqlalchemy', connection_string, blocker.current_test_nodeid)  # noqa: SLF001
+                blocker.on_violation('sqlalchemy', connection_string, blocker.current_test_nodeid)
 
             return original_create_engine(url, *args, **kwargs)
 

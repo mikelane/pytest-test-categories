@@ -151,6 +151,145 @@ Warnings: 1
 ===========================================================================
 ```
 
+### JSON Report
+
+```bash
+pytest --test-size-report=json
+```
+
+JSON output is printed to stdout. To save to a file:
+
+```bash
+pytest --test-size-report=json --test-size-report-file=report.json
+```
+
+Output:
+
+```json
+{
+  "version": "1.0.0",
+  "timestamp": "2024-01-15T10:30:45.123456Z",
+  "summary": {
+    "total_tests": 55,
+    "distribution": {
+      "small": {"count": 45, "percentage": 81.8},
+      "medium": {"count": 8, "percentage": 14.5},
+      "large": {"count": 2, "percentage": 3.6},
+      "xlarge": {"count": 0, "percentage": 0.0}
+    },
+    "violations": {
+      "timing": 0,
+      "hermeticity": {
+        "network": 0,
+        "filesystem": 0,
+        "process": 0,
+        "database": 0,
+        "sleep": 0,
+        "total": 0
+      }
+    }
+  },
+  "tests": [
+    {
+      "name": "test_validation.py::test_email_valid",
+      "size": "small",
+      "duration": 0.001,
+      "status": "passed",
+      "violations": []
+    },
+    {
+      "name": "test_network.py::test_with_network_call",
+      "size": "small",
+      "duration": 0.234,
+      "status": "passed",
+      "violations": ["hermeticity:network"]
+    }
+  ]
+}
+```
+
+#### JSON Schema
+
+The JSON report includes:
+
+- **version**: Schema version (currently "1.0.0")
+- **timestamp**: ISO 8601 formatted UTC timestamp
+- **summary**: Aggregate statistics
+  - **total_tests**: Total number of tests
+  - **distribution**: Count and percentage by test size
+  - **violations**: Violation counts
+    - **timing**: Number of tests exceeding time limits
+    - **hermeticity**: Counts by violation type (network, filesystem, process, database, sleep, and total)
+- **tests**: Array of test entries with name, size, duration, status, and violations
+
+#### Hermeticity Violations
+
+When running with `--test-categories-enforcement=warn`, the JSON report tracks hermeticity violations:
+
+| Violation Type | Format in JSON | Description |
+|---------------|----------------|-------------|
+| Network | `hermeticity:network` | Blocked network connections |
+| Filesystem | `hermeticity:filesystem` | Blocked filesystem access |
+| Process | `hermeticity:process` | Blocked subprocess spawning |
+| Database | `hermeticity:database` | Blocked database connections |
+| Sleep | `hermeticity:sleep` | Blocked sleep calls |
+
+Example with violations:
+
+```bash
+pytest --test-size-report=json --test-categories-enforcement=warn --test-size-report-file=report.json
+```
+
+```json
+{
+  "version": "1.0.0",
+  "timestamp": "2024-01-15T10:30:45.123456Z",
+  "summary": {
+    "total_tests": 3,
+    "distribution": {
+      "small": {"count": 3, "percentage": 100.0},
+      "medium": {"count": 0, "percentage": 0.0},
+      "large": {"count": 0, "percentage": 0.0},
+      "xlarge": {"count": 0, "percentage": 0.0}
+    },
+    "violations": {
+      "timing": 1,
+      "hermeticity": {
+        "network": 1,
+        "filesystem": 0,
+        "process": 0,
+        "database": 2,
+        "sleep": 0,
+        "total": 3
+      }
+    }
+  },
+  "tests": [
+    {
+      "name": "test_slow.py::test_takes_too_long",
+      "size": "small",
+      "duration": 2.34,
+      "status": "passed",
+      "violations": ["timing"]
+    },
+    {
+      "name": "test_api.py::test_external_call",
+      "size": "small",
+      "duration": 0.01,
+      "status": "passed",
+      "violations": ["hermeticity:network"]
+    },
+    {
+      "name": "test_db.py::test_multiple_db_calls",
+      "size": "small",
+      "duration": 0.05,
+      "status": "passed",
+      "violations": ["hermeticity:database", "hermeticity:database"]
+    }
+  ]
+}
+```
+
 ## Customizing Output
 
 ### Verbose Mode

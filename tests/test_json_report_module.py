@@ -14,6 +14,7 @@ import pytest
 from pytest_test_categories.distribution.stats import DistributionStats
 from pytest_test_categories.json_report import (
     DistributionSizeEntry,
+    HermeticityViolationsSummary,
     JsonReport,
     JsonReportSummary,
     JsonTestEntry,
@@ -21,6 +22,10 @@ from pytest_test_categories.json_report import (
 )
 from pytest_test_categories.reporting import TestSizeReport
 from pytest_test_categories.types import TestSize
+from pytest_test_categories.violations import (
+    ViolationTracker,
+    ViolationType,
+)
 
 
 @pytest.mark.small
@@ -62,26 +67,38 @@ class DescribeViolationsSummary:
     """Test suite for ViolationsSummary model."""
 
     def it_creates_with_default_values(self) -> None:
-        """Create violations summary with default values of 0."""
+        """Create violations summary with default values."""
         violations = ViolationsSummary()
 
         assert violations.timing == 0
-        assert violations.hermeticity == 0
+        assert violations.hermeticity.total == 0
 
-    def it_creates_with_custom_values(self) -> None:
-        """Create violations summary with custom values."""
-        violations = ViolationsSummary(timing=3, hermeticity=1)
+    def it_creates_with_custom_timing_value(self) -> None:
+        """Create violations summary with custom timing value."""
+        violations = ViolationsSummary(timing=3)
 
         assert violations.timing == 3
-        assert violations.hermeticity == 1
+        assert violations.hermeticity.total == 0
+
+    def it_creates_with_custom_hermeticity_values(self) -> None:
+        """Create violations summary with custom hermeticity values."""
+        hermeticity = HermeticityViolationsSummary(network=1, filesystem=2)
+        violations = ViolationsSummary(timing=3, hermeticity=hermeticity)
+
+        assert violations.timing == 3
+        assert violations.hermeticity.network == 1
+        assert violations.hermeticity.filesystem == 2
 
     def it_serializes_to_dict(self) -> None:
         """Serialize violations summary to dictionary format."""
-        violations = ViolationsSummary(timing=2, hermeticity=1)
+        hermeticity = HermeticityViolationsSummary(network=1)
+        violations = ViolationsSummary(timing=2, hermeticity=hermeticity)
 
         result = violations.model_dump()
 
-        assert result == {'timing': 2, 'hermeticity': 1}
+        assert result['timing'] == 2
+        assert result['hermeticity']['network'] == 1
+        assert result['hermeticity']['total'] == 1
 
 
 @pytest.mark.small
@@ -90,6 +107,7 @@ class DescribeJsonReportSummary:
 
     def it_creates_summary_with_all_fields(self) -> None:
         """Create summary with total tests, distribution, and violations."""
+        hermeticity = HermeticityViolationsSummary(network=1)
         summary = JsonReportSummary(
             total_tests=100,
             distribution={
@@ -98,12 +116,13 @@ class DescribeJsonReportSummary:
                 'large': DistributionSizeEntry(count=4, percentage=4.0, target=4.0),
                 'xlarge': DistributionSizeEntry(count=1, percentage=1.0, target=1.0),
             },
-            violations=ViolationsSummary(timing=2, hermeticity=0),
+            violations=ViolationsSummary(timing=2, hermeticity=hermeticity),
         )
 
         assert summary.total_tests == 100
         assert summary.distribution['small'].count == 80
         assert summary.violations.timing == 2
+        assert summary.violations.hermeticity.network == 1
 
     def it_serializes_to_dict(self) -> None:
         """Serialize summary to dictionary format."""
@@ -115,13 +134,14 @@ class DescribeJsonReportSummary:
                 'large': DistributionSizeEntry(count=4, percentage=4.0, target=4.0),
                 'xlarge': DistributionSizeEntry(count=1, percentage=1.0, target=1.0),
             },
-            violations=ViolationsSummary(timing=0, hermeticity=0),
+            violations=ViolationsSummary(),
         )
 
         result = summary.model_dump()
 
         assert result['total_tests'] == 100
         assert result['distribution']['small']['count'] == 80
+        assert result['violations']['hermeticity']['total'] == 0
 
 
 @pytest.mark.small
@@ -351,3 +371,142 @@ class DescribeJsonReportFromTestSizeReport:
         assert json_report.summary.total_tests == 1
         assert len(json_report.tests) == 1
         assert json_report.tests[0].size == 'unsized'
+
+
+@pytest.mark.small
+class DescribeHermeticityViolationsSummary:
+    """Test suite for HermeticityViolationsSummary model."""
+
+    def it_creates_with_zero_counts(self) -> None:
+        """Create hermeticity violations summary with zero counts."""
+        summary = HermeticityViolationsSummary()
+
+        assert summary.network == 0
+        assert summary.filesystem == 0
+        assert summary.process == 0
+        assert summary.database == 0
+        assert summary.sleep == 0
+        assert summary.total == 0
+
+    def it_calculates_total_correctly(self) -> None:
+        """Calculate total from all violation types."""
+        summary = HermeticityViolationsSummary(
+            network=3,
+            filesystem=2,
+            process=0,
+            database=1,
+            sleep=0,
+        )
+
+        assert summary.total == 6
+
+    def it_serializes_to_dict(self) -> None:
+        """Serialize hermeticity violations summary to dictionary format."""
+        summary = HermeticityViolationsSummary(
+            network=3,
+            filesystem=2,
+            process=0,
+            database=1,
+            sleep=0,
+        )
+
+        result = summary.model_dump()
+
+        assert result == {
+            'network': 3,
+            'filesystem': 2,
+            'process': 0,
+            'database': 1,
+            'sleep': 0,
+            'total': 6,
+        }
+
+
+@pytest.mark.small
+class DescribeJsonReportWithHermeticityViolations:
+    """Test suite for JsonReport with hermeticity violation tracking."""
+
+    def it_includes_hermeticity_violations_summary(self) -> None:
+        """Include hermeticity violations in JSON report summary."""
+        test_report = TestSizeReport()
+        test_report.add_test('test_net.py::test_network', TestSize.SMALL, duration=0.1, outcome='failed')
+        test_report.add_test('test_fs.py::test_filesystem', TestSize.SMALL, duration=0.1, outcome='failed')
+
+        tracker = ViolationTracker()
+        tracker.record_violation('test_net.py::test_network', ViolationType.NETWORK)
+        tracker.record_violation('test_fs.py::test_filesystem', ViolationType.FILESYSTEM)
+        tracker.record_violation('test_fs.py::test_filesystem', ViolationType.DATABASE)
+
+        stats = DistributionStats.update_counts({TestSize.SMALL: 2})
+
+        json_report = JsonReport.from_test_size_report(
+            test_report=test_report,
+            distribution_stats=stats,
+            version='0.7.0',
+            violation_tracker=tracker,
+        )
+
+        assert json_report.summary.violations.hermeticity.network == 1
+        assert json_report.summary.violations.hermeticity.filesystem == 1
+        assert json_report.summary.violations.hermeticity.database == 1
+        assert json_report.summary.violations.hermeticity.total == 3
+
+    def it_includes_per_test_hermeticity_violations(self) -> None:
+        """Include per-test hermeticity violations in JSON report."""
+        test_report = TestSizeReport()
+        test_report.add_test('test_net.py::test_network', TestSize.SMALL, duration=0.1, outcome='failed')
+
+        tracker = ViolationTracker()
+        tracker.record_violation('test_net.py::test_network', ViolationType.NETWORK)
+        tracker.record_violation('test_net.py::test_network', ViolationType.FILESYSTEM)
+
+        stats = DistributionStats.update_counts({TestSize.SMALL: 1})
+
+        json_report = JsonReport.from_test_size_report(
+            test_report=test_report,
+            distribution_stats=stats,
+            version='0.7.0',
+            violation_tracker=tracker,
+        )
+
+        test_entry = json_report.tests[0]
+        assert 'hermeticity:network' in test_entry.violations
+        assert 'hermeticity:filesystem' in test_entry.violations
+
+    def it_handles_missing_violation_tracker(self) -> None:
+        """Handle missing violation_tracker with zero hermeticity violations."""
+        test_report = TestSizeReport()
+        test_report.add_test('test_one.py::test_small', TestSize.SMALL, duration=0.032, outcome='passed')
+
+        stats = DistributionStats.update_counts({TestSize.SMALL: 1})
+
+        json_report = JsonReport.from_test_size_report(
+            test_report=test_report,
+            distribution_stats=stats,
+            version='0.7.0',
+        )
+
+        assert json_report.summary.violations.hermeticity.total == 0
+
+    def it_combines_timing_and_hermeticity_violations(self) -> None:
+        """Combine timing and hermeticity violations in test entry."""
+        test_report = TestSizeReport()
+        test_report.add_test('test_slow_net.py::test_slow_network', TestSize.SMALL, duration=1.5, outcome='failed')
+
+        tracker = ViolationTracker()
+        tracker.record_violation('test_slow_net.py::test_slow_network', ViolationType.NETWORK)
+
+        stats = DistributionStats.update_counts({TestSize.SMALL: 1})
+
+        json_report = JsonReport.from_test_size_report(
+            test_report=test_report,
+            distribution_stats=stats,
+            version='0.7.0',
+            violation_tracker=tracker,
+        )
+
+        test_entry = json_report.tests[0]
+        assert 'timing' in test_entry.violations
+        assert 'hermeticity:network' in test_entry.violations
+        assert json_report.summary.violations.timing == 1
+        assert json_report.summary.violations.hermeticity.network == 1

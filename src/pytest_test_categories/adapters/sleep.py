@@ -219,7 +219,7 @@ class SleepPatchingBlocker(SleepBlockerPort):
 
             """
             if not blocker._do_check_sleep_allowed('time.sleep', seconds):  # noqa: SLF001
-                blocker._do_on_violation('time.sleep', seconds, blocker.current_test_nodeid)  # noqa: SLF001
+                blocker.on_violation('time.sleep', seconds, blocker.current_test_nodeid)
 
             original_sleep(seconds)
 
@@ -247,7 +247,7 @@ class SleepPatchingBlocker(SleepBlockerPort):
 
             """
             if not blocker._do_check_sleep_allowed('asyncio.sleep', delay):  # noqa: SLF001
-                blocker._do_on_violation('asyncio.sleep', delay, blocker.current_test_nodeid)  # noqa: SLF001
+                blocker.on_violation('asyncio.sleep', delay, blocker.current_test_nodeid)
 
             await original_sleep(delay)
 

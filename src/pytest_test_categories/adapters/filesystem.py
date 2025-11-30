@@ -443,7 +443,7 @@ class FilesystemPatchingBlocker(FilesystemBlockerPort):
         def patched_method(self_path: Path, *args: Any, **kwargs: Any) -> Any:  # noqa: ANN401
             path = Path(self_path)
             if not blocker._do_check_access_allowed(path, operation):  # noqa: SLF001
-                blocker._do_on_violation(path, operation, blocker.current_test_nodeid)  # noqa: SLF001
+                blocker.on_violation(path, operation, blocker.current_test_nodeid)
             return original(self_path, *args, **kwargs)
 
         return patched_method
@@ -472,7 +472,7 @@ class FilesystemPatchingBlocker(FilesystemBlockerPort):
             path = Path(self_path)
             operation = blocker._determine_operation_from_mode(mode)  # noqa: SLF001
             if not blocker._do_check_access_allowed(path, operation):  # noqa: SLF001
-                blocker._do_on_violation(path, operation, blocker.current_test_nodeid)  # noqa: SLF001
+                blocker.on_violation(path, operation, blocker.current_test_nodeid)
             return original(self_path, mode, *args, **kwargs)
 
         return patched_open
@@ -497,7 +497,7 @@ class FilesystemPatchingBlocker(FilesystemBlockerPort):
         def patched_func(path: str | Path, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401
             path_obj = Path(path) if isinstance(path, str) else path
             if not blocker._do_check_access_allowed(path_obj, operation):  # noqa: SLF001
-                blocker._do_on_violation(path_obj, operation, blocker.current_test_nodeid)  # noqa: SLF001
+                blocker.on_violation(path_obj, operation, blocker.current_test_nodeid)
             return original(path, *args, **kwargs)
 
         return patched_func
@@ -520,9 +520,7 @@ class FilesystemPatchingBlocker(FilesystemBlockerPort):
         def patched_rename(src: str | Path, dst: str | Path, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401
             src_path = Path(src) if isinstance(src, str) else src
             if not blocker._do_check_access_allowed(src_path, FilesystemOperation.MODIFY):  # noqa: SLF001
-                blocker._do_on_violation(  # noqa: SLF001
-                    src_path, FilesystemOperation.MODIFY, blocker.current_test_nodeid
-                )
+                blocker.on_violation(src_path, FilesystemOperation.MODIFY, blocker.current_test_nodeid)
             return original(src, dst, *args, **kwargs)
 
         return patched_rename
@@ -545,9 +543,7 @@ class FilesystemPatchingBlocker(FilesystemBlockerPort):
         def patched_copy(src: str | Path, dst: str | Path, *args: Any, **kwargs: Any) -> str:  # noqa: ANN401
             src_path = Path(src) if isinstance(src, str) else src
             if not blocker._do_check_access_allowed(src_path, FilesystemOperation.READ):  # noqa: SLF001
-                blocker._do_on_violation(  # noqa: SLF001
-                    src_path, FilesystemOperation.READ, blocker.current_test_nodeid
-                )
+                blocker.on_violation(src_path, FilesystemOperation.READ, blocker.current_test_nodeid)
             return original(src, dst, *args, **kwargs)
 
         return patched_copy
@@ -570,9 +566,7 @@ class FilesystemPatchingBlocker(FilesystemBlockerPort):
         def patched_rmtree(path: str | Path, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401
             path_obj = Path(path) if isinstance(path, str) else path
             if not blocker._do_check_access_allowed(path_obj, FilesystemOperation.DELETE):  # noqa: SLF001
-                blocker._do_on_violation(  # noqa: SLF001
-                    path_obj, FilesystemOperation.DELETE, blocker.current_test_nodeid
-                )
+                blocker.on_violation(path_obj, FilesystemOperation.DELETE, blocker.current_test_nodeid)
             return original(path, *args, **kwargs)
 
         return patched_rmtree
@@ -617,7 +611,7 @@ class FilesystemPatchingBlocker(FilesystemBlockerPort):
             operation = blocker._determine_operation_from_mode(mode)  # noqa: SLF001
 
             if not blocker._do_check_access_allowed(path, operation):  # noqa: SLF001
-                blocker._do_on_violation(path, operation, blocker.current_test_nodeid)  # noqa: SLF001
+                blocker.on_violation(path, operation, blocker.current_test_nodeid)
 
             return original_open(file, mode, *args, **kwargs)
 

@@ -327,3 +327,183 @@ class DescribeJsonReportFileOption:
 
         result.assert_outcomes(passed=1)
         assert report_path.exists()
+
+
+@pytest.mark.medium
+class DescribeJsonReportHermeticityViolations:
+    """Test suite for hermeticity violation tracking in JSON reports."""
+
+    def it_includes_hermeticity_violations_summary_in_json(self, pytester: pytest.Pytester) -> None:
+        """Include hermeticity violations summary structure in JSON output."""
+        pytester.makepyfile(
+            test_example="""
+            import pytest
+
+            @pytest.mark.small
+            def test_small():
+                assert True
+            """
+        )
+
+        report_path = pytester.path / 'report.json'
+        result = pytester.runpytest(
+            '--test-size-report=json',
+            f'--test-size-report-file={report_path}',
+        )
+
+        result.assert_outcomes(passed=1)
+        report = json.loads(report_path.read_text())
+
+        hermeticity = report['summary']['violations']['hermeticity']
+        assert 'network' in hermeticity
+        assert 'filesystem' in hermeticity
+        assert 'process' in hermeticity
+        assert 'database' in hermeticity
+        assert 'sleep' in hermeticity
+        assert 'total' in hermeticity
+
+    def it_tracks_network_violations_in_warn_mode(self, pytester: pytest.Pytester) -> None:
+        """Track network violations in warn mode."""
+        pytester.makepyfile(
+            test_network="""
+            import pytest
+            import socket
+
+            @pytest.mark.small
+            def test_network_violation():
+                try:
+                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    s.connect(('httpbin.org', 80))
+                    s.close()
+                except Exception:
+                    pass
+                assert True
+            """
+        )
+
+        report_path = pytester.path / 'report.json'
+        result = pytester.runpytest(
+            '--test-size-report=json',
+            f'--test-size-report-file={report_path}',
+            '--test-categories-enforcement=warn',
+        )
+
+        result.assert_outcomes(passed=1)
+        report = json.loads(report_path.read_text())
+
+        assert report['summary']['violations']['hermeticity']['network'] >= 1
+        assert report['summary']['violations']['hermeticity']['total'] >= 1
+
+    def it_includes_hermeticity_violations_in_test_details(self, pytester: pytest.Pytester) -> None:
+        """Include hermeticity violations in per-test details."""
+        pytester.makepyfile(
+            test_network="""
+            import pytest
+            import socket
+
+            @pytest.mark.small
+            def test_network_violation():
+                try:
+                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    s.connect(('httpbin.org', 80))
+                    s.close()
+                except Exception:
+                    pass
+                assert True
+            """
+        )
+
+        report_path = pytester.path / 'report.json'
+        result = pytester.runpytest(
+            '--test-size-report=json',
+            f'--test-size-report-file={report_path}',
+            '--test-categories-enforcement=warn',
+        )
+
+        result.assert_outcomes(passed=1)
+        report = json.loads(report_path.read_text())
+
+        test_entry = next((t for t in report['tests'] if 'network_violation' in t['name']), None)
+        assert test_entry is not None
+        assert any('hermeticity:network' in v for v in test_entry['violations'])
+
+    def it_has_zero_violations_when_enforcement_off(self, pytester: pytest.Pytester) -> None:
+        """Report zero violations when enforcement is off."""
+        pytester.makepyfile(
+            test_network="""
+            import pytest
+            import socket
+
+            @pytest.mark.small
+            def test_network_access():
+                # Network access but enforcement is off
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                s.close()
+                assert True
+            """
+        )
+
+        report_path = pytester.path / 'report.json'
+        result = pytester.runpytest(
+            '--test-size-report=json',
+            f'--test-size-report-file={report_path}',
+            '--test-categories-enforcement=off',
+        )
+
+        result.assert_outcomes(passed=1)
+        report = json.loads(report_path.read_text())
+
+        assert report['summary']['violations']['hermeticity']['total'] == 0
+
+    def it_tracks_sleep_violations_in_warn_mode(self, pytester: pytest.Pytester) -> None:
+        """Track sleep violations in warn mode."""
+        pytester.makepyfile(
+            test_sleep="""
+            import pytest
+            import time
+
+            @pytest.mark.small
+            def test_sleep_violation():
+                time.sleep(0.01)
+                assert True
+            """
+        )
+
+        report_path = pytester.path / 'report.json'
+        result = pytester.runpytest(
+            '--test-size-report=json',
+            f'--test-size-report-file={report_path}',
+            '--test-categories-enforcement=warn',
+        )
+
+        result.assert_outcomes(passed=1)
+        report = json.loads(report_path.read_text())
+
+        assert report['summary']['violations']['hermeticity']['sleep'] >= 1
+
+    def it_tracks_database_violations_in_warn_mode(self, pytester: pytest.Pytester) -> None:
+        """Track database violations in warn mode."""
+        pytester.makepyfile(
+            test_database="""
+            import pytest
+            import sqlite3
+
+            @pytest.mark.small
+            def test_database_violation():
+                conn = sqlite3.connect(':memory:')
+                conn.close()
+                assert True
+            """
+        )
+
+        report_path = pytester.path / 'report.json'
+        result = pytester.runpytest(
+            '--test-size-report=json',
+            f'--test-size-report-file={report_path}',
+            '--test-categories-enforcement=warn',
+        )
+
+        result.assert_outcomes(passed=1)
+        report = json.loads(report_path.read_text())
+
+        assert report['summary']['violations']['hermeticity']['database'] >= 1

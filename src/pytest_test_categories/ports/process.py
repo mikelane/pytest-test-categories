@@ -43,11 +43,15 @@ from icontract import (
     ensure,
     require,
 )
-from pydantic import BaseModel
+from pydantic import (
+    BaseModel,
+    Field,
+)
 
 from pytest_test_categories.ports.network import (
     BlockerState,
     EnforcementMode,
+    ViolationCallback,
 )
 
 if TYPE_CHECKING:
@@ -135,7 +139,10 @@ class ProcessBlockerPort(BaseModel, ABC):
 
     """
 
+    model_config = {'arbitrary_types_allowed': True}
+
     state: BlockerState = BlockerState.INACTIVE
+    violation_callback: ViolationCallback | None = Field(default=None, description='Callback for violation tracking')
 
     @require(lambda self: self.state == BlockerState.INACTIVE, 'Blocker must be INACTIVE to activate')
     @ensure(lambda self: self.state == BlockerState.ACTIVE, 'Blocker must be ACTIVE after activation')
@@ -278,6 +285,9 @@ class ProcessBlockerPort(BaseModel, ABC):
         - WARN: Emit warning via pytest's warning system
         - OFF: Do nothing (should not be called in OFF mode)
 
+        If a violation_callback is set, it will be called to record the
+        violation for JSON report tracking.
+
         Args:
             command: The attempted command.
             args: The attempted arguments.
@@ -294,6 +304,10 @@ class ProcessBlockerPort(BaseModel, ABC):
             SubprocessViolationError: Small tests cannot spawn subprocesses...
 
         """
+        if self.violation_callback is not None:
+            from pytest_test_categories.violations import ViolationType  # noqa: PLC0415
+
+            self.violation_callback(test_nodeid, ViolationType.PROCESS)
         self._do_on_violation(command, args, test_nodeid, method)
 
     @abstractmethod

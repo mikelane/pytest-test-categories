@@ -50,11 +50,15 @@ from icontract import (
     ensure,
     require,
 )
-from pydantic import BaseModel
+from pydantic import (
+    BaseModel,
+    Field,
+)
 
 from pytest_test_categories.ports.network import (
     BlockerState,
     EnforcementMode,
+    ViolationCallback,
 )
 
 if TYPE_CHECKING:
@@ -132,7 +136,10 @@ class DatabaseBlockerPort(BaseModel, ABC):
 
     """
 
+    model_config = {'arbitrary_types_allowed': True}
+
     state: BlockerState = BlockerState.INACTIVE
+    violation_callback: ViolationCallback | None = Field(default=None, description='Callback for violation tracking')
 
     @require(lambda self: self.state == BlockerState.INACTIVE, 'Blocker must be INACTIVE to activate')
     @ensure(lambda self: self.state == BlockerState.ACTIVE, 'Blocker must be ACTIVE after activation')
@@ -269,6 +276,9 @@ class DatabaseBlockerPort(BaseModel, ABC):
         - WARN: Emit warning via pytest's warning system
         - OFF: Do nothing (should not be called in OFF mode)
 
+        If a violation_callback is set, it will be called to record the
+        violation for JSON report tracking.
+
         Args:
             library: The database library name.
             connection_string: The connection string or database path.
@@ -284,6 +294,10 @@ class DatabaseBlockerPort(BaseModel, ABC):
             DatabaseViolationError: Small tests cannot access databases...
 
         """
+        if self.violation_callback is not None:
+            from pytest_test_categories.violations import ViolationType  # noqa: PLC0415
+
+            self.violation_callback(test_nodeid, ViolationType.DATABASE)
         self._do_on_violation(library, connection_string, test_nodeid)
 
     @abstractmethod

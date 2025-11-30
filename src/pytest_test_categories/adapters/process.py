@@ -294,9 +294,7 @@ class SubprocessPatchingBlocker(ProcessBlockerPort):
                 command, cmd_args = blocker._extract_command_and_args(args)  # noqa: SLF001
 
                 if not blocker._do_check_spawn_allowed(command, cmd_args):  # noqa: SLF001
-                    blocker._do_on_violation(  # noqa: SLF001
-                        command, cmd_args, blocker.current_test_nodeid, 'subprocess.Popen'
-                    )
+                    blocker.on_violation(command, cmd_args, blocker.current_test_nodeid, 'subprocess.Popen')
 
                 super().__init__(args, *pargs, **kwargs)
 
@@ -321,9 +319,7 @@ class SubprocessPatchingBlocker(ProcessBlockerPort):
             command, cmd_args = blocker._extract_command_and_args(args)  # noqa: SLF001
 
             if not blocker._do_check_spawn_allowed(command, cmd_args):  # noqa: SLF001
-                blocker._do_on_violation(  # noqa: SLF001
-                    command, cmd_args, blocker.current_test_nodeid, 'subprocess.run'
-                )
+                blocker.on_violation(command, cmd_args, blocker.current_test_nodeid, 'subprocess.run')
 
             return original_run(args, *pargs, **kwargs)  # type: ignore[no-any-return]
 
@@ -348,9 +344,7 @@ class SubprocessPatchingBlocker(ProcessBlockerPort):
             command, cmd_args = blocker._extract_command_and_args(args)  # noqa: SLF001
 
             if not blocker._do_check_spawn_allowed(command, cmd_args):  # noqa: SLF001
-                blocker._do_on_violation(  # noqa: SLF001
-                    command, cmd_args, blocker.current_test_nodeid, 'subprocess.call'
-                )
+                blocker.on_violation(command, cmd_args, blocker.current_test_nodeid, 'subprocess.call')
 
             return original_call(args, *pargs, **kwargs)  # type: ignore[no-any-return]
 
@@ -375,9 +369,7 @@ class SubprocessPatchingBlocker(ProcessBlockerPort):
             command, cmd_args = blocker._extract_command_and_args(args)  # noqa: SLF001
 
             if not blocker._do_check_spawn_allowed(command, cmd_args):  # noqa: SLF001
-                blocker._do_on_violation(  # noqa: SLF001
-                    command, cmd_args, blocker.current_test_nodeid, 'subprocess.check_call'
-                )
+                blocker.on_violation(command, cmd_args, blocker.current_test_nodeid, 'subprocess.check_call')
 
             return original_check_call(args, *pargs, **kwargs)  # type: ignore[no-any-return]
 
@@ -402,9 +394,7 @@ class SubprocessPatchingBlocker(ProcessBlockerPort):
             command, cmd_args = blocker._extract_command_and_args(args)  # noqa: SLF001
 
             if not blocker._do_check_spawn_allowed(command, cmd_args):  # noqa: SLF001
-                blocker._do_on_violation(  # noqa: SLF001
-                    command, cmd_args, blocker.current_test_nodeid, 'subprocess.check_output'
-                )
+                blocker.on_violation(command, cmd_args, blocker.current_test_nodeid, 'subprocess.check_output')
 
             return original_check_output(args, *pargs, **kwargs)  # type: ignore[no-any-return]
 
@@ -423,9 +413,7 @@ class SubprocessPatchingBlocker(ProcessBlockerPort):
         def patched_os_system(command: str) -> int:
             """Check permissions then delegate to actual os.system."""
             if not blocker._do_check_spawn_allowed(command, ()):  # noqa: SLF001
-                blocker._do_on_violation(  # noqa: SLF001
-                    command, (), blocker.current_test_nodeid, 'os.system'
-                )
+                blocker.on_violation(command, (), blocker.current_test_nodeid, 'os.system')
 
             return original_os_system(command)  # type: ignore[no-any-return]
 
@@ -448,9 +436,7 @@ class SubprocessPatchingBlocker(ProcessBlockerPort):
         ) -> Any:  # noqa: ANN401
             """Check permissions then delegate to actual os.popen."""
             if not blocker._do_check_spawn_allowed(cmd, ()):  # noqa: SLF001
-                blocker._do_on_violation(  # noqa: SLF001
-                    cmd, (), blocker.current_test_nodeid, 'os.popen'
-                )
+                blocker.on_violation(cmd, (), blocker.current_test_nodeid, 'os.popen')
 
             return original_os_popen(cmd, *pargs, **kwargs)
 
@@ -475,9 +461,7 @@ class SubprocessPatchingBlocker(ProcessBlockerPort):
                 target_name = getattr(target, '__name__', str(target)) if target else 'Process'
 
                 if not blocker._do_check_spawn_allowed(target_name, ()):  # noqa: SLF001
-                    blocker._do_on_violation(  # noqa: SLF001
-                        target_name, (), blocker.current_test_nodeid, 'multiprocessing.Process'
-                    )
+                    blocker.on_violation(target_name, (), blocker.current_test_nodeid, 'multiprocessing.Process')
 
                 super().start()
 

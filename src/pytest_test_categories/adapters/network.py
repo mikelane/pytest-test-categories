@@ -212,9 +212,7 @@ class SocketPatchingNetworkBlocker(NetworkBlockerPort):
 
                     # Check if connection is allowed (accessing parent via closure)
                     if not blocker._do_check_connection_allowed(host, port):  # noqa: SLF001
-                        blocker._do_on_violation(  # noqa: SLF001
-                            host, port, blocker.current_test_nodeid
-                        )
+                        blocker.on_violation(host, port, blocker.current_test_nodeid)
 
                 # If we get here, either:
                 # 1. Connection is allowed
@@ -242,9 +240,7 @@ class SocketPatchingNetworkBlocker(NetworkBlockerPort):
 
                     # Check if connection is allowed (accessing parent via closure)
                     if not blocker._do_check_connection_allowed(host, port):  # noqa: SLF001
-                        blocker._do_on_violation(  # noqa: SLF001
-                            host, port, blocker.current_test_nodeid
-                        )
+                        blocker.on_violation(host, port, blocker.current_test_nodeid)
 
                 # If we get here, proceed with the actual connection
                 return super().connect_ex(address)  # type: ignore[no-any-return]
