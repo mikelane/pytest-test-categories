@@ -1,20 +1,53 @@
 # Pytest Test Categories Plugin
 
+[![PyPI version](https://img.shields.io/pypi/v/pytest-test-categories.svg)](https://pypi.org/project/pytest-test-categories/)
+[![Python versions](https://img.shields.io/pypi/pyversions/pytest-test-categories.svg)](https://pypi.org/project/pytest-test-categories/)
 [![Documentation Status](https://readthedocs.org/projects/pytest-test-categories/badge/?version=latest)](https://pytest-test-categories.readthedocs.io/en/latest/?badge=latest)
+[![License](https://img.shields.io/badge/license-CC%20BY--NC%204.0-lightgrey.svg)](LICENSE)
 
-## Overview
+A pytest plugin that enforces test timing constraints, resource isolation, and validates test size distributions based on Google's "Software Engineering at Google" best practices.
 
-**pytest-test-categories** is a pytest plugin that enforces test timing constraints, resource isolation, and validates test size distributions based on Google's "Software Engineering at Google" best practices. The plugin helps you maintain a fast, reliable, and hermetic test suite.
+**[Documentation](https://pytest-test-categories.readthedocs.io)** | **[PyPI](https://pypi.org/project/pytest-test-categories/)** | **[GitHub](https://github.com/mikelane/pytest-test-categories)**
 
-The test size categories and their constraints are based on Google's test taxonomy. The plugin offers size markers (`small`, `medium`, `large`, and `xlarge`), each with specific time limits and resource access rules.
+## Why pytest-test-categories?
+
+### The Problem
+
+Most test suites suffer from:
+
+- **Flaky tests** due to network timeouts, race conditions, or shared state
+- **Slow CI pipelines** because tests lack time budgets
+- **Testing pyramid inversion** with too many slow integration tests and too few fast unit tests
+- **No enforced boundaries** between unit, integration, and system tests
+
+### The Solution
+
+pytest-test-categories brings Google's battle-tested testing philosophy to Python:
+
+1. **Categorize tests by size** (small, medium, large, xlarge) with clear resource constraints
+2. **Enforce hermeticity** by blocking network, filesystem, database, and subprocess access in small tests
+3. **Enforce time limits** so slow tests fail fast
+4. **Validate distribution** to maintain a healthy 80/15/5 test pyramid
+
+When a small test tries to access the network, it fails immediately with actionable guidance:
+
+```
+HermeticityViolationError: Network access blocked in small test
+
+Options:
+  1. Mock the network call using responses, httpretty, or respx
+  2. Use dependency injection to provide a fake HTTP client
+  3. Change test category to @pytest.mark.medium (if network is required)
+```
 
 ## Features
 
 - **Test size categorization**: Mark tests with `@pytest.mark.small`, `@pytest.mark.medium`, `@pytest.mark.large`, or `@pytest.mark.xlarge`
-- **Configurable time limits**: Enforce size-specific time limits with customizable thresholds
 - **Resource isolation**: Block network, filesystem, database, subprocess, and sleep access in small tests
+- **Configurable time limits**: Enforce size-specific time limits with customizable thresholds
 - **Distribution validation**: Ensure your test suite follows the recommended 80/15/5 test pyramid
 - **JSON/XML reporting**: Export test size reports for CI integration and dashboards
+- **Base test classes**: Inherit from `SmallTest`, `MediumTest`, `LargeTest`, or `XLargeTest`
 - **Zero overhead**: Less than 1% performance impact on test execution
 - **Parallel execution**: Full pytest-xdist compatibility for distributed testing
 
@@ -27,138 +60,199 @@ The test size categories and their constraints are based on Google's test taxono
 | Large | 15 minutes | Allowed | Allowed | Allowed | Allowed | Allowed |
 | XLarge | 15 minutes | Allowed | Allowed | Allowed | Allowed | Allowed |
 
-### Configuring Custom Time Limits
-
-Time limits can be customized via `pyproject.toml` or CLI options:
-
-```toml
-[tool.pytest.ini_options]
-# Custom time limits (in seconds)
-test_categories_small_time_limit = "2.0"
-test_categories_medium_time_limit = "600.0"
-test_categories_large_time_limit = "1800.0"
-test_categories_xlarge_time_limit = "1800.0"
-```
-
-Or via command line (CLI options take precedence over ini settings):
-
-```bash
-pytest --test-categories-small-time-limit=2.0 --test-categories-medium-time-limit=600.0
-```
-
-Time limits must follow ordering constraints: `small < medium < large <= xlarge`
-
 ## Installation
 
-This project uses [uv](https://github.com/astral-sh/uv) for fast, reliable dependency management. You can install the project by running:
+### pip
 
 ```bash
-uv sync --all-groups
+pip install pytest-test-categories
 ```
 
-## Usage
+### uv
 
-Mark your tests with size markers to categorize them. For example:
+```bash
+uv add pytest-test-categories
+```
+
+### Poetry
+
+```bash
+poetry add pytest-test-categories
+```
+
+## Quick Start
+
+### Basic Usage
+
+Mark your tests with size markers:
 
 ```python
 import pytest
 
 @pytest.mark.small
-def test_fast_function():
-    assert some_function() == expected_result
+def test_fast_pure_function():
+    """Small tests are hermetic - no I/O, network, or external dependencies."""
+    assert calculate_total([1, 2, 3]) == 6
 
 @pytest.mark.medium
-def test_moderate_function():
-    assert some_other_function() == another_result
+def test_database_integration(tmp_path):
+    """Medium tests can access localhost and filesystem."""
+    db_path = tmp_path / "test.db"
+    # ... test with local database
+```
+
+Or inherit from base test classes:
+
+```python
+from pytest_test_categories import SmallTest, MediumTest
+
+class DescribeUserService(SmallTest):
+    """All tests in this class are automatically marked as small."""
+
+    def test_validates_email_format(self):
+        assert is_valid_email("user@example.com")
+
+    def test_rejects_invalid_email(self):
+        assert not is_valid_email("not-an-email")
+
+class DescribeUserRepository(MediumTest):
+    """Tests requiring database access."""
+
+    def test_saves_user(self, db_connection):
+        # ... test with real database
+```
+
+### Enable Enforcement
+
+By default, enforcement is off. Enable it in `pyproject.toml`:
+
+```toml
+[tool.pytest.ini_options]
+# Resource isolation: "off" (default), "warn", or "strict"
+test_categories_enforcement = "strict"
+
+# Distribution validation: "off" (default), "warn", or "strict"
+test_categories_distribution_enforcement = "warn"
 ```
 
 Run pytest as usual:
 
 ```bash
-uv run pytest
+pytest
 ```
 
-## Development
+## Configuration
 
-This project follows best practices for testing, linting, and code quality.
+### pyproject.toml
 
-### Install Development Dependencies
+```toml
+[tool.pytest.ini_options]
+# Enforcement modes: "strict" (fail), "warn" (warning), "off" (disabled)
+test_categories_enforcement = "strict"
+test_categories_distribution_enforcement = "warn"
+
+# Custom time limits (in seconds)
+test_categories_small_time_limit = "1.0"
+test_categories_medium_time_limit = "300.0"
+test_categories_large_time_limit = "900.0"
+test_categories_xlarge_time_limit = "900.0"
+
+# Additional allowed paths for filesystem access in small tests
+test_categories_allowed_paths = [
+    "tests/fixtures/",
+]
+```
+
+### Command-Line Options
+
+CLI options override `pyproject.toml` settings:
 
 ```bash
-uv sync --all-groups
+# Enforcement modes
+pytest --test-categories-enforcement=strict
+pytest --test-categories-distribution-enforcement=warn
+
+# Custom time limits
+pytest --test-categories-small-time-limit=2.0
+pytest --test-categories-medium-time-limit=600.0
+pytest --test-categories-large-time-limit=1800.0
+pytest --test-categories-xlarge-time-limit=1800.0
+
+# Additional allowed paths (comma-separated)
+pytest --test-categories-allowed-paths=tests/fixtures/,tests/data/
+
+# Reporting
+pytest --test-size-report=basic      # Summary report
+pytest --test-size-report=detailed   # Per-test details
+pytest --test-size-report=json       # JSON output
+pytest --test-size-report=json --test-size-report-file=report.json
 ```
 
-### Setup Pre-commit Hooks
+## Enforcement Modes
 
-To ensure code quality, set up pre-commit hooks:
+| Mode | Behavior | Use Case |
+|------|----------|----------|
+| `off` | No enforcement (default) | Initial exploration |
+| `warn` | Emit warnings, tests continue | Migration period |
+| `strict` | Fail tests on violations | Production enforcement |
 
-```bash
-uv run pre-commit install
+### Recommended Migration Path
+
+```toml
+# Week 1: Discovery - see what would fail
+test_categories_enforcement = "off"
+
+# Week 2-4: Migration - fix violations incrementally
+test_categories_enforcement = "warn"
+
+# Week 5+: Enforced - violations fail the build
+test_categories_enforcement = "strict"
 ```
 
-### Running Tests
+## Philosophy: No Override Markers
 
-This project uses [tox](https://tox.wiki/) for testing across multiple Python versions (3.11, 3.12, 3.13, 3.14).
+pytest-test-categories intentionally does **not** provide per-test override markers like `@pytest.mark.allow_network`.
 
-```bash
-# Test all Python versions in parallel (fast mode, used by pre-commit)
-uv run tox run-parallel -e py311-fast,py312-fast,py313-fast,py314-fast
+If a test needs network access, filesystem access, or other resources, it should be marked with the appropriate size:
 
-# Test all Python versions sequentially (full output)
-uv run tox
+```python
+# Wrong: Trying to bypass restrictions
+@pytest.mark.small
+@pytest.mark.allow_network  # This marker does not exist!
+def test_api_call():
+    ...
 
-# Test a specific Python version
-uv run tox -e py312
+# Correct: Use the appropriate test size
+@pytest.mark.medium  # Medium tests can access localhost
+def test_api_call():
+    ...
 
-# Run tests directly with pytest (single version)
-uv run pytest
-
-# Run tests with coverage
-uv run coverage run -m pytest
-uv run coverage report
+# Or: Mock the dependency for small tests
+@pytest.mark.small
+def test_api_call(httpx_mock):
+    httpx_mock.add_response(url="https://api.example.com/", json={"status": "ok"})
+    ...
 ```
 
-### Code Quality
+**Why no escape hatches?**
 
-Run pre-commit hooks to automatically format and lint code:
+1. **Flaky tests are expensive** - escape hatches become the norm, defeating the purpose
+2. **Categories have meaning** - if a "small" test can access the network, it's not really a small test
+3. **Encourages better design** - mocking and dependency injection lead to more testable code
 
-```bash
-# Run all pre-commit hooks
-uv run pre-commit run --all-files
-
-# Run individual tools
-uv run ruff check --fix .
-uv run ruff format .
-uv run isort .
-```
-
-## How It Works
-
-The plugin hooks into several pytest phases to:
-
-- Count tests by size during collection
-- Validate the test distribution at the end of collection
-- Enforce time limits during test execution
-- Modify the test report to display size labels next to test names
-
-### Key Hooks
-
-- `pytest_configure`: Registers the plugin and size markers
-- `pytest_collection_modifyitems`: Tracks the number of tests in each size category
-- `pytest_collection_finish`: Validates the distribution of test sizes
-- `pytest_runtest_protocol`: Tracks the execution time of each test
+See the [Design Philosophy](https://pytest-test-categories.readthedocs.io/en/latest/architecture/design-philosophy.html) documentation for the full rationale.
 
 ## Test Distribution Targets
 
-| Size         | Target Percentage | Tolerance |
-|--------------|-------------------|-----------|
-| Small        | 80%               | 5%        |
-| Medium       | 15%               | 5%        |
-| Large/XLarge | 5%                | 3%        |
+| Size | Target Percentage | Tolerance |
+|------|-------------------|-----------|
+| Small | 80% | +/- 5% |
+| Medium | 15% | +/- 5% |
+| Large/XLarge | 5% | +/- 3% |
 
-## Reporting Options
+When distribution enforcement is enabled, pytest will warn or fail if your test distribution falls outside these ranges.
 
-The plugin provides multiple reporting formats for analyzing test size distribution and timing.
+## Reporting
 
 ### Terminal Reports
 
@@ -172,7 +266,7 @@ pytest --test-size-report=detailed
 
 ### JSON Report Export
 
-For CI/CD integration and custom tooling, the plugin supports JSON report output:
+For CI/CD integration and custom tooling:
 
 ```bash
 # Output JSON report to terminal
@@ -183,8 +277,6 @@ pytest --test-size-report=json --test-size-report-file=report.json
 ```
 
 #### JSON Report Structure
-
-The JSON report includes comprehensive test size and timing data:
 
 ```json
 {
@@ -214,113 +306,29 @@ The JSON report includes comprehensive test size and timing data:
 }
 ```
 
-This format enables:
-- **CI/CD Integration**: Parse results in GitHub Actions, GitLab CI, or other pipelines
-- **Dashboard Visualization**: Feed data into monitoring tools like Grafana or custom dashboards
-- **Trend Analysis**: Track test distribution and timing over time
-- **Quality Gates**: Enforce test size policies programmatically
+## Documentation
 
-## Resource Isolation
+For comprehensive documentation, visit **[pytest-test-categories.readthedocs.io](https://pytest-test-categories.readthedocs.io)**:
 
-The plugin enforces resource isolation for small tests to ensure test hermeticity. When enabled, small tests that attempt network or filesystem access will fail immediately or emit warnings, depending on the enforcement mode.
-
-| Test Size | Network Access | Filesystem Access |
-|-----------|---------------|-------------------|
-| Small     | **Blocked** | **Blocked*** |
-| Medium    | Allowed | Allowed |
-| Large     | Allowed | Allowed |
-| XLarge    | Allowed | Allowed |
-
-*Small tests can access `tmp_path`, system temp directories, and configured allowed paths.
-
-### Configuration
-
-Resource isolation enforcement is configured via `pyproject.toml`:
-
-```toml
-[tool.pytest.ini_options]
-# Enforcement modes: "strict", "warn", "off"
-test_categories_enforcement = "strict"
-
-# Additional allowed paths for filesystem access in small tests
-test_categories_allowed_paths = [
-    "tests/fixtures/",
-]
-```
-
-Or via command line (CLI option takes precedence over ini setting):
-
-```bash
-pytest --test-categories-enforcement=strict
-pytest --test-categories-allowed-paths=tests/fixtures/
-```
-
-### Enforcement Modes
-
-| Mode | Behavior |
-|------|----------|
-| `strict` | Fail tests immediately on violations |
-| `warn` | Emit warnings but allow tests to continue |
-| `off` | Disable isolation enforcement (default) |
-
-### Philosophy: No Escape Hatches
-
-pytest-test-categories intentionally does **not** provide per-test override markers like `@pytest.mark.allow_network`. This is by design.
-
-If a test needs network access, filesystem access, or other resources, it should be marked with the appropriate size:
-
-```python
-# Wrong: Trying to bypass restrictions
-@pytest.mark.small
-@pytest.mark.allow_network  # This marker does not exist
-def test_api_call():
-    ...
-
-# Correct: Use the appropriate test size
-@pytest.mark.medium  # Medium tests can access localhost
-def test_api_call():
-    ...
-
-# Or mock the dependency for small tests
-@pytest.mark.small
-def test_api_call(httpx_mock):
-    httpx_mock.add_response(url="https://api.example.com/", json={"status": "ok"})
-    ...
-```
-
-See [Design Philosophy](docs/architecture/design-philosophy.md) for the reasoning behind this approach.
-
-### Documentation
-
-**Network Isolation:**
-- [User Guide: Network Isolation](docs/user-guide/network-isolation.md)
-- [Troubleshooting: Network Violations](docs/troubleshooting/network-violations.md)
-- [Examples: Network Isolation](docs/examples/network-isolation.md)
-- [ADR-001: Network Isolation Architecture](docs/architecture/adr-001-network-isolation.md)
-
-**Filesystem Isolation:**
-- [User Guide: Filesystem Isolation](docs/user-guide/filesystem-isolation.md)
-- [Troubleshooting: Filesystem Violations](docs/troubleshooting/filesystem-violations.md)
-- [Examples: Filesystem Isolation](docs/examples/filesystem-isolation.md)
-- [ADR-002: Filesystem Isolation Architecture](docs/architecture/adr-002-filesystem-isolation.md)
+- **[Getting Started](https://pytest-test-categories.readthedocs.io/en/latest/getting-started.html)** - Installation and first steps
+- **[User Guide](https://pytest-test-categories.readthedocs.io/en/latest/user-guide/index.html)** - Test sizes, isolation, timing, and distribution
+- **[Configuration](https://pytest-test-categories.readthedocs.io/en/latest/configuration.html)** - All configuration options
+- **[Examples](https://pytest-test-categories.readthedocs.io/en/latest/examples/index.html)** - Common patterns and CI integration
+- **[API Reference](https://pytest-test-categories.readthedocs.io/en/latest/api-reference/index.html)** - Markers, fixtures, and error messages
+- **[Architecture](https://pytest-test-categories.readthedocs.io/en/latest/architecture/index.html)** - Design philosophy and ADRs
 
 ## Project Resources
 
-### Documentation
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Comprehensive contribution guidelines
-- **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** - Community standards and expectations
-- **[SECURITY.md](SECURITY.md)** - Security policy and vulnerability reporting
-- **[ROADMAP.md](ROADMAP.md)** - Project vision, goals, and milestones
-- **[CLAUDE.md](CLAUDE.md)** - Architecture and development documentation
-
-### Community
-- **[GitHub Discussions](https://github.com/mikelane/pytest-test-categories/discussions)** - Ask questions and share ideas
-- **[Issue Templates](.github/ISSUE_TEMPLATE/)** - Report bugs, request features, suggest improvements
-- **[GitHub Projects](https://github.com/mikelane/pytest-test-categories/projects)** - Track development progress
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines
+- **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** - Community standards
+- **[SECURITY.md](SECURITY.md)** - Security policy
+- **[ROADMAP.md](ROADMAP.md)** - Project vision and milestones
+- **[GitHub Discussions](https://github.com/mikelane/pytest-test-categories/discussions)** - Questions and ideas
+- **[Issue Tracker](https://github.com/mikelane/pytest-test-categories/issues)** - Bug reports and feature requests
 
 ## Contributing
 
-We welcome contributions from the community! Please read our [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+We welcome contributions! Please read our [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
 ### Quick Start for Contributors
 
@@ -328,29 +336,16 @@ We welcome contributions from the community! Please read our [CONTRIBUTING.md](C
 2. **Create an issue** describing what you plan to work on
 3. **Create a feature branch** from main
 4. **Make your changes** following our coding standards
-5. **Run pre-commit hooks** to ensure quality
+5. **Run pre-commit hooks** to ensure quality: `uv run pre-commit run --all-files`
 6. **Open a pull request** linking to your issue
-
-For detailed instructions, see [CONTRIBUTING.md](CONTRIBUTING.md).
-
-**Note for maintainers**: This repository requires [CodeQL Advanced Setup](.github/CODEQL_SETUP.md) configuration. GitHub's default CodeQL setup must be disabled in repository settings for the security workflow to function correctly.
-
-### Ways to Contribute
-
-- **Report bugs** using the [bug report template](.github/ISSUE_TEMPLATE/bug_report.yml)
-- **Request features** using the [feature request template](.github/ISSUE_TEMPLATE/feature_request.yml)
-- **Improve documentation** using the [documentation template](.github/ISSUE_TEMPLATE/documentation.yml)
-- **Submit code** following our development workflow
-- **Review pull requests** and provide constructive feedback
-- **Help others** in GitHub Discussions
 
 ## License
 
 This project is available under a dual-license model:
 
-- **Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0):** You are free to use, modify, and distribute the project for non-commercial purposes, provided that you give appropriate credit.
+- **Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0):** Free for non-commercial use with attribution.
 
-- **Commercial License:** If you wish to use this project in a commercial setting, please contact me at [mikelane@gmail.com](mailto:mikelane@gmail.com) to obtain a commercial license.
+- **Commercial License:** Contact [mikelane@gmail.com](mailto:mikelane@gmail.com) for commercial licensing.
 
 See the [LICENSE](LICENSE) file for details.
 
