@@ -1,18 +1,8 @@
 # Network Isolation for Hermetic Tests
 
-> **PLANNED FEATURE - Coming in v0.4.0**
->
-> This documentation describes network isolation features that are **currently being implemented**.
-> The `NetworkBlockerPort` interface exists (PR #74), but pytest hook integration is planned for a
-> future PR (#69). The CLI options, config options, and markers described below are **not yet available**.
->
-> Track progress: [Issue #70](https://github.com/mikelane/pytest-test-categories/issues/70)
+Network isolation is a test enforcement mechanism that prevents tests from making network connections during execution. This ensures tests are **hermetic** - running entirely in memory with no external dependencies.
 
-## What is Network Isolation?
-
-Network isolation will be a test enforcement mechanism that prevents tests from making network connections during execution. This will ensure tests are **hermetic** - running entirely in memory with no external dependencies.
-
-When enabled, the pytest-test-categories plugin will intercept socket connections and either block them or warn about them, depending on your configuration.
+When enabled, the pytest-test-categories plugin intercepts socket connections and either blocks them or warns about them, depending on your configuration.
 
 ## Why Network Isolation Matters
 
@@ -57,9 +47,9 @@ Network-dependent tests create resource contention:
 - Port conflicts for mock servers
 - Shared state on external services
 
-## Google's Test Size Definitions
+## Test Size Restrictions
 
-The network isolation feature will implement Google's test size definitions from "Software Engineering at Google":
+Network isolation follows Google's test size definitions from "Software Engineering at Google":
 
 | Test Size | Network Access | Rationale |
 |-----------|---------------|-----------|
@@ -77,7 +67,7 @@ Small tests are the foundation of a healthy test suite. They must be:
 - **Deterministic**: Same input always produces same output
 - **Parallelizable**: Safe to run concurrently with other tests
 
-Network isolation will enforce hermeticity by blocking all network access in small tests.
+Network isolation enforces hermeticity by blocking all network access in small tests.
 
 ### Medium Tests
 
@@ -97,13 +87,32 @@ Large and XLarge tests may access external networks for:
 - Contract testing against real service dependencies
 - Performance testing against production-like infrastructure
 
+## How It Works
+
+The plugin intercepts network connections by patching Python's socket module:
+
+### Patched Entry Points
+
+The following network entry points are intercepted:
+
+- `socket.socket.connect` - TCP connection establishment
+- `socket.socket.connect_ex` - Non-blocking connection
+- `socket.create_connection` - High-level connection helper
+
+### Connection Interception
+
+When a test attempts to connect:
+
+1. The blocker intercepts the `connect()` call
+2. It extracts the target host and port
+3. It checks if the connection is allowed based on test size
+4. For violations, it either raises an exception (STRICT) or warns (WARN)
+
 ## Enabling Network Isolation
 
-> **Planned Configuration** - The options below are not yet implemented.
+Network isolation is controlled by the `test_categories_enforcement` configuration option.
 
-Network isolation will be controlled by the `test_categories_enforcement` configuration option.
-
-### Configuration via pyproject.toml (Planned)
+### Configuration via pyproject.toml
 
 ```toml
 [tool.pytest.ini_options]
@@ -111,14 +120,14 @@ Network isolation will be controlled by the `test_categories_enforcement` config
 test_categories_enforcement = "strict"
 ```
 
-### Configuration via pytest.ini (Planned)
+### Configuration via pytest.ini
 
 ```ini
 [pytest]
 test_categories_enforcement = strict
 ```
 
-### Configuration via Command Line (Planned)
+### Configuration via Command Line
 
 ```bash
 pytest --test-categories-enforcement=strict
@@ -126,7 +135,7 @@ pytest --test-categories-enforcement=strict
 
 ## Enforcement Modes
 
-The plugin will support three enforcement modes:
+The plugin supports three enforcement modes:
 
 ### STRICT Mode
 
@@ -134,26 +143,22 @@ The plugin will support three enforcement modes:
 test_categories_enforcement = "strict"
 ```
 
-In strict mode, network violations will immediately fail the test with a detailed error message:
+In strict mode, network violations immediately fail the test with a detailed error message:
 
 ```
-============================================================
-HermeticityViolationError
-============================================================
+[TC001] Network Access Violation
 Test: tests/test_api.py::test_fetch_user
 Category: SMALL
-Violation: Network access attempted
 
-Details:
-  Attempted connection to: api.example.com:443
+What happened:
+  Attempted network connection to api.example.com:443
 
-Small tests have restricted resource access. Options:
+How to fix:
   1. Mock the network call using responses, httpretty, or respx
   2. Use dependency injection to provide a fake HTTP client
   3. Change test category to @pytest.mark.medium (if network is required)
 
-Documentation: See docs/architecture/adr-001-network-isolation.md
-============================================================
+Documentation: https://pytest-test-categories.readthedocs.io/errors/TC001
 ```
 
 Use strict mode in CI pipelines to catch violations before merge.
@@ -164,7 +169,7 @@ Use strict mode in CI pipelines to catch violations before merge.
 test_categories_enforcement = "warn"
 ```
 
-In warn mode, network violations will emit a warning but allow the test to continue:
+In warn mode, network violations emit a warning but allow the test to continue:
 
 ```
 PytestWarning: Network access violation in test_fetch_user:
@@ -184,6 +189,165 @@ In off mode, network isolation is disabled entirely. Use this for:
 - Legacy test suites not yet ready for enforcement
 - Specific test runs that require network access
 - Debugging network-related test issues
+
+## Allowed Hosts Configuration
+
+You can configure hosts that are always allowed, even for small tests.
+
+### Configuration via pyproject.toml
+
+```toml
+[tool.pytest.ini_options]
+test_categories_enforcement = "strict"
+
+# Hosts allowed for all test sizes
+test_categories_allowed_hosts = [
+    "localhost",
+    "127.0.0.1",
+    "::1",
+]
+```
+
+### Configuration via Command Line
+
+```bash
+pytest --test-categories-allowed-hosts=localhost,127.0.0.1
+```
+
+## Common Remediation Strategies
+
+### 1. Use responses Library
+
+For tests using the `requests` library:
+
+```python
+import responses
+import requests
+import pytest
+
+@pytest.mark.small
+@responses.activate
+def test_fetch_user():
+    responses.add(
+        responses.GET,
+        "https://api.example.com/users/123",
+        json={"id": "123", "name": "Alice"},
+        status=200,
+    )
+
+    response = requests.get("https://api.example.com/users/123")
+
+    assert response.json()["name"] == "Alice"
+```
+
+### 2. Use respx Library
+
+For tests using the `httpx` library:
+
+```python
+import httpx
+import respx
+import pytest
+
+@pytest.mark.small
+@respx.mock
+def test_fetch_user():
+    respx.get("https://api.example.com/users/123").respond(
+        json={"id": "123", "name": "Alice"}
+    )
+
+    response = httpx.get("https://api.example.com/users/123")
+
+    assert response.json()["name"] == "Alice"
+```
+
+### 3. Use Dependency Injection
+
+Design code to accept HTTP clients as parameters:
+
+```python
+from unittest.mock import Mock
+import httpx
+import pytest
+
+# Production code
+def fetch_user(user_id: str, client: httpx.Client | None = None) -> dict:
+    client = client or httpx.Client()
+    response = client.get(f"https://api.example.com/users/{user_id}")
+    return response.json()
+
+# Test code
+@pytest.mark.small
+def test_fetch_user():
+    mock_client = Mock(spec=httpx.Client)
+    mock_response = Mock()
+    mock_response.json.return_value = {"id": "123", "name": "Alice"}
+    mock_client.get.return_value = mock_response
+
+    result = fetch_user("123", client=mock_client)
+
+    assert result["name"] == "Alice"
+```
+
+### 4. Use pytest-mock
+
+For simple mocking scenarios:
+
+```python
+import pytest
+
+@pytest.mark.small
+def test_fetch_user(mocker):
+    mock_get = mocker.patch("requests.get")
+    mock_get.return_value.json.return_value = {"id": "123", "name": "Alice"}
+
+    from myapp.users import fetch_user
+    result = fetch_user("123")
+
+    assert result["name"] == "Alice"
+```
+
+### 5. Use VCR.py for Record/Replay
+
+For complex API interactions:
+
+```python
+import vcr
+import pytest
+
+@pytest.mark.small
+@vcr.use_cassette("tests/cassettes/user_123.yaml")
+def test_fetch_user():
+    # First run records the interaction
+    # Subsequent runs replay from cassette
+    from myapp.users import fetch_user
+    result = fetch_user("123")
+
+    assert result["name"] == "Alice"
+```
+
+### 6. Recategorize the Test
+
+If the test legitimately requires network access, it's not a small test - recategorize it:
+
+```python
+import pytest
+
+@pytest.mark.medium  # Medium tests can access localhost
+def test_database_integration(local_postgres):
+    from myapp.repos import UserRepository
+    repo = UserRepository(local_postgres)
+    user = repo.create(name="Alice")
+    assert user.id is not None
+
+@pytest.mark.large  # Large tests can access external networks
+def test_staging_api():
+    import httpx
+    response = httpx.get("https://staging.example.com/health")
+    assert response.status_code == 200
+```
+
+The test size defines the constraints, not the other way around.
 
 ## Best Practices
 
@@ -212,30 +376,7 @@ Replace network calls with mocks using established libraries:
 - **aiohttp**: Use `aioresponses`
 - **urllib**: Use `responses` or manual patching
 
-### 4. Apply Dependency Injection
-
-Design code to accept HTTP clients as parameters:
-
-```python
-# Production code
-def fetch_user(user_id: str, client: httpx.Client | None = None) -> User:
-    client = client or httpx.Client()
-    response = client.get(f"https://api.example.com/users/{user_id}")
-    return User.model_validate(response.json())
-
-# Test code
-def test_fetch_user():
-    mock_client = Mock(spec=httpx.Client)
-    mock_client.get.return_value = Mock(
-        json=lambda: {"id": "123", "name": "Test User"}
-    )
-
-    user = fetch_user("123", client=mock_client)
-
-    assert user.name == "Test User"
-```
-
-### 5. Consider Test Size Carefully
+### 4. Consider Test Size Carefully
 
 If a test genuinely requires network access, consider whether it belongs in a different size category:
 
@@ -243,8 +384,67 @@ If a test genuinely requires network access, consider whether it belongs in a di
 - **Medium**: Integration with local services
 - **Large**: Integration with external services
 
+### 5. Use Localhost Services for Medium Tests
+
+For database and service integration:
+
+```python
+import pytest
+
+@pytest.fixture(scope="session")
+def postgres_container():
+    """Start a PostgreSQL container for medium tests."""
+    import docker
+    client = docker.from_env()
+    container = client.containers.run(
+        "postgres:15",
+        detach=True,
+        ports={"5432/tcp": None},
+        environment={"POSTGRES_PASSWORD": "test"},
+    )
+    yield container
+    container.stop()
+    container.remove()
+
+@pytest.mark.medium
+def test_user_repository(postgres_container):
+    # Test with real database on localhost
+    ...
+```
+
+## Troubleshooting
+
+### "NetworkAccessViolationError" in tests that don't make network calls
+
+Some libraries make network calls during import or initialization:
+- Analytics/telemetry libraries
+- Configuration loaders that fetch from URLs
+- Logging handlers that send to remote services
+
+**Solution**: Mock the library at import time or disable the network-calling feature.
+
+### "Connection to localhost blocked in medium test"
+
+Ensure you're using the correct test marker:
+
+```python
+@pytest.mark.medium  # Not @pytest.mark.small
+def test_with_local_database():
+    ...
+```
+
+### "Test passes locally but fails in CI"
+
+Common causes:
+1. Different network configurations in CI
+2. Firewall rules blocking connections
+3. DNS resolution differences
+
+**Solution**: Use mocking instead of relying on network access.
+
 ## Related Documentation
 
 - [Architecture Decision Record: Network Isolation](../architecture/adr-001-network-isolation.md)
-- [Troubleshooting Network Violations](../troubleshooting/network-violations.md)
-- [Network Isolation Examples](../examples/network-isolation.md)
+- [Test Sizes](test-sizes.md)
+- [Filesystem Isolation](filesystem-isolation.md)
+- [Configuration Reference](../configuration.md)
