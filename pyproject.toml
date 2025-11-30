@@ -31,6 +31,7 @@ test_categories = "pytest_test_categories.plugin"
 
 [dependency-groups]
 test = [
+    "pytest-benchmark>=5.1.0",
     "pytest-cov>=7.0.0",
     "pytest-mock>=3.15.1",
     "pytest-xdist>=3.8.0",
@@ -57,7 +58,7 @@ docs = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-python_files = ["it_*.py", "test_*.py"]
+python_files = ["bench_*.py", "it_*.py", "test_*.py"]
 python_functions = ["it_*"]
 python_classes = ["Describe[A-Z]*"]
 addopts = ["-s", "-ra", "-q", "-vv"]
@@ -137,6 +138,16 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
     "PLC0415", # Allow imports in functions for test isolation (monkeypatching)
     "ARG002", # Allow unused kwargs in test fixtures
     "SLF001", # Allow private member access in tests (for verification)
+]
+"tests/benchmarks/*" = [
+    "D100", # Don't require module docstrings in benchmarks
+    "D101", # Don't require class docstrings in benchmarks
+    "D102", # Don't require method docstrings in benchmarks
+    "D103", # Don't require function docstrings in benchmarks
+    "D104", # Don't require init docstrings in benchmarks
+    "D107", # Don't require __init__ docstrings in benchmarks
+    "S101", # Allow asserts in benchmarks
+    "PLR2004", # Allow magic values in benchmarks
 ]
 "scripts/*" = ["T201"] # allow print function in the scripts
 "src/pytest_test_categories/adapters/database.py" = [
