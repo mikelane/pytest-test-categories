@@ -16,8 +16,16 @@ from icontract import (
 from pydantic import BaseModel
 
 
-class TimingViolationError(Exception):
-    """Exception raised for timing violations."""
+# TimingViolationError is now defined in timing.py with enhanced error messages
+# This is a re-export for backward compatibility
+def __getattr__(name: str) -> type:
+    """Lazy import for backward compatibility with TimingViolationError."""
+    if name == 'TimingViolationError':
+        from pytest_test_categories.timing import TimingViolationError  # noqa: PLC0415
+
+        return TimingViolationError
+    msg = f'module {__name__!r} has no attribute {name!r}'
+    raise AttributeError(msg)
 
 
 class NetworkMode(StrEnum):

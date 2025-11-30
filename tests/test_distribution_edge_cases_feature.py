@@ -161,7 +161,7 @@ class DescribeDistributionEdgeCases:
 
         # Then it should show a distribution warning
         result.assert_outcomes(passed=100)
-        result.stdout.fnmatch_lines(['*PytestWarning: Test distribution does not meet targets*'])
+        result.stdout.fnmatch_lines(['*PytestWarning: *TC007* Test distribution does not meet targets*'])
 
     def it_accepts_perfect_80_15_5_distribution(self, pytester: pytest.Pytester) -> None:
         """It accepts the ideal 80% small, 15% medium, 5% large/xlarge distribution."""
@@ -263,5 +263,5 @@ class DescribeDistributionEdgeCases:
 
         # Then it should show a distribution warning
         result.assert_outcomes(passed=100)
-        result.stdout.fnmatch_lines(['*PytestWarning: Test distribution does not meet targets*'])
+        result.stdout.fnmatch_lines(['*PytestWarning: *TC007* Test distribution does not meet targets*'])
         result.stdout.fnmatch_lines(['*Large/XLarge tests are 9*% of the suite*'])

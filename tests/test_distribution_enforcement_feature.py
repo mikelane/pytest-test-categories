@@ -226,8 +226,8 @@ class DescribeDistributionEnforcementStrict:
 
         # Collection should fail
         assert result.ret != 0
-        # UsageError messages go to stderr
-        result.stderr.fnmatch_lines(['*Distribution violation*'])
+        # UsageError messages go to stderr, now with error code
+        result.stderr.fnmatch_lines(['*TC007*Test Distribution Warning*'])
 
     def it_passes_for_good_distribution(self, pytester: pytest.Pytester) -> None:
         """STRICT mode passes when distribution is within acceptable range."""
@@ -350,8 +350,8 @@ class DescribeDistributionEnforcementStrict:
         result = pytester.runpytest('-v')
 
         assert result.ret != 0
-        # UsageError messages go to stderr
-        result.stderr.fnmatch_lines(['*Distribution violation*'])
+        # UsageError messages go to stderr, now with error code
+        result.stderr.fnmatch_lines(['*TC007*Test Distribution Warning*'])
 
     def it_cli_overrides_ini(self, pytester: pytest.Pytester) -> None:
         """CLI option overrides ini configuration."""
