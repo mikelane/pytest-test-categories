@@ -295,3 +295,71 @@ class DescribeDistributionStats:
         stats = DistributionStats()
         with pytest.raises(ValueError, match='Instance is frozen'):
             stats.counts = TestCounts(small=10)
+
+
+@pytest.mark.small
+class DescribeDistributionStatsWithCustomConfig:
+    """Test DistributionStats.validate_distribution with custom configuration."""
+
+    def it_validates_with_custom_config(self) -> None:
+        """Test that validate_distribution accepts custom config."""
+        from pytest_test_categories.distribution.config import DistributionConfig
+
+        # 70% small, 20% medium, 10% large/xlarge - would fail with defaults
+        # but passes with custom config
+        counts = TestCounts(small=70, medium=20, large=8, xlarge=2)
+        stats = DistributionStats(counts=counts)
+
+        custom_config = DistributionConfig(
+            small_target=70.0,
+            medium_target=20.0,
+            large_target=10.0,
+        )
+
+        # Should not raise any exception with custom config
+        stats.validate_distribution(config=custom_config)
+
+    def it_fails_with_default_config_for_relaxed_distribution(self) -> None:
+        """Test that relaxed distribution fails with default config."""
+        # 70% small, 20% medium, 10% large/xlarge - fails with defaults
+        counts = TestCounts(small=70, medium=20, large=8, xlarge=2)
+        stats = DistributionStats(counts=counts)
+
+        with pytest.raises(ValueError, match=r'Small test percentage.*outside target range'):
+            stats.validate_distribution()  # Uses default config
+
+    def it_validates_with_relaxed_tolerance(self) -> None:
+        """Test that validate_distribution uses custom tolerance."""
+        from pytest_test_categories.distribution.config import DistributionConfig
+
+        # 73% small - outside default range (75-85%) but within custom tolerance
+        counts = TestCounts(small=73, medium=17, large=8, xlarge=2)
+        stats = DistributionStats(counts=counts)
+
+        custom_config = DistributionConfig(
+            small_tolerance=10.0,  # Now allows 70-90%
+            medium_tolerance=10.0,
+            large_tolerance=5.0,
+        )
+
+        # Should not raise with custom tolerance
+        stats.validate_distribution(config=custom_config)
+
+    def it_uses_default_config_when_none_provided(self) -> None:
+        """Test that validate_distribution uses default config when none provided."""
+        # This is the standard case - compliant with defaults
+        counts = TestCounts(small=80, medium=15, large=3, xlarge=2)
+        stats = DistributionStats(counts=counts)
+
+        # Should not raise any exception
+        stats.validate_distribution()
+
+    def it_uses_default_config_constant(self) -> None:
+        """Test that DEFAULT_DISTRIBUTION_CONFIG is used when no config provided."""
+        # Distribution that's just outside default tolerance
+        counts = TestCounts(small=74, medium=16, large=8, xlarge=2)
+        stats = DistributionStats(counts=counts)
+
+        # Should fail with default config (small must be >= 75%)
+        with pytest.raises(ValueError, match=r'Small test percentage.*outside target range'):
+            stats.validate_distribution()

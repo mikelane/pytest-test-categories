@@ -383,6 +383,9 @@ class PluginState(BaseModel):
 
     The time_limit_config holds the configured time limits for each test size,
     allowing customization via pyproject.toml, pytest.ini, or CLI options.
+
+    The distribution_config holds the configured distribution targets and tolerances,
+    allowing customization via pyproject.toml, pytest.ini, or CLI options.
     """
 
     model_config = {'arbitrary_types_allowed': True}
@@ -399,6 +402,8 @@ class PluginState(BaseModel):
     test_discovery_service: object | None = None
     # Time limit configuration for each test size (configurable)
     time_limit_config: object | None = None  # TimeLimitConfig, avoiding circular import
+    # Distribution configuration for targets and tolerances (configurable)
+    distribution_config: object | None = None  # DistributionConfig, avoiding circular import
 
     def __init__(self, **data: object) -> None:
         """Initialize PluginState with defaults for circular import fields."""
@@ -416,6 +421,10 @@ class PluginState(BaseModel):
             from pytest_test_categories.timing import DEFAULT_TIME_LIMIT_CONFIG  # noqa: PLC0415
 
             self.time_limit_config = DEFAULT_TIME_LIMIT_CONFIG
+        if self.distribution_config is None:
+            from pytest_test_categories.distribution.config import DEFAULT_DISTRIBUTION_CONFIG  # noqa: PLC0415
+
+            self.distribution_config = DEFAULT_DISTRIBUTION_CONFIG
 
 
 # Add proper type hints for TYPE_CHECKING
