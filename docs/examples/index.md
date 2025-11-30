@@ -12,6 +12,10 @@ common-patterns
 ci-integration
 network-isolation
 filesystem-isolation
+http-mocking
+async-testing
+database-testing
+container-testing
 ide-configs/README
 ```
 
@@ -27,6 +31,15 @@ For isolation-specific examples, see:
 
 - **[Network Isolation](network-isolation.md)** - Mocking HTTP, databases, and other network calls
 - **[Filesystem Isolation](filesystem-isolation.md)** - Using tmp_path and mocking file operations
+
+## Ecosystem Integration Guides
+
+Guides for integrating pytest-test-categories with popular testing libraries:
+
+- **[HTTP Mocking](http-mocking.md)** - pytest-httpx, responses, and httpretty for small tests
+- **[Async Testing](async-testing.md)** - pytest-asyncio integration and async mocking patterns
+- **[Database Testing](database-testing.md)** - SQLAlchemy, pytest-postgresql, and repository patterns
+- **[Container Testing](container-testing.md)** - Testcontainers for medium tests with real services
 
 ## Quick Examples
 
