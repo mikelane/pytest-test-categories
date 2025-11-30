@@ -1,24 +1,25 @@
 # pytest-test-categories
 
-A pytest plugin that enforces test timing constraints and validates test size distributions based on Google's "Software Engineering at Google" best practices.
+A pytest plugin that enforces test timing constraints, resource isolation, and validates test size distributions based on Google's "Software Engineering at Google" best practices.
 
 ## Overview
 
-**pytest-test-categories** helps you maintain a healthy test suite by:
+**pytest-test-categories** helps you maintain a healthy, reliable test suite by:
 
 - **Categorizing tests by size**: Mark tests as `small`, `medium`, `large`, or `xlarge` based on their execution characteristics
-- **Enforcing time limits**: Automatically fail tests that exceed their allocated time limit
-- **Validating test distribution**: Ensure your test suite follows the recommended test pyramid
-- **Enforcing network isolation**: Block network access in small tests to ensure hermeticity (planned feature)
+- **Enforcing time limits**: Automatically fail tests that exceed their allocated time limit (configurable)
+- **Validating test distribution**: Ensure your test suite follows the recommended test pyramid (80/15/5)
+- **Enforcing resource isolation**: Block network, filesystem, database, subprocess, and sleep access in small tests to ensure hermeticity
+- **Zero-overhead design**: Less than 1% overhead on test execution
 
 ## Test Size Categories
 
-| Size | Time Limit | Network Access | Use Case |
-|------|------------|----------------|----------|
-| Small | 1 second | Blocked | Unit tests, pure functions |
-| Medium | 5 minutes | Allowed | Integration tests with local services |
-| Large | 15 minutes | Allowed | End-to-end tests |
-| XLarge | 15 minutes | Allowed | Extended tests |
+| Size | Time Limit | Network | Filesystem | Database | Subprocess | Sleep |
+|------|------------|---------|------------|----------|------------|-------|
+| Small | 1 second | Blocked | tmp_path only | Blocked | Blocked | Blocked |
+| Medium | 5 minutes | Localhost | Allowed | Allowed | Allowed | Allowed |
+| Large | 15 minutes | Allowed | Allowed | Allowed | Allowed | Allowed |
+| XLarge | 15 minutes | Allowed | Allowed | Allowed | Allowed | Allowed |
 
 ## Quick Start
 
@@ -77,21 +78,21 @@ ide-integration
 
 ```{toctree}
 :maxdepth: 2
-:caption: Examples
+:caption: Examples & Patterns
 
 examples/index
 ```
 
 ```{toctree}
 :maxdepth: 2
-:caption: Reference
+:caption: API Reference
 
-api/index
+api-reference/index
 ```
 
 ```{toctree}
 :maxdepth: 2
-:caption: Architecture
+:caption: Architecture & Design
 
 architecture/index
 ```
@@ -105,8 +106,9 @@ troubleshooting/index
 
 ```{toctree}
 :maxdepth: 2
-:caption: Operations
+:caption: Performance & Operations
 
+performance
 deployment
 monitoring
 ```
