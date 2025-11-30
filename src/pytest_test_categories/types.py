@@ -386,6 +386,9 @@ class PluginState(BaseModel):
 
     The distribution_config holds the configured distribution targets and tolerances,
     allowing customization via pyproject.toml, pytest.ini, or CLI options.
+
+    The violation_tracker collects hermeticity violations for terminal summary
+    reporting in both WARN and STRICT enforcement modes.
     """
 
     model_config = {'arbitrary_types_allowed': True}
@@ -404,6 +407,8 @@ class PluginState(BaseModel):
     time_limit_config: object | None = None  # TimeLimitConfig, avoiding circular import
     # Distribution configuration for targets and tolerances (configurable)
     distribution_config: object | None = None  # DistributionConfig, avoiding circular import
+    # Violation tracker for hermeticity enforcement summary
+    violation_tracker: object | None = None  # ViolationTracker, avoiding circular import
 
     def __init__(self, **data: object) -> None:
         """Initialize PluginState with defaults for circular import fields."""
@@ -425,6 +430,10 @@ class PluginState(BaseModel):
             from pytest_test_categories.distribution.config import DEFAULT_DISTRIBUTION_CONFIG  # noqa: PLC0415
 
             self.distribution_config = DEFAULT_DISTRIBUTION_CONFIG
+        if self.violation_tracker is None:
+            from pytest_test_categories.violation_tracking import ViolationTracker  # noqa: PLC0415
+
+            self.violation_tracker = ViolationTracker()
 
 
 # Add proper type hints for TYPE_CHECKING

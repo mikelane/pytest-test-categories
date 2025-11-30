@@ -145,6 +145,8 @@ class NetworkBlockerPort(BaseModel, ABC):
 
     Attributes:
         state: Current blocker state (INACTIVE or ACTIVE).
+        violation_callback: Optional callback invoked when violations occur.
+            Signature: (violation_type: str, test_nodeid: str, details: str, failed: bool) -> None
 
     Example:
         >>> class FakeNetworkBlocker(NetworkBlockerPort):
@@ -164,7 +166,10 @@ class NetworkBlockerPort(BaseModel, ABC):
 
     """
 
+    model_config = {'arbitrary_types_allowed': True}
+
     state: BlockerState = BlockerState.INACTIVE
+    violation_callback: object | None = None
 
     @require(lambda self: self.state == BlockerState.INACTIVE, 'Blocker must be INACTIVE to activate')
     @ensure(lambda self: self.state == BlockerState.ACTIVE, 'Blocker must be ACTIVE after activation')

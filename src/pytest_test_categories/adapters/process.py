@@ -209,8 +209,8 @@ class SubprocessPatchingBlocker(ProcessBlockerPort):
         """Handle a process spawn violation based on enforcement mode.
 
         Behavior:
-        - STRICT: Raise SubprocessViolationError
-        - WARN: Log warning (future: integrate with pytest warning system)
+        - STRICT: Record violation and raise SubprocessViolationError
+        - WARN: Record violation, allow spawn to proceed
         - OFF: Do nothing
 
         Args:
@@ -223,7 +223,17 @@ class SubprocessPatchingBlocker(ProcessBlockerPort):
             SubprocessViolationError: If enforcement mode is STRICT.
 
         """
-        if self.current_enforcement_mode == EnforcementMode.STRICT:
+        is_strict = self.current_enforcement_mode == EnforcementMode.STRICT
+        args_str = ' '.join(args) if args else ''
+        details = f'Attempted subprocess via {method}: {command} {args_str}'.strip()
+
+        # Record violation via callback if set
+        if self.violation_callback is not None:
+            callback = self.violation_callback
+            if callable(callback):
+                callback('process', test_nodeid, details, failed=is_strict)
+
+        if is_strict:
             raise SubprocessViolationError(
                 test_size=self.current_test_size,  # type: ignore[arg-type]
                 test_nodeid=test_nodeid,

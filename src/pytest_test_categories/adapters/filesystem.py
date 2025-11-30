@@ -207,8 +207,8 @@ class FilesystemPatchingBlocker(FilesystemBlockerPort):
         """Handle a filesystem access violation based on enforcement mode.
 
         Behavior:
-        - STRICT: Raise FilesystemAccessViolationError
-        - WARN: Log warning (future: integrate with pytest warning system)
+        - STRICT: Record violation and raise FilesystemAccessViolationError
+        - WARN: Record violation, allow operation to proceed
         - OFF: Do nothing
 
         Args:
@@ -220,7 +220,16 @@ class FilesystemPatchingBlocker(FilesystemBlockerPort):
             FilesystemAccessViolationError: If enforcement mode is STRICT.
 
         """
-        if self.current_enforcement_mode == EnforcementMode.STRICT:
+        is_strict = self.current_enforcement_mode == EnforcementMode.STRICT
+        details = f'Attempted {operation.value} on filesystem path: {path}'
+
+        # Record violation via callback if set
+        if self.violation_callback is not None:
+            callback = self.violation_callback
+            if callable(callback):
+                callback('filesystem', test_nodeid, details, failed=is_strict)
+
+        if is_strict:
             raise FilesystemAccessViolationError(
                 test_size=self.current_test_size,  # type: ignore[arg-type]
                 test_nodeid=test_nodeid,

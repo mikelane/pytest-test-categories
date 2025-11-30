@@ -131,7 +131,10 @@ class SleepBlockerPort(BaseModel, ABC):
 
     """
 
+    model_config = {'arbitrary_types_allowed': True}
+
     state: BlockerState = BlockerState.INACTIVE
+    violation_callback: object | None = None
 
     @require(lambda self: self.state == BlockerState.INACTIVE, 'Blocker must be INACTIVE to activate')
     @ensure(lambda self: self.state == BlockerState.ACTIVE, 'Blocker must be ACTIVE after activation')

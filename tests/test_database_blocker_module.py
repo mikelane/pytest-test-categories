@@ -590,3 +590,66 @@ class DescribeDatabasePatchingBlockerIntegration:
             assert result == (42,)
         finally:
             blocker.deactivate()
+
+
+@pytest.mark.small
+class DescribeDatabasePatchingBlockerViolationCallback:
+    """Tests for the DatabasePatchingBlocker violation callback feature."""
+
+    def it_calls_violation_callback_on_violation_in_strict_mode(self) -> None:
+        """Verify violation callback is invoked when a database violation occurs in STRICT mode."""
+        callback_invocations: list[tuple[str, str, str, bool]] = []
+
+        def callback(violation_type: str, test_nodeid: str, details: str, *, failed: bool) -> None:
+            callback_invocations.append((violation_type, test_nodeid, details, failed))
+
+        blocker = DatabasePatchingBlocker(violation_callback=callback)
+        blocker.activate(TestSize.SMALL, EnforcementMode.STRICT)
+
+        try:
+            with pytest.raises(DatabaseViolationError):
+                blocker.on_violation('sqlite3', ':memory:', 'test_module.py::test_fn')
+
+            assert len(callback_invocations) == 1
+            violation_type, test_nodeid, details, failed = callback_invocations[0]
+            assert violation_type == 'database'
+            assert test_nodeid == 'test_module.py::test_fn'
+            assert 'sqlite3' in details
+            assert ':memory:' in details
+            assert failed is True
+        finally:
+            blocker.reset()
+
+    def it_calls_violation_callback_on_violation_in_warn_mode(self) -> None:
+        """Verify violation callback is invoked when a database violation occurs in WARN mode."""
+        callback_invocations: list[tuple[str, str, str, bool]] = []
+
+        def callback(violation_type: str, test_nodeid: str, details: str, *, failed: bool) -> None:
+            callback_invocations.append((violation_type, test_nodeid, details, failed))
+
+        blocker = DatabasePatchingBlocker(violation_callback=callback)
+        blocker.activate(TestSize.SMALL, EnforcementMode.WARN)
+
+        try:
+            blocker.on_violation('psycopg2', 'postgresql://localhost/db', 'test_module.py::test_db')
+
+            assert len(callback_invocations) == 1
+            violation_type, test_nodeid, details, failed = callback_invocations[0]
+            assert violation_type == 'database'
+            assert test_nodeid == 'test_module.py::test_db'
+            assert 'psycopg2' in details
+            assert 'postgresql://localhost/db' in details
+            assert failed is False
+        finally:
+            blocker.reset()
+
+    def it_does_not_call_callback_when_not_set(self) -> None:
+        """Verify no error when violation_callback is None."""
+        blocker = DatabasePatchingBlocker()
+        blocker.activate(TestSize.SMALL, EnforcementMode.STRICT)
+
+        try:
+            with pytest.raises(DatabaseViolationError):
+                blocker.on_violation('sqlite3', ':memory:', 'test_module.py::test_fn')
+        finally:
+            blocker.reset()

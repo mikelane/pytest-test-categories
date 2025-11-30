@@ -140,8 +140,8 @@ class SocketPatchingNetworkBlocker(NetworkBlockerPort):
         """Handle a network access violation based on enforcement mode.
 
         Behavior:
-        - STRICT: Raise NetworkAccessViolationError
-        - WARN: Log warning (future: integrate with pytest warning system)
+        - STRICT: Record violation and raise NetworkAccessViolationError
+        - WARN: Record violation, allow connection to proceed
         - OFF: Do nothing
 
         Args:
@@ -153,7 +153,16 @@ class SocketPatchingNetworkBlocker(NetworkBlockerPort):
             NetworkAccessViolationError: If enforcement mode is STRICT.
 
         """
-        if self.current_enforcement_mode == EnforcementMode.STRICT:
+        is_strict = self.current_enforcement_mode == EnforcementMode.STRICT
+        details = f'Attempted network connection to {host}:{port}'
+
+        # Record violation via callback if set
+        if self.violation_callback is not None:
+            callback = self.violation_callback
+            if callable(callback):
+                callback('network', test_nodeid, details, failed=is_strict)
+
+        if is_strict:
             # test_size is guaranteed to be set when ACTIVE (checked by icontract)
             raise NetworkAccessViolationError(
                 test_size=self.current_test_size,  # type: ignore[arg-type]
@@ -161,9 +170,6 @@ class SocketPatchingNetworkBlocker(NetworkBlockerPort):
                 host=host,
                 port=port,
             )
-
-        # WARN and OFF modes: future implementation will integrate with pytest
-        # For now, these modes simply allow the connection to proceed
 
     def reset(self) -> None:
         """Reset blocker to initial state, restoring original socket.

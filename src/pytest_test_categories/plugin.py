@@ -66,6 +66,7 @@ from pytest_test_categories.services.distribution_validation import (
     DistributionValidationService,
     DistributionViolationError,
 )
+from pytest_test_categories.services.hermeticity_summary import HermeticitySummaryService
 from pytest_test_categories.services.test_discovery import TestDiscoveryService
 from pytest_test_categories.services.test_reporting import TestReportingService
 from pytest_test_categories.services.timing_validation import TimingValidationService
@@ -78,6 +79,10 @@ from pytest_test_categories.timing import (
 from pytest_test_categories.types import (
     TestSize,
     TimerState,
+)
+from pytest_test_categories.violation_tracking import (
+    ViolationTracker,
+    ViolationType,
 )
 from pytest_test_categories.xdist_compat import (
     WORKEROUTPUT_DISTRIBUTION_KEY,
@@ -583,7 +588,7 @@ def pytest_runtest_makereport(item: pytest.Item) -> Generator[None, None, None]:
 
 @pytest.hookimpl
 def pytest_terminal_summary(terminalreporter: pytest.TerminalReporter) -> None:
-    """Write distribution summary and optional size report."""
+    """Write distribution summary, hermeticity violations, and optional size report."""
     config_adapter = PytestConfigAdapter(terminalreporter.config)
     session_state = config_adapter.get_plugin_state()
     stats = config_adapter.get_distribution_stats()
@@ -592,6 +597,14 @@ def pytest_terminal_summary(terminalreporter: pytest.TerminalReporter) -> None:
     writer = TerminalReporterAdapter(terminalreporter)
     reporting_service = TestReportingService()
     reporting_service.write_distribution_summary(stats, writer)
+
+    # Write hermeticity violation summary if any violations occurred
+    violation_tracker = cast('ViolationTracker', session_state.violation_tracker)
+    if violation_tracker.has_violations:
+        enforcement_mode = _get_enforcement_mode(terminalreporter.config)
+        quiet = terminalreporter.verbosity < 0
+        hermeticity_service = HermeticitySummaryService()
+        hermeticity_service.write_hermeticity_summary(violation_tracker, enforcement_mode, writer, quiet=quiet)
 
     # Add test size report if requested
     if session_state.test_size_report is not None:
@@ -645,7 +658,7 @@ def pytest_sessionfinish(session: pytest.Session) -> None:
         workeroutput[WORKEROUTPUT_REPORT_KEY] = serialize_report_data(test_report)
 
 
-@pytest.hookimpl
+@pytest.hookimpl(optionalhook=True)
 def pytest_testnodedown(node: object, error: object | None) -> None:  # noqa: ARG001
     """Aggregate distribution stats from a worker when it shuts down.
 
@@ -875,6 +888,40 @@ def _get_distribution_config(config: pytest.Config) -> DistributionConfig:
     return DistributionConfig(**targets)
 
 
+def _make_violation_callback(config: pytest.Config) -> object:
+    """Create a violation callback that records to the session's ViolationTracker.
+
+    This callback is passed to blocker adapters to record violations for the
+    terminal summary output.
+
+    Args:
+        config: The pytest configuration object.
+
+    Returns:
+        A callable that records violations to the ViolationTracker.
+
+    """
+    config_adapter = PytestConfigAdapter(config)
+
+    def callback(violation_type_str: str, test_nodeid: str, details: str, *, failed: bool) -> None:
+        """Record a violation to the session's ViolationTracker."""
+        session_state = config_adapter.get_plugin_state()
+        violation_tracker = cast('ViolationTracker', session_state.violation_tracker)
+
+        # Map string to ViolationType enum
+        violation_type_map = {
+            'network': ViolationType.NETWORK,
+            'filesystem': ViolationType.FILESYSTEM,
+            'process': ViolationType.PROCESS,
+            'database': ViolationType.DATABASE,
+            'sleep': ViolationType.SLEEP,
+        }
+        violation_type = violation_type_map.get(violation_type_str, ViolationType.NETWORK)
+        violation_tracker.record_violation(violation_type, test_nodeid, details, failed=failed)
+
+    return callback
+
+
 def _get_network_blocker(config: pytest.Config) -> SocketPatchingNetworkBlocker:
     """Get or create the network blocker instance.
 
@@ -891,6 +938,7 @@ def _get_network_blocker(config: pytest.Config) -> SocketPatchingNetworkBlocker:
     blocker_attr = '_test_categories_network_blocker'
     if not hasattr(config, blocker_attr):
         blocker = SocketPatchingNetworkBlocker()
+        blocker.violation_callback = _make_violation_callback(config)
         setattr(config, blocker_attr, blocker)
     return cast('SocketPatchingNetworkBlocker', getattr(config, blocker_attr))
 
@@ -911,6 +959,7 @@ def _get_filesystem_blocker(config: pytest.Config) -> FilesystemPatchingBlocker:
     blocker_attr = '_test_categories_filesystem_blocker'
     if not hasattr(config, blocker_attr):
         blocker = FilesystemPatchingBlocker()
+        blocker.violation_callback = _make_violation_callback(config)
         setattr(config, blocker_attr, blocker)
     return cast('FilesystemPatchingBlocker', getattr(config, blocker_attr))
 
@@ -957,6 +1006,7 @@ def _get_process_blocker(config: pytest.Config) -> SubprocessPatchingBlocker:
     blocker_attr = '_test_categories_process_blocker'
     if not hasattr(config, blocker_attr):
         blocker = SubprocessPatchingBlocker()
+        blocker.violation_callback = _make_violation_callback(config)
         setattr(config, blocker_attr, blocker)
     return cast('SubprocessPatchingBlocker', getattr(config, blocker_attr))
 
@@ -990,6 +1040,7 @@ def _get_sleep_blocker(config: pytest.Config) -> SleepPatchingBlocker:
     blocker_attr = '_test_categories_sleep_blocker'
     if not hasattr(config, blocker_attr):
         blocker = SleepPatchingBlocker()
+        blocker.violation_callback = _make_violation_callback(config)
         setattr(config, blocker_attr, blocker)
     return cast('SleepPatchingBlocker', getattr(config, blocker_attr))
 
@@ -1023,6 +1074,7 @@ def _get_database_blocker(config: pytest.Config) -> DatabasePatchingBlocker:
     blocker_attr = '_test_categories_database_blocker'
     if not hasattr(config, blocker_attr):
         blocker = DatabasePatchingBlocker()
+        blocker.violation_callback = _make_violation_callback(config)
         setattr(config, blocker_attr, blocker)
     return cast('DatabasePatchingBlocker', getattr(config, blocker_attr))
 
