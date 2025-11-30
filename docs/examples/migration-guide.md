@@ -358,13 +358,18 @@ If a test does not fit neatly into a category, ask yourself:
 
 ### Tests That Need Gradual Migration
 
-Use the `allow_network` or `allow_filesystem` markers for gradual migration:
+For tests that are difficult to migrate immediately, use `WARN` mode and recategorize them temporarily:
 
 ```python
-@pytest.mark.small
-@pytest.mark.allow_network  # Temporary: remove after refactoring
+# Option 1: Recategorize to medium temporarily during migration
+@pytest.mark.medium  # TODO: Refactor to use mocks and change to @pytest.mark.small
 def test_legacy_http_call():
-    """TODO: Refactor to use mocks."""
+    """Needs refactoring to use mocks."""
+    ...
+
+# Option 2: Use pytest.mark.skip for tests that need major refactoring
+@pytest.mark.skip(reason="Migration in progress: needs mock refactoring (see #123)")
+def test_complex_legacy_integration():
     ...
 ```
 
