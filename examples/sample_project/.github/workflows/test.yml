@@ -1,0 +1,219 @@
+# Example GitHub Actions Workflow for pytest-test-categories
+# ==========================================================
+#
+# This workflow demonstrates best practices for running categorized tests in CI:
+# 1. Run small tests first (fast feedback)
+# 2. Run medium tests in parallel with small tests
+# 3. Run large tests only on main branch or release
+# 4. Generate and upload test reports
+
+name: Test Suite
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  UV_CACHE_DIR: /tmp/.uv-cache
+
+jobs:
+  # ===========================================================================
+  # Small Tests: Fast feedback (< 2 minutes)
+  # ===========================================================================
+  small-tests:
+    name: Small Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12', '3.13']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Run small tests with strict enforcement
+        run: |
+          uv run pytest -m small \
+            --test-categories-enforcement=strict \
+            --test-size-report=json \
+            --test-size-report-file=small-tests-report.json \
+            -v
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: small-tests-report-py${{ matrix.python-version }}
+          path: small-tests-report.json
+
+  # ===========================================================================
+  # Medium Tests: Container-based tests (< 10 minutes)
+  # ===========================================================================
+  medium-tests:
+    name: Medium Tests
+    runs-on: ubuntu-latest
+    # Run in parallel with small tests for faster overall feedback
+    services:
+      # Example: PostgreSQL service for tests that don't use testcontainers
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Run medium tests
+        run: |
+          uv run pytest -m medium \
+            --test-categories-enforcement=strict \
+            --test-size-report=json \
+            --test-size-report-file=medium-tests-report.json \
+            -v
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: medium-tests-report
+          path: medium-tests-report.json
+
+  # ===========================================================================
+  # Large Tests: Full integration (runs only on main branch)
+  # ===========================================================================
+  large-tests:
+    name: Large Tests (Integration)
+    runs-on: ubuntu-latest
+    # Only run large tests on main branch to save CI time
+    if: github.ref == 'refs/heads/main'
+    needs: [small-tests, medium-tests]  # Wait for faster tests to pass
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Run large tests
+        run: |
+          uv run pytest -m large \
+            --test-size-report=json \
+            --test-size-report-file=large-tests-report.json \
+            -v
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: large-tests-report
+          path: large-tests-report.json
+
+  # ===========================================================================
+  # Coverage Report: Combined coverage from all test sizes
+  # ===========================================================================
+  coverage:
+    name: Coverage Report
+    runs-on: ubuntu-latest
+    needs: [small-tests, medium-tests]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Run all tests with coverage
+        run: |
+          uv run coverage run -m pytest \
+            --test-categories-enforcement=warn \
+            --test-size-report=detailed
+          uv run coverage report --show-missing
+          uv run coverage xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.xml
+          fail_ci_if_error: false
+
+  # ===========================================================================
+  # Distribution Check: Validate test size distribution
+  # ===========================================================================
+  distribution-check:
+    name: Check Test Distribution
+    runs-on: ubuntu-latest
+    needs: [small-tests]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Check distribution percentages
+        run: |
+          uv run pytest --collect-only \
+            --test-categories-distribution-enforcement=warn \
+            -q
