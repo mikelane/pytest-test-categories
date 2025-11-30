@@ -80,6 +80,7 @@ force_grid_wrap = 0
 include_trailing_comma = true
 use_parentheses = true
 ensure_newline_before_comments = true
+skip_glob = ["examples/*"]
 
 [tool.ruff]
 line-length = 120
@@ -88,7 +89,7 @@ src = ["src", "tests"]
 
 include = ["*.py"]
 
-exclude = [".git", ".venv", "__pycache__", "build", "dist"]
+exclude = [".git", ".venv", "__pycache__", "build", "dist", "examples"]
 
 target-version = "py312"
 
@@ -183,6 +184,7 @@ docstring-quotes = "double"
 [tool.mypy]
 python_version = "3.11"
 strict = true
+exclude = ["examples/"]
 warn_return_any = true
 warn_unused_configs = true
 disallow_any_generics = true
@@ -224,6 +226,16 @@ disable_error_code = ["import-untyped", "import-not-found", "assignment", "no-an
 [[tool.mypy.overrides]]
 module = ["psycopg2", "psycopg2.*", "psycopg", "psycopg.*", "pymysql", "pymysql.*", "pymongo", "pymongo.*", "redis", "redis.*", "sqlalchemy", "sqlalchemy.*"]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "pytest_benchmark.*"
+ignore_missing_imports = true
+
+# Exclude examples directory from mypy - it has its own tests module
+# that would conflict with the main project's tests module
+[[tool.mypy.overrides]]
+module = "examples.*"
+ignore_errors = true
 
 
 [tool.commitizen]
