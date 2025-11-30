@@ -111,6 +111,26 @@ class DescribeXdistControllerDetection:
 
         assert is_xdist_controller(mock_config) is False
 
+    def it_handles_getoption_type_error(self, mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Returns False when getoption raises TypeError."""
+        monkeypatch.delenv(XDIST_WORKER_ENV, raising=False)
+
+        mock_config = mocker.Mock()
+        mock_config.pluginmanager.hasplugin.return_value = True
+        mock_config.getoption.side_effect = TypeError('Type error')
+
+        assert is_xdist_controller(mock_config) is False
+
+    def it_handles_negative_numprocesses(self, mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Returns False when numprocesses is negative (invalid config)."""
+        monkeypatch.delenv(XDIST_WORKER_ENV, raising=False)
+
+        mock_config = mocker.Mock()
+        mock_config.pluginmanager.hasplugin.return_value = True
+        mock_config.getoption.return_value = -1
+
+        assert is_xdist_controller(mock_config) is False
+
 
 @pytest.mark.small
 class DescribeDistributionCountsSerialization:

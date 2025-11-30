@@ -459,3 +459,369 @@ class DescribeXdistWithEnforcementModes:
         result.assert_outcomes(passed=2)
         stdout = result.stdout.str()
         assert 'Distribution Summary' in stdout
+
+
+@pytest.mark.medium
+class DescribeXdistSpecificWorkerCounts:
+    """Tests for specific worker count configurations beyond 1 and 2."""
+
+    def it_works_with_four_workers(self, pytester: pytest.Pytester) -> None:
+        """Plugin works correctly with -n 4 (specific worker count)."""
+        pytester.makepyfile(
+            test_example="""
+            import pytest
+
+            @pytest.mark.small
+            def test_small_1():
+                assert True
+
+            @pytest.mark.small
+            def test_small_2():
+                assert True
+
+            @pytest.mark.small
+            def test_small_3():
+                assert True
+
+            @pytest.mark.small
+            def test_small_4():
+                assert True
+
+            @pytest.mark.small
+            def test_small_5():
+                assert True
+
+            @pytest.mark.small
+            def test_small_6():
+                assert True
+
+            @pytest.mark.medium
+            def test_medium_1():
+                assert True
+
+            @pytest.mark.large
+            def test_large_1():
+                assert True
+            """
+        )
+
+        result = pytester.runpytest('-v', '-n', '4')
+
+        result.assert_outcomes(passed=8)
+        stdout = result.stdout.str()
+
+        assert 'Distribution Summary' in stdout
+        assert 'Small' in stdout
+        assert '6 tests' in stdout
+        assert 'Medium' in stdout
+        assert '1 test' in stdout
+        assert 'Large' in stdout
+        assert '1 test' in stdout
+
+    def it_aggregates_correctly_with_more_workers_than_tests(self, pytester: pytest.Pytester) -> None:
+        """Plugin handles correctly when there are more workers than tests."""
+        pytester.makepyfile(
+            test_example="""
+            import pytest
+
+            @pytest.mark.small
+            def test_small_1():
+                assert True
+
+            @pytest.mark.small
+            def test_small_2():
+                assert True
+            """
+        )
+
+        result = pytester.runpytest('-v', '-n', '4')
+
+        result.assert_outcomes(passed=2)
+        stdout = result.stdout.str()
+        assert 'Distribution Summary' in stdout
+        assert 'Small' in stdout
+        assert '2 tests' in stdout
+
+
+@pytest.mark.medium
+class DescribeXdistWorkerFailures:
+    """Tests for graceful handling of worker failures."""
+
+    def it_handles_test_failures_across_workers(self, pytester: pytest.Pytester) -> None:
+        """Plugin aggregates distribution even when some tests fail."""
+        pytester.makepyfile(
+            test_example="""
+            import pytest
+
+            @pytest.mark.small
+            def test_small_pass():
+                assert True
+
+            @pytest.mark.small
+            def test_small_fail():
+                assert False
+
+            @pytest.mark.medium
+            def test_medium_pass():
+                assert True
+
+            @pytest.mark.medium
+            def test_medium_fail():
+                assert False
+            """
+        )
+
+        result = pytester.runpytest('-v', '-n', '2')
+
+        result.assert_outcomes(passed=2, failed=2)
+        stdout = result.stdout.str()
+
+        assert 'Distribution Summary' in stdout
+        assert 'Small' in stdout
+        assert '2 tests' in stdout
+        assert 'Medium' in stdout
+        assert '2 tests' in stdout
+
+    def it_handles_test_errors_across_workers(self, pytester: pytest.Pytester) -> None:
+        """Plugin aggregates distribution even when tests raise errors."""
+        pytester.makepyfile(
+            test_example="""
+            import pytest
+
+            @pytest.mark.small
+            def test_small_pass():
+                assert True
+
+            @pytest.mark.small
+            def test_small_error():
+                raise RuntimeError("Intentional error")
+
+            @pytest.mark.medium
+            def test_medium_pass():
+                assert True
+            """
+        )
+
+        result = pytester.runpytest('-v', '-n', '2')
+
+        result.assert_outcomes(passed=2, failed=1)
+        stdout = result.stdout.str()
+
+        assert 'Distribution Summary' in stdout
+        assert 'Small' in stdout
+        assert '2 tests' in stdout
+        assert 'Medium' in stdout
+        assert '1 test' in stdout
+
+    def it_handles_setup_failures(self, pytester: pytest.Pytester) -> None:
+        """Plugin handles tests with failing setup fixtures."""
+        pytester.makepyfile(
+            test_example="""
+            import pytest
+
+            @pytest.fixture
+            def failing_fixture():
+                raise RuntimeError("Setup failed")
+
+            @pytest.mark.small
+            def test_small_pass():
+                assert True
+
+            @pytest.mark.small
+            def test_small_with_failing_setup(failing_fixture):
+                assert True
+
+            @pytest.mark.medium
+            def test_medium_pass():
+                assert True
+            """
+        )
+
+        result = pytester.runpytest('-v', '-n', '2')
+
+        result.assert_outcomes(passed=2, errors=1)
+        stdout = result.stdout.str()
+
+        assert 'Distribution Summary' in stdout
+
+
+@pytest.mark.medium
+class DescribeXdistOutputDeduplication:
+    """Tests for ensuring output is not duplicated across workers."""
+
+    def it_shows_only_one_distribution_summary(self, pytester: pytest.Pytester) -> None:
+        """Distribution summary appears exactly once, not per-worker."""
+        pytester.makepyfile(
+            test_example="""
+            import pytest
+
+            @pytest.mark.small
+            def test_small_1():
+                assert True
+
+            @pytest.mark.small
+            def test_small_2():
+                assert True
+
+            @pytest.mark.medium
+            def test_medium():
+                assert True
+            """
+        )
+
+        result = pytester.runpytest('-v', '-n', '2')
+
+        result.assert_outcomes(passed=3)
+        stdout = result.stdout.str()
+
+        summary_count = stdout.count('Distribution Summary')
+        assert summary_count == 1, f'Expected 1 Distribution Summary, found {summary_count}'
+
+    def it_shows_only_one_distribution_summary_with_four_workers(self, pytester: pytest.Pytester) -> None:
+        """Distribution summary appears exactly once even with many workers."""
+        pytester.makepyfile(
+            test_example="""
+            import pytest
+
+            @pytest.mark.small
+            def test_small_1():
+                assert True
+
+            @pytest.mark.small
+            def test_small_2():
+                assert True
+
+            @pytest.mark.small
+            def test_small_3():
+                assert True
+
+            @pytest.mark.small
+            def test_small_4():
+                assert True
+            """
+        )
+
+        result = pytester.runpytest('-v', '-n', '4')
+
+        result.assert_outcomes(passed=4)
+        stdout = result.stdout.str()
+
+        summary_count = stdout.count('Distribution Summary')
+        assert summary_count == 1, f'Expected 1 Distribution Summary, found {summary_count}'
+
+
+@pytest.mark.medium
+class DescribeXdistTimingValidation:
+    """Tests for timing validation correctness per-worker."""
+
+    def it_validates_timing_independently_per_worker(self, pytester: pytest.Pytester) -> None:
+        """Each worker validates timing for its own tests, no cross-worker interference."""
+        pytester.makepyfile(
+            test_example="""
+            import pytest
+            import time
+
+            @pytest.mark.small
+            def test_fast_worker_0():
+                time.sleep(0.01)
+                assert True
+
+            @pytest.mark.small
+            def test_fast_worker_1():
+                time.sleep(0.01)
+                assert True
+
+            @pytest.mark.small
+            def test_fast_worker_2():
+                time.sleep(0.01)
+                assert True
+
+            @pytest.mark.small
+            def test_fast_worker_3():
+                time.sleep(0.01)
+                assert True
+            """
+        )
+
+        result = pytester.runpytest('-v', '-n', '4')
+
+        result.assert_outcomes(passed=4)
+        stdout = result.stdout.str()
+        assert 'FAILED' not in stdout
+        assert 'exceeded time limit' not in stdout.lower()
+
+    def it_catches_timing_violations_on_any_worker(self, pytester: pytest.Pytester) -> None:
+        """Timing violations are caught regardless of which worker runs the test."""
+        pytester.makepyfile(
+            test_example="""
+            import pytest
+            import time
+
+            @pytest.mark.small
+            def test_fast_1():
+                assert True
+
+            @pytest.mark.small
+            def test_fast_2():
+                assert True
+
+            @pytest.mark.small
+            def test_slow_violates_limit():
+                # Small tests have 1 second limit, this exceeds it
+                time.sleep(1.5)
+                assert True
+
+            @pytest.mark.small
+            def test_fast_3():
+                assert True
+            """
+        )
+
+        result = pytester.runpytest('-v', '-n', '2')
+
+        result.assert_outcomes(passed=3, failed=1)
+        stdout = result.stdout.str()
+        assert 'exceeded time limit' in stdout.lower() or 'timing' in stdout.lower()
+
+
+@pytest.mark.medium
+class DescribeXdistLoadGroupDistribution:
+    """Tests for --dist=loadgroup distribution mode."""
+
+    def it_works_with_loadgroup_distribution(self, pytester: pytest.Pytester) -> None:
+        """Plugin works correctly with --dist=loadgroup using xdist_group marker."""
+        pytester.makepyfile(
+            test_example="""
+            import pytest
+
+            @pytest.mark.small
+            @pytest.mark.xdist_group("group_a")
+            def test_group_a_1():
+                assert True
+
+            @pytest.mark.small
+            @pytest.mark.xdist_group("group_a")
+            def test_group_a_2():
+                assert True
+
+            @pytest.mark.medium
+            @pytest.mark.xdist_group("group_b")
+            def test_group_b_1():
+                assert True
+
+            @pytest.mark.medium
+            @pytest.mark.xdist_group("group_b")
+            def test_group_b_2():
+                assert True
+            """
+        )
+
+        result = pytester.runpytest('-v', '-n', '2', '--dist=loadgroup')
+
+        result.assert_outcomes(passed=4)
+        stdout = result.stdout.str()
+        assert 'Distribution Summary' in stdout
+        assert 'Small' in stdout
+        assert '2 tests' in stdout
+        assert 'Medium' in stdout
+        assert '2 tests' in stdout
