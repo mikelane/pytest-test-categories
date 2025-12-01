@@ -23,14 +23,17 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    computed_field,
 )
 
 from pytest_test_categories.distribution.stats import DISTRIBUTION_TARGETS
 from pytest_test_categories.types import TestSize
+from pytest_test_categories.violation_tracking import ViolationType
 
 if TYPE_CHECKING:
     from pytest_test_categories.distribution.stats import DistributionStats
     from pytest_test_categories.reporting import TestSizeReport
+    from pytest_test_categories.violation_tracking import ViolationTracker
 
 
 class DistributionSizeEntry(BaseModel):
@@ -47,6 +50,28 @@ class DistributionSizeEntry(BaseModel):
     target: float = Field(ge=0.0, le=100.0)
 
 
+class HermeticityViolationsSummary(BaseModel):
+    """Detailed breakdown of hermeticity violations by type.
+
+    Tracks counts for each type of resource isolation violation
+    (network, filesystem, process, database, sleep) with a computed total.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    network: int = Field(default=0, ge=0)
+    filesystem: int = Field(default=0, ge=0)
+    process: int = Field(default=0, ge=0)
+    database: int = Field(default=0, ge=0)
+    sleep: int = Field(default=0, ge=0)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def total(self) -> int:
+        """Calculate total violations across all types."""
+        return self.network + self.filesystem + self.process + self.database + self.sleep
+
+
 class ViolationsSummary(BaseModel):
     """Summary of test violations.
 
@@ -57,7 +82,7 @@ class ViolationsSummary(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     timing: int = Field(default=0, ge=0)
-    hermeticity: int = Field(default=0, ge=0)
+    hermeticity: HermeticityViolationsSummary = Field(default_factory=HermeticityViolationsSummary)
 
 
 class JsonReportSummary(BaseModel):
@@ -113,6 +138,7 @@ class JsonReport(BaseModel):
         test_report: TestSizeReport,
         distribution_stats: DistributionStats,
         version: str,
+        violation_tracker: ViolationTracker | None = None,
     ) -> JsonReport:
         """Create a JsonReport from a TestSizeReport and DistributionStats.
 
@@ -120,6 +146,7 @@ class JsonReport(BaseModel):
             test_report: The TestSizeReport containing test data.
             distribution_stats: The DistributionStats with count data.
             version: The plugin version string.
+            violation_tracker: Optional ViolationTracker with hermeticity violations.
 
         Returns:
             A JsonReport instance ready for serialization.
@@ -152,6 +179,15 @@ class JsonReport(BaseModel):
             ),
         }
 
+        # Build per-test hermeticity violations lookup
+        test_hermeticity_violations: dict[str, list[str]] = {}
+        if violation_tracker is not None:
+            for violation_type in ViolationType:
+                for nodeid in violation_tracker.get_test_nodeids_by_type(violation_type):
+                    if nodeid not in test_hermeticity_violations:
+                        test_hermeticity_violations[nodeid] = []
+                    test_hermeticity_violations[nodeid].append(f'hermeticity:{violation_type.value}')
+
         timing_violations = 0
         tests: list[JsonTestEntry] = []
 
@@ -164,6 +200,9 @@ class JsonReport(BaseModel):
                 if test_report.exceeds_time_limit(nodeid, size):
                     violations.append('timing')
                     timing_violations += 1
+
+                # Add hermeticity violations for this test
+                violations.extend(test_hermeticity_violations.get(nodeid, []))
 
                 tests.append(
                     JsonTestEntry(
@@ -185,16 +224,27 @@ class JsonReport(BaseModel):
                     size='unsized',
                     duration=duration,
                     status=outcome,
-                    violations=[],
+                    violations=test_hermeticity_violations.get(nodeid, []),
                 )
             )
 
         total_tests = test_report.get_total_tests()
 
+        # Build hermeticity violations summary
+        hermeticity_summary = HermeticityViolationsSummary()
+        if violation_tracker is not None:
+            hermeticity_summary = HermeticityViolationsSummary(
+                network=violation_tracker.count_by_type(ViolationType.NETWORK),
+                filesystem=violation_tracker.count_by_type(ViolationType.FILESYSTEM),
+                process=violation_tracker.count_by_type(ViolationType.PROCESS),
+                database=violation_tracker.count_by_type(ViolationType.DATABASE),
+                sleep=violation_tracker.count_by_type(ViolationType.SLEEP),
+            )
+
         summary = JsonReportSummary(
             total_tests=total_tests,
             distribution=distribution,
-            violations=ViolationsSummary(timing=timing_violations, hermeticity=0),
+            violations=ViolationsSummary(timing=timing_violations, hermeticity=hermeticity_summary),
         )
 
         return cls(

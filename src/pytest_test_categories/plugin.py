@@ -611,7 +611,7 @@ def pytest_terminal_summary(terminalreporter: pytest.TerminalReporter) -> None:
         test_report = cast('TestSizeReport', session_state.test_size_report)
         report_type = config_adapter.get_option('--test-size-report')
         if report_type == 'json':
-            _write_json_report(test_report, stats, config_adapter, terminalreporter)
+            _write_json_report(test_report, stats, config_adapter, terminalreporter, violation_tracker)
         elif report_type == 'detailed':
             test_report.write_detailed_report(terminalreporter)
         else:
@@ -1208,6 +1208,7 @@ def _write_json_report(
     stats: DistributionStatsType,
     config_adapter: PytestConfigAdapterType,
     terminalreporter: pytest.TerminalReporter,
+    violation_tracker: ViolationTracker | None = None,
 ) -> None:
     """Write JSON report to file or stdout.
 
@@ -1216,12 +1217,14 @@ def _write_json_report(
         stats: The distribution statistics.
         config_adapter: The config adapter for accessing options.
         terminalreporter: The terminal reporter for output.
+        violation_tracker: Optional violation tracker with hermeticity violations.
 
     """
     json_report = JsonReport.from_test_size_report(
         test_report=test_report,
         distribution_stats=stats,
         version=PLUGIN_VERSION,
+        violation_tracker=violation_tracker,
     )
 
     json_output = json_report.model_dump_json(indent=2)

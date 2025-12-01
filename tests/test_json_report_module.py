@@ -14,6 +14,7 @@ import pytest
 from pytest_test_categories.distribution.stats import DistributionStats
 from pytest_test_categories.json_report import (
     DistributionSizeEntry,
+    HermeticityViolationsSummary,
     JsonReport,
     JsonReportSummary,
     JsonTestEntry,
@@ -21,6 +22,7 @@ from pytest_test_categories.json_report import (
 )
 from pytest_test_categories.reporting import TestSizeReport
 from pytest_test_categories.types import TestSize
+from pytest_test_categories.violation_tracking import ViolationTracker, ViolationType
 
 
 @pytest.mark.small
@@ -58,6 +60,65 @@ class DescribeDistributionSizeEntry:
 
 
 @pytest.mark.small
+class DescribeHermeticityViolationsSummary:
+    """Test suite for HermeticityViolationsSummary model."""
+
+    def it_creates_with_default_values(self) -> None:
+        """Create hermeticity violations summary with default values of 0."""
+        hermeticity = HermeticityViolationsSummary()
+
+        assert hermeticity.network == 0
+        assert hermeticity.filesystem == 0
+        assert hermeticity.process == 0
+        assert hermeticity.database == 0
+        assert hermeticity.sleep == 0
+        assert hermeticity.total == 0
+
+    def it_creates_with_custom_values(self) -> None:
+        """Create hermeticity violations summary with custom values."""
+        hermeticity = HermeticityViolationsSummary(
+            network=2,
+            filesystem=1,
+            process=3,
+            database=0,
+            sleep=1,
+        )
+
+        assert hermeticity.network == 2
+        assert hermeticity.filesystem == 1
+        assert hermeticity.process == 3
+        assert hermeticity.database == 0
+        assert hermeticity.sleep == 1
+
+    def it_computes_total_from_all_types(self) -> None:
+        """Compute total from all violation types."""
+        hermeticity = HermeticityViolationsSummary(
+            network=2,
+            filesystem=1,
+            process=3,
+            database=4,
+            sleep=5,
+        )
+
+        assert hermeticity.total == 15
+
+    def it_serializes_to_dict_with_total(self) -> None:
+        """Serialize hermeticity violations summary to dictionary format with computed total."""
+        hermeticity = HermeticityViolationsSummary(network=1, filesystem=2)
+
+        result = hermeticity.model_dump()
+
+        assert result == {
+            'network': 1,
+            'filesystem': 2,
+            'process': 0,
+            'database': 0,
+            'sleep': 0,
+            'total': 3,
+        }
+
+
+@pytest.mark.small
 class DescribeViolationsSummary:
     """Test suite for ViolationsSummary model."""
 
@@ -66,22 +127,28 @@ class DescribeViolationsSummary:
         violations = ViolationsSummary()
 
         assert violations.timing == 0
-        assert violations.hermeticity == 0
+        assert violations.hermeticity.total == 0
 
-    def it_creates_with_custom_values(self) -> None:
-        """Create violations summary with custom values."""
-        violations = ViolationsSummary(timing=3, hermeticity=1)
+    def it_creates_with_custom_hermeticity_values(self) -> None:
+        """Create violations summary with custom hermeticity values."""
+        hermeticity = HermeticityViolationsSummary(network=2, filesystem=1)
+        violations = ViolationsSummary(timing=3, hermeticity=hermeticity)
 
         assert violations.timing == 3
-        assert violations.hermeticity == 1
+        assert violations.hermeticity.network == 2
+        assert violations.hermeticity.filesystem == 1
+        assert violations.hermeticity.total == 3
 
-    def it_serializes_to_dict(self) -> None:
-        """Serialize violations summary to dictionary format."""
-        violations = ViolationsSummary(timing=2, hermeticity=1)
+    def it_serializes_to_dict_with_nested_hermeticity(self) -> None:
+        """Serialize violations summary to dictionary format with nested hermeticity."""
+        hermeticity = HermeticityViolationsSummary(network=1)
+        violations = ViolationsSummary(timing=2, hermeticity=hermeticity)
 
         result = violations.model_dump()
 
-        assert result == {'timing': 2, 'hermeticity': 1}
+        assert result['timing'] == 2
+        assert result['hermeticity']['network'] == 1
+        assert result['hermeticity']['total'] == 1
 
 
 @pytest.mark.small
@@ -98,7 +165,7 @@ class DescribeJsonReportSummary:
                 'large': DistributionSizeEntry(count=4, percentage=4.0, target=4.0),
                 'xlarge': DistributionSizeEntry(count=1, percentage=1.0, target=1.0),
             },
-            violations=ViolationsSummary(timing=2, hermeticity=0),
+            violations=ViolationsSummary(timing=2),
         )
 
         assert summary.total_tests == 100
@@ -115,7 +182,7 @@ class DescribeJsonReportSummary:
                 'large': DistributionSizeEntry(count=4, percentage=4.0, target=4.0),
                 'xlarge': DistributionSizeEntry(count=1, percentage=1.0, target=1.0),
             },
-            violations=ViolationsSummary(timing=0, hermeticity=0),
+            violations=ViolationsSummary(),
         )
 
         result = summary.model_dump()
@@ -351,3 +418,174 @@ class DescribeJsonReportFromTestSizeReport:
         assert json_report.summary.total_tests == 1
         assert len(json_report.tests) == 1
         assert json_report.tests[0].size == 'unsized'
+
+    def it_includes_hermeticity_violations_in_summary(self) -> None:
+        """Include hermeticity violations in JSON report summary."""
+        test_report = TestSizeReport()
+        test_report.add_test('test_api.py::test_network', TestSize.SMALL, duration=0.1, outcome='passed')
+        test_report.add_test('test_file.py::test_filesystem', TestSize.SMALL, duration=0.1, outcome='passed')
+
+        stats = DistributionStats.update_counts({TestSize.SMALL: 2})
+
+        violation_tracker = ViolationTracker()
+        violation_tracker.record_violation(
+            ViolationType.NETWORK,
+            'test_api.py::test_network',
+            'Attempted connection to example.com:443',
+        )
+        violation_tracker.record_violation(
+            ViolationType.FILESYSTEM,
+            'test_file.py::test_filesystem',
+            'Attempted write to /etc/passwd',
+        )
+
+        json_report = JsonReport.from_test_size_report(
+            test_report=test_report,
+            distribution_stats=stats,
+            version='0.7.0',
+            violation_tracker=violation_tracker,
+        )
+
+        assert json_report.summary.violations.hermeticity.network == 1
+        assert json_report.summary.violations.hermeticity.filesystem == 1
+        assert json_report.summary.violations.hermeticity.total == 2
+
+    def it_includes_hermeticity_violations_in_per_test_entries(self) -> None:
+        """Include hermeticity violation types in per-test entries."""
+        test_report = TestSizeReport()
+        test_report.add_test('test_api.py::test_network', TestSize.SMALL, duration=0.1, outcome='passed')
+
+        stats = DistributionStats.update_counts({TestSize.SMALL: 1})
+
+        violation_tracker = ViolationTracker()
+        violation_tracker.record_violation(
+            ViolationType.NETWORK,
+            'test_api.py::test_network',
+            'Attempted connection to example.com:443',
+        )
+
+        json_report = JsonReport.from_test_size_report(
+            test_report=test_report,
+            distribution_stats=stats,
+            version='0.7.0',
+            violation_tracker=violation_tracker,
+        )
+
+        test_entry = json_report.tests[0]
+        assert 'hermeticity:network' in test_entry.violations
+
+    def it_handles_multiple_violation_types_for_same_test(self) -> None:
+        """Handle multiple hermeticity violation types for the same test."""
+        test_report = TestSizeReport()
+        test_report.add_test('test_all.py::test_violations', TestSize.SMALL, duration=0.1, outcome='failed')
+
+        stats = DistributionStats.update_counts({TestSize.SMALL: 1})
+
+        violation_tracker = ViolationTracker()
+        violation_tracker.record_violation(
+            ViolationType.NETWORK,
+            'test_all.py::test_violations',
+            'Network violation',
+        )
+        violation_tracker.record_violation(
+            ViolationType.FILESYSTEM,
+            'test_all.py::test_violations',
+            'Filesystem violation',
+        )
+        violation_tracker.record_violation(
+            ViolationType.PROCESS,
+            'test_all.py::test_violations',
+            'Process violation',
+        )
+
+        json_report = JsonReport.from_test_size_report(
+            test_report=test_report,
+            distribution_stats=stats,
+            version='0.7.0',
+            violation_tracker=violation_tracker,
+        )
+
+        test_entry = json_report.tests[0]
+        assert 'hermeticity:network' in test_entry.violations
+        assert 'hermeticity:filesystem' in test_entry.violations
+        assert 'hermeticity:process' in test_entry.violations
+
+    def it_includes_all_violation_type_counts_in_summary(self) -> None:
+        """Include all violation type counts in summary hermeticity breakdown."""
+        test_report = TestSizeReport()
+        test_report.add_test('test_one.py::test_a', TestSize.SMALL, duration=0.1, outcome='passed')
+        test_report.add_test('test_two.py::test_b', TestSize.SMALL, duration=0.1, outcome='passed')
+        test_report.add_test('test_three.py::test_c', TestSize.SMALL, duration=0.1, outcome='passed')
+        test_report.add_test('test_four.py::test_d', TestSize.SMALL, duration=0.1, outcome='passed')
+        test_report.add_test('test_five.py::test_e', TestSize.SMALL, duration=0.1, outcome='passed')
+
+        stats = DistributionStats.update_counts({TestSize.SMALL: 5})
+
+        violation_tracker = ViolationTracker()
+        violation_tracker.record_violation(ViolationType.NETWORK, 'test_one.py::test_a', 'network')
+        violation_tracker.record_violation(ViolationType.FILESYSTEM, 'test_two.py::test_b', 'filesystem')
+        violation_tracker.record_violation(ViolationType.PROCESS, 'test_three.py::test_c', 'process')
+        violation_tracker.record_violation(ViolationType.DATABASE, 'test_four.py::test_d', 'database')
+        violation_tracker.record_violation(ViolationType.SLEEP, 'test_five.py::test_e', 'sleep')
+
+        json_report = JsonReport.from_test_size_report(
+            test_report=test_report,
+            distribution_stats=stats,
+            version='0.7.0',
+            violation_tracker=violation_tracker,
+        )
+
+        hermeticity = json_report.summary.violations.hermeticity
+        assert hermeticity.network == 1
+        assert hermeticity.filesystem == 1
+        assert hermeticity.process == 1
+        assert hermeticity.database == 1
+        assert hermeticity.sleep == 1
+        assert hermeticity.total == 5
+
+    def it_handles_no_violation_tracker(self) -> None:
+        """Handle case when no violation tracker is provided (backward compatibility)."""
+        test_report = TestSizeReport()
+        test_report.add_test('test_one.py::test_a', TestSize.SMALL, duration=0.1, outcome='passed')
+
+        stats = DistributionStats.update_counts({TestSize.SMALL: 1})
+
+        json_report = JsonReport.from_test_size_report(
+            test_report=test_report,
+            distribution_stats=stats,
+            version='0.7.0',
+            violation_tracker=None,
+        )
+
+        hermeticity = json_report.summary.violations.hermeticity
+        assert hermeticity.network == 0
+        assert hermeticity.filesystem == 0
+        assert hermeticity.process == 0
+        assert hermeticity.database == 0
+        assert hermeticity.sleep == 0
+        assert hermeticity.total == 0
+        assert json_report.tests[0].violations == []
+
+    def it_includes_hermeticity_violations_for_unsized_tests(self) -> None:
+        """Include hermeticity violations for unsized tests."""
+        test_report = TestSizeReport()
+        test_report.add_test('test_one.py::test_unsized', None, duration=0.1, outcome='passed')
+
+        stats = DistributionStats.update_counts({})
+
+        violation_tracker = ViolationTracker()
+        violation_tracker.record_violation(
+            ViolationType.NETWORK,
+            'test_one.py::test_unsized',
+            'Network access from unsized test',
+        )
+
+        json_report = JsonReport.from_test_size_report(
+            test_report=test_report,
+            distribution_stats=stats,
+            version='0.7.0',
+            violation_tracker=violation_tracker,
+        )
+
+        assert json_report.tests[0].size == 'unsized'
+        assert 'hermeticity:network' in json_report.tests[0].violations
