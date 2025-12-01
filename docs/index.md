@@ -133,10 +133,7 @@ Following Google's recommendations, a healthy test suite should have:
 
 ## License
 
-This project is available under a dual-license model:
-
-- **CC BY-NC 4.0**: Free for non-commercial use with attribution
-- **Commercial License**: Contact [mikelane@gmail.com](mailto:mikelane@gmail.com) for commercial licensing
+This project is licensed under the [MIT License](https://github.com/mikelane/pytest-test-categories/blob/main/LICENSE).
 
 ## Indices and tables
 

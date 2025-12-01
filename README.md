@@ -291,7 +291,14 @@ pytest --test-size-report=json --test-size-report-file=report.json
     },
     "violations": {
       "timing": 0,
-      "hermeticity": 0
+      "hermeticity": {
+        "network": 0,
+        "filesystem": 0,
+        "process": 0,
+        "database": 0,
+        "sleep": 0,
+        "total": 0
+      }
     }
   },
   "tests": [
