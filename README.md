@@ -1,11 +1,19 @@
-# Pytest Test Categories Plugin
+<p align="center">
+  <img src="docs/_static/logo.svg" alt="pytest-test-categories logo" width="200">
+</p>
 
-[![PyPI version](https://img.shields.io/pypi/v/pytest-test-categories.svg)](https://pypi.org/project/pytest-test-categories/)
-[![Python versions](https://img.shields.io/pypi/pyversions/pytest-test-categories.svg)](https://pypi.org/project/pytest-test-categories/)
-[![Documentation Status](https://readthedocs.org/projects/pytest-test-categories/badge/?version=latest)](https://pytest-test-categories.readthedocs.io/en/latest/?badge=latest)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+<h1 align="center">Pytest Test Categories Plugin</h1>
 
-A pytest plugin that enforces test timing constraints, resource isolation, and validates test size distributions based on Google's "Software Engineering at Google" best practices.
+<p align="center">
+  <a href="https://pypi.org/project/pytest-test-categories/"><img src="https://img.shields.io/pypi/v/pytest-test-categories.svg" alt="PyPI version"></a>
+  <a href="https://pypi.org/project/pytest-test-categories/"><img src="https://img.shields.io/pypi/pyversions/pytest-test-categories.svg" alt="Python versions"></a>
+  <a href="https://pytest-test-categories.readthedocs.io/en/latest/?badge=latest"><img src="https://readthedocs.org/projects/pytest-test-categories/badge/?version=latest" alt="Documentation Status"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+</p>
+
+<p align="center">
+  A pytest plugin that enforces test timing constraints, resource isolation, and validates test size distributions based on Google's "Software Engineering at Google" best practices.
+</p>
 
 **[Documentation](https://pytest-test-categories.readthedocs.io)** | **[PyPI](https://pypi.org/project/pytest-test-categories/)** | **[GitHub](https://github.com/mikelane/pytest-test-categories)**
 
