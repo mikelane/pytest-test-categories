@@ -31,11 +31,12 @@ class DescribeTestSize:
         assert TestSize.XLARGE.marker_name == 'xlarge'
 
     def it_provides_descriptions(self) -> None:
-        """Test that description property returns correct values."""
-        assert TestSize.SMALL.description == 'mark test as SMALL size'
-        assert TestSize.MEDIUM.description == 'mark test as MEDIUM size'
-        assert TestSize.LARGE.description == 'mark test as LARGE size'
-        assert TestSize.XLARGE.description == 'mark test as XLARGE size'
+        """Test that description property returns informative constraint details."""
+        assert 'no network' in TestSize.SMALL.description
+        assert '<1s' in TestSize.SMALL.description
+        assert 'localhost' in TestSize.MEDIUM.description
+        assert 'full network' in TestSize.LARGE.description
+        assert 'full network' in TestSize.XLARGE.description
 
     def it_provides_labels(self) -> None:
         """Test that label property returns correct values."""

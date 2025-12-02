@@ -62,7 +62,13 @@ class TestSize(StrEnum):
     @property
     def description(self) -> str:
         """Get the description for this test size marker."""
-        return f'mark test as {self.name} size'
+        descriptions = {
+            'SMALL': 'Fast unit test (<1s, no network/filesystem/subprocess/database/sleep)',
+            'MEDIUM': 'Integration test (<5min, localhost network, filesystem allowed)',
+            'LARGE': 'System test (<15min, full network and resource access)',
+            'XLARGE': 'Extended test (<15min, full network and resource access)',
+        }
+        return descriptions.get(self.name, f'mark test as {self.name} size')
 
     @property
     def label(self) -> str:

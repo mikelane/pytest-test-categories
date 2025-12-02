@@ -74,24 +74,28 @@ class DescribeTestSizeDescriptionProperty:
     """Test TestSize description property."""
 
     def it_returns_description_for_small(self) -> None:
-        """Test description property for SMALL size."""
+        """Test description property for SMALL size includes constraint info."""
         result = TestSize.SMALL.description
-        assert result == 'mark test as SMALL size'
+        assert 'no network' in result
+        assert '<1s' in result
 
     def it_returns_description_for_medium(self) -> None:
-        """Test description property for MEDIUM size."""
+        """Test description property for MEDIUM size includes constraint info."""
         result = TestSize.MEDIUM.description
-        assert result == 'mark test as MEDIUM size'
+        assert 'localhost' in result
+        assert '<5min' in result
 
     def it_returns_description_for_large(self) -> None:
-        """Test description property for LARGE size."""
+        """Test description property for LARGE size includes constraint info."""
         result = TestSize.LARGE.description
-        assert result == 'mark test as LARGE size'
+        assert 'full network' in result
+        assert '<15min' in result
 
     def it_returns_description_for_xlarge(self) -> None:
-        """Test description property for XLARGE size."""
+        """Test description property for XLARGE size includes constraint info."""
         result = TestSize.XLARGE.description
-        assert result == 'mark test as XLARGE size'
+        assert 'full network' in result
+        assert '<15min' in result
 
 
 @pytest.mark.small
