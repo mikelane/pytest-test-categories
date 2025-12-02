@@ -6,25 +6,58 @@ authors = [{ name = "Mike Lane", email = "mikelane@gmail.com" }]
 license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.11"
+keywords = [
+    "pytest",
+    "testing",
+    "hermetic",
+    "test-pyramid",
+    "flaky-tests",
+    "test-categories",
+    "unit-testing",
+    "integration-testing",
+    "test-timing",
+    "ci-cd",
+]
 classifiers = [
+    # Development Status
     "Development Status :: 5 - Production/Stable",
-    "Framework :: Pytest",
+    # Intended Audience
     "Intended Audience :: Developers",
+    # Topic
+    "Topic :: Software Development :: Testing",
+    "Topic :: Software Development :: Testing :: Unit",
+    "Topic :: Software Development :: Quality Assurance",
+    # License
     "License :: OSI Approved :: MIT License",
+    # Framework
+    "Framework :: Pytest",
+    # Programming Language
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
-    "Topic :: Software Development :: Testing",
+    # Environment
+    "Environment :: Console",
+    "Environment :: Plugins",
+    # Operating System
+    "Operating System :: OS Independent",
+    # Typing
+    "Typing :: Typed",
 ]
-
 dependencies = [
     "beartype>=0.22.5",
     "icontract>=2.7.1",
     "pydantic>=2.12.4",
     "pytest>=8.4.2",
 ]
+
+[project.urls]
+Homepage = "https://github.com/mikelane/pytest-test-categories"
+Documentation = "https://pytest-test-categories.readthedocs.io"
+Repository = "https://github.com/mikelane/pytest-test-categories"
+Changelog = "https://github.com/mikelane/pytest-test-categories/blob/main/CHANGELOG.md"
+"Bug Tracker" = "https://github.com/mikelane/pytest-test-categories/issues"
 
 [project.entry-points.pytest11]
 test_categories = "pytest_test_categories.plugin"
