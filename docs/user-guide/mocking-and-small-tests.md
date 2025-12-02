@@ -68,7 +68,7 @@ import respx
 
 @pytest.mark.small
 @respx.mock
-def test_async_api_client():
+def test_httpx_client():
     """Hermetic test using respx for httpx."""
     respx.get("https://api.example.com/health").respond(
         json={"status": "healthy"},
