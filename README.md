@@ -7,7 +7,10 @@
 <p align="center">
   <a href="https://pypi.org/project/pytest-test-categories/"><img src="https://img.shields.io/pypi/v/pytest-test-categories.svg" alt="PyPI version"></a>
   <a href="https://pypi.org/project/pytest-test-categories/"><img src="https://img.shields.io/pypi/pyversions/pytest-test-categories.svg" alt="Python versions"></a>
+  <a href="https://github.com/mikelane/pytest-test-categories/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/mikelane/pytest-test-categories/ci.yml?branch=main&label=CI" alt="CI Status"></a>
+  <a href="https://codecov.io/gh/mikelane/pytest-test-categories"><img src="https://img.shields.io/codecov/c/github/mikelane/pytest-test-categories" alt="Code Coverage"></a>
   <a href="https://pytest-test-categories.readthedocs.io/en/latest/?badge=latest"><img src="https://readthedocs.org/projects/pytest-test-categories/badge/?version=latest" alt="Documentation Status"></a>
+  <a href="https://pepy.tech/project/pytest-test-categories"><img src="https://static.pepy.tech/badge/pytest-test-categories/month" alt="Downloads"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
 </p>
 
