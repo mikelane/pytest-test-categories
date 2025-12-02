@@ -18,10 +18,6 @@ Configuration is applied in the following order (later overrides earlier):
 | Enforcement | `test_categories_enforcement` | `--test-categories-enforcement` | `off` |
 | Distribution | `test_categories_distribution_enforcement` | `--test-categories-distribution-enforcement` | `off` |
 | Allowed Paths | `test_categories_allowed_paths` | `--test-categories-allowed-paths` | `[]` |
-| Small Time Limit | `test_categories_small_time_limit` | `--test-categories-small-time-limit` | `1.0` |
-| Medium Time Limit | `test_categories_medium_time_limit` | `--test-categories-medium-time-limit` | `300.0` |
-| Large Time Limit | `test_categories_large_time_limit` | `--test-categories-large-time-limit` | `900.0` |
-| XLarge Time Limit | `test_categories_xlarge_time_limit` | `--test-categories-xlarge-time-limit` | `900.0` |
 | Report | - | `--test-size-report` | none |
 | Report File | - | `--test-size-report-file` | none |
 
@@ -52,12 +48,6 @@ test_categories_allowed_paths = [
     "tests/fixtures/",
     "src/mypackage/data/",
 ]
-
-# Custom time limits (in seconds)
-test_categories_small_time_limit = 1.0
-test_categories_medium_time_limit = 300.0
-test_categories_large_time_limit = 900.0
-test_categories_xlarge_time_limit = 900.0
 ```
 
 ## pytest.ini
@@ -75,12 +65,6 @@ markers =
 test_categories_enforcement = warn
 test_categories_distribution_enforcement = warn
 test_categories_allowed_paths = tests/fixtures/,src/mypackage/data/
-
-; Time limits (in seconds)
-test_categories_small_time_limit = 1.0
-test_categories_medium_time_limit = 300.0
-test_categories_large_time_limit = 900.0
-test_categories_xlarge_time_limit = 900.0
 ```
 
 ## Command-Line Options
@@ -164,21 +148,6 @@ pytest --test-categories-distribution-enforcement=warn
 pytest --test-categories-distribution-enforcement=off
 ```
 
-### Time Limit Configuration
-
-Override default time limits from the command line:
-
-```bash
-# Set individual time limits (in seconds)
-pytest --test-categories-small-time-limit=2.0
-pytest --test-categories-medium-time-limit=600.0
-pytest --test-categories-large-time-limit=1800.0
-pytest --test-categories-xlarge-time-limit=1800.0
-
-# Combine with other options
-pytest --test-categories-enforcement=strict --test-categories-small-time-limit=0.5
-```
-
 ## Markers
 
 ### Size Markers
@@ -223,30 +192,18 @@ def test_with_docker():
 
 ## Time Limits
 
-Each test size has a configurable time limit:
+Test sizes have **fixed time limits** that are not configurable. This follows Google's "Software Engineering at Google" philosophy where test sizes are DEFINITIONS, not suggestions.
 
-| Size | Default Limit | ini Option | CLI Option |
-|------|---------------|------------|------------|
-| Small | 1 second | `test_categories_small_time_limit` | `--test-categories-small-time-limit` |
-| Medium | 300 seconds (5 min) | `test_categories_medium_time_limit` | `--test-categories-medium-time-limit` |
-| Large | 900 seconds (15 min) | `test_categories_large_time_limit` | `--test-categories-large-time-limit` |
-| XLarge | 900 seconds (15 min) | `test_categories_xlarge_time_limit` | `--test-categories-xlarge-time-limit` |
+| Size | Time Limit | Description |
+|------|------------|-------------|
+| Small | 1 second | Fast unit tests without external dependencies |
+| Medium | 300 seconds (5 min) | Integration tests with local services |
+| Large | 900 seconds (15 min) | Full system/E2E tests |
+| XLarge | 900 seconds (15 min) | Extended tests with same limits as large |
 
 Tests exceeding their time limit will fail with a `TimingViolationError` ([TC006](api-reference/error-messages.md#tc006-timing-violation)).
 
-**Ordering Constraint:** Time limits must satisfy: `small < medium < large <= xlarge`
-
-```toml
-# VALID: proper ordering
-test_categories_small_time_limit = 2.0
-test_categories_medium_time_limit = 600.0
-test_categories_large_time_limit = 1800.0
-test_categories_xlarge_time_limit = 1800.0
-
-# INVALID: small >= medium (will raise ValueError)
-test_categories_small_time_limit = 500.0
-test_categories_medium_time_limit = 300.0
-```
+**Philosophy:** If a test exceeds its category's time limit, the correct action is to **recategorize the test** to a larger size, not to extend the limit. This ensures that test size categories maintain their semantic meaning across all projects.
 
 ## Distribution Targets
 
@@ -318,12 +275,6 @@ test_categories_allowed_paths = [
     "src/mypackage/data/",
 ]
 
-# Plugin configuration - custom time limits (in seconds)
-test_categories_small_time_limit = 1.0
-test_categories_medium_time_limit = 300.0
-test_categories_large_time_limit = 900.0
-test_categories_xlarge_time_limit = 900.0
-
 # Default report option
 addopts = ["--test-size-report=basic"]
 ```
@@ -337,10 +288,6 @@ addopts = ["--test-size-report=basic"]
 | `test_categories_enforcement` | string | `"off"` | Resource isolation enforcement mode: `"strict"`, `"warn"`, or `"off"` |
 | `test_categories_distribution_enforcement` | string | `"off"` | Distribution validation enforcement mode: `"strict"`, `"warn"`, or `"off"` |
 | `test_categories_allowed_paths` | pathlist | `[]` | Additional paths allowed for filesystem access in small tests |
-| `test_categories_small_time_limit` | float | `1.0` | Time limit in seconds for small tests |
-| `test_categories_medium_time_limit` | float | `300.0` | Time limit in seconds for medium tests |
-| `test_categories_large_time_limit` | float | `900.0` | Time limit in seconds for large tests |
-| `test_categories_xlarge_time_limit` | float | `900.0` | Time limit in seconds for xlarge tests |
 
 ### CLI Options
 
@@ -351,15 +298,11 @@ addopts = ["--test-size-report=basic"]
 | `--test-categories-enforcement` | choice | none | Override resource isolation enforcement mode from command line |
 | `--test-categories-distribution-enforcement` | choice | none | Override distribution enforcement mode from command line |
 | `--test-categories-allowed-paths` | string | none | Comma-separated paths allowed for filesystem access (extends ini option) |
-| `--test-categories-small-time-limit` | float | none | Override small test time limit (in seconds) |
-| `--test-categories-medium-time-limit` | float | none | Override medium test time limit (in seconds) |
-| `--test-categories-large-time-limit` | float | none | Override large test time limit (in seconds) |
-| `--test-categories-xlarge-time-limit` | float | none | Override xlarge test time limit (in seconds) |
 
 ## Source Code References
 
 | Component | Location |
 |-----------|----------|
 | CLI options registration | [`plugin.py#pytest_addoption`](https://github.com/mikelane/pytest-test-categories/blob/main/src/pytest_test_categories/plugin.py) |
-| Time limit configuration | [`timing.py#TimeLimitConfig`](https://github.com/mikelane/pytest-test-categories/blob/main/src/pytest_test_categories/timing.py) |
+| Time limit definitions | [`timing.py`](https://github.com/mikelane/pytest-test-categories/blob/main/src/pytest_test_categories/timing.py) |
 | Enforcement mode handling | [`plugin.py#_get_enforcement_mode`](https://github.com/mikelane/pytest-test-categories/blob/main/src/pytest_test_categories/plugin.py) |

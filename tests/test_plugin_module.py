@@ -187,15 +187,13 @@ class DescribePytestAddoption:
         pytest_addoption(parser)
 
         parser.getgroup.assert_called_once_with('test-categories')
-        # Now adds thirteen CLI options:
+        # Now adds nine CLI options:
         # --test-size-report, --test-size-report-file,
         # --test-categories-enforcement, --test-categories-allowed-paths,
         # --test-categories-distribution-enforcement,
-        # --test-categories-small-time-limit, --test-categories-medium-time-limit,
-        # --test-categories-large-time-limit, --test-categories-xlarge-time-limit,
         # --test-categories-small-target, --test-categories-medium-target,
         # --test-categories-large-target, --test-categories-tolerance
-        assert group.addoption.call_count == 13
+        assert group.addoption.call_count == 9
         # Find the test-size-report call
         test_size_report_call = None
         for call in group.addoption.call_args_list:
