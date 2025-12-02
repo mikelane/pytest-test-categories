@@ -37,13 +37,21 @@ Mark your tests with size markers:
 import pytest
 
 @pytest.mark.small
-def test_fast_function():
-    assert some_function() == expected_result
+def test_unit():
+    """Fast, hermetic unit test - no network, no filesystem, no database."""
+    assert 1 + 1 == 2
+
+@pytest.mark.small
+def test_with_mocking(mocker):
+    """Mocked tests are still hermetic - mocks intercept before the network layer."""
+    mocker.patch("requests.get").return_value.json.return_value = {"status": "ok"}
+    # Your code that uses requests.get() works without hitting the network
 
 @pytest.mark.medium
-def test_database_integration():
-    # Test with local database
-    pass
+def test_integration(tmp_path):
+    """Integration test - can access localhost and filesystem."""
+    db_path = tmp_path / "test.db"
+    # ... test with local database
 ```
 
 Run pytest as usual:

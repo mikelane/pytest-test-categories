@@ -30,6 +30,7 @@ process-isolation
 database-isolation
 sleep-blocking
 threading-monitoring
+mocking-and-small-tests
 ```
 
 ## Quick Reference
