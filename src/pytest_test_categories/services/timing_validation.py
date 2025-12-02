@@ -1,14 +1,18 @@
 """Timing validation service for test execution.
 
 This module provides the TimingValidationService that validates test execution
-timing against configured time limits. It follows hexagonal architecture by
+timing against fixed time limits. It follows hexagonal architecture by
 depending on abstract ports rather than concrete pytest implementations.
 
 The service encapsulates the logic for:
 - Retrieving timers for test items
 - Extracting duration from timers or reports
-- Validating timing constraints
+- Validating timing constraints against fixed limits
 - Modifying test reports on timing violations
+
+Test sizes have fixed time limits that are not configurable. This follows
+Google's "Software Engineering at Google" philosophy where test sizes are
+DEFINITIONS, not suggestions.
 
 This is pure domain logic that can be tested without pytest.
 
@@ -37,14 +41,12 @@ from pytest_test_categories.types import (
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
 
-    from pytest_test_categories.timing import TimeLimitConfig
-
 
 class TimingValidationService:
     """Service for validating test timing constraints.
 
     This service encapsulates the logic for validating that tests complete
-    within their configured time limits. It works with timers and test reports
+    within their fixed time limits. It works with timers and test reports
     through abstract interfaces, making it testable without pytest dependencies.
 
     The service is stateless and thread-safe - all state is passed as parameters.
@@ -63,18 +65,21 @@ class TimingValidationService:
         self,
         test_size: TestSize,
         duration: float,
-        config: TimeLimitConfig | None = None,
     ) -> None:
-        """Validate that a test completed within its time limit.
+        """Validate that a test completed within its fixed time limit.
 
         Delegates to the timing module's validate() function to check if
-        the duration is within the configured limit for the test size.
+        the duration is within the fixed limit for the test size.
+
+        Test sizes have fixed time limits:
+        - Small: 1 second
+        - Medium: 300 seconds (5 minutes)
+        - Large: 900 seconds (15 minutes)
+        - XLarge: 900 seconds (15 minutes)
 
         Args:
             test_size: The size category of the test.
             duration: The test duration in seconds.
-            config: Optional time limit configuration. If None, uses
-                DEFAULT_TIME_LIMIT_CONFIG.
 
         Raises:
             TimingViolationError: If the test exceeded its time limit.
@@ -83,13 +88,9 @@ class TimingValidationService:
             >>> service = TimingValidationService()
             >>> service.validate_timing(TestSize.SMALL, 0.5)  # OK
             >>> service.validate_timing(TestSize.SMALL, 2.0)  # Raises TimingViolationError
-            >>> # With custom config:
-            >>> from pytest_test_categories.timing import TimeLimitConfig
-            >>> config = TimeLimitConfig(small=5.0)
-            >>> service.validate_timing(TestSize.SMALL, 3.0, config=config)  # OK with 5s limit
 
         """
-        timing.validate(test_size, duration, config=config)
+        timing.validate(test_size, duration)
 
     def get_test_duration(
         self,

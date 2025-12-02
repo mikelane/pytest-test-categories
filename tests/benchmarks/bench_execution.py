@@ -16,7 +16,6 @@ import pytest
 
 from pytest_test_categories.services.timing_validation import TimingValidationService
 from pytest_test_categories.timers import FakeTimer, WallTimer
-from pytest_test_categories.timing import DEFAULT_TIME_LIMIT_CONFIG, TimeLimitConfig
 from pytest_test_categories.types import TestSize, TestTimer, TimerState
 
 if TYPE_CHECKING:
@@ -90,10 +89,9 @@ class DescribeBenchTimingValidation:
     def it_benchmarks_timing_validation_pass(self, benchmark: BenchmarkFixture) -> None:
         """Benchmark timing validation for passing test (within limit)."""
         service = TimingValidationService()
-        config = DEFAULT_TIME_LIMIT_CONFIG
 
         def validate_timing() -> None:
-            service.validate_timing(TestSize.SMALL, 0.5, config=config)
+            service.validate_timing(TestSize.SMALL, 0.5)
 
         benchmark(validate_timing)
 
@@ -101,7 +99,6 @@ class DescribeBenchTimingValidation:
     def it_benchmarks_timing_validation_1000_tests(self, benchmark: BenchmarkFixture) -> None:
         """Benchmark timing validation for 1000 tests."""
         service = TimingValidationService()
-        config = DEFAULT_TIME_LIMIT_CONFIG
 
         test_data = [
             (TestSize.SMALL, 0.5),
@@ -114,7 +111,7 @@ class DescribeBenchTimingValidation:
             count = 0
             for i in range(1000):
                 size, duration = test_data[i % 4]
-                service.validate_timing(size, duration, config=config)
+                service.validate_timing(size, duration)
                 count += 1
             return count
 
@@ -135,17 +132,6 @@ class DescribeBenchTimingValidation:
 
         result = benchmark(extract_duration)
         assert result == 0.5
-
-    @pytest.mark.medium
-    def it_benchmarks_custom_time_limit_config(self, benchmark: BenchmarkFixture) -> None:
-        """Benchmark timing validation with custom config."""
-        service = TimingValidationService()
-        custom_config = TimeLimitConfig(small=5.0, medium=600.0, large=1800.0, xlarge=1800.0)
-
-        def validate_with_custom_config() -> None:
-            service.validate_timing(TestSize.SMALL, 4.0, config=custom_config)
-
-        benchmark(validate_with_custom_config)
 
 
 class DescribeBenchTimerCleanup:
@@ -176,7 +162,6 @@ class DescribeBenchTimerCleanup:
     def it_benchmarks_full_test_timing_workflow(self, benchmark: BenchmarkFixture) -> None:
         """Benchmark complete timing workflow for a single test."""
         service = TimingValidationService()
-        config = DEFAULT_TIME_LIMIT_CONFIG
         timers: dict[str, TestTimer] = {}
 
         def full_workflow() -> None:
@@ -188,7 +173,7 @@ class DescribeBenchTimerCleanup:
 
             duration = service.get_test_duration(timer, None)
             if duration is not None:
-                service.validate_timing(TestSize.SMALL, duration, config=config)
+                service.validate_timing(TestSize.SMALL, duration)
 
             service.cleanup_timer(timers, 'test_workflow')
 

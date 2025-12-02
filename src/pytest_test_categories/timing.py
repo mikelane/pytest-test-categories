@@ -1,17 +1,26 @@
-"""Time limit configuration and validation for test categories."""
+"""Time limit definitions and validation for test categories.
+
+Test sizes are DEFINITIONS, not configurable options. This follows Google's
+"Software Engineering at Google" philosophy where test sizes have fixed
+meanings:
+
+- Small tests (< 1s): Fast unit tests without external dependencies
+- Medium tests (< 5 min): Integration tests with local services
+- Large tests (< 15 min): Full system/E2E tests
+- XLarge tests (< 15 min): Extended tests with same limits as large
+
+If a test exceeds its category's time limit, the correct action is to
+RECATEGORIZE the test to a larger size, not extend the limit.
+"""
 
 from __future__ import annotations
 
-from typing import (
-    Annotated,
-    Self,
-)
+from typing import Annotated
 
 from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
-    model_validator,
 )
 
 from pytest_test_categories.errors import (
@@ -21,14 +30,12 @@ from pytest_test_categories.errors import (
 from pytest_test_categories.types import TestSize
 
 __all__ = [
-    'DEFAULT_TIME_LIMIT_CONFIG',
     'LARGE_LIMIT',
     'MEDIUM_LIMIT',
     'SMALL_LIMIT',
     'TIME_LIMITS',
     'XLARGE_LIMIT',
     'TimeLimit',
-    'TimeLimitConfig',
     'TimingViolationError',
     'get_limit',
     'validate',
@@ -132,98 +139,26 @@ class TimingViolationError(Exception):
 
 
 class TimeLimit(BaseModel):
-    """Configuration for a test size's time limit in seconds."""
+    """Fixed time limit for a test size category.
+
+    This is an immutable value object representing a test size's time limit.
+    Time limits are fixed definitions based on Google's test size standards,
+    not configurable options.
+    """
 
     limit: Annotated[float, Field(gt=0)]  # Time limit in seconds must be positive
 
     model_config = ConfigDict(frozen=True)
 
 
-class TimeLimitConfig(BaseModel):
-    """Configuration for time limits across all test sizes.
-
-    This model holds configurable time limits for each test size category.
-    Users can override the defaults via pyproject.toml, pytest.ini, or CLI options.
-
-    The limits must follow ordering constraints:
-    - small < medium < large <= xlarge
-
-    Default values match Google's test size definitions:
-    - Small: 1 second (fast unit tests)
-    - Medium: 300 seconds (5 minutes, integration tests)
-    - Large: 900 seconds (15 minutes, end-to-end tests)
-    - XLarge: 900 seconds (15 minutes, same as large by default)
-
-    Example:
-        >>> config = TimeLimitConfig(small=2.0, medium=600.0)
-        >>> config.get_limit(TestSize.SMALL)
-        2.0
-        >>> config.get_limit(TestSize.MEDIUM)
-        600.0
-
-    """
-
-    small: Annotated[float, Field(gt=0, description='Time limit in seconds for small tests')] = 1.0
-    medium: Annotated[float, Field(gt=0, description='Time limit in seconds for medium tests')] = 300.0
-    large: Annotated[float, Field(gt=0, description='Time limit in seconds for large tests')] = 900.0
-    xlarge: Annotated[float, Field(gt=0, description='Time limit in seconds for xlarge tests')] = 900.0
-
-    model_config = ConfigDict(frozen=True)
-
-    @model_validator(mode='after')
-    def validate_ordering(self) -> Self:
-        """Validate that time limits are properly ordered.
-
-        Ensures: small < medium < large <= xlarge
-
-        Raises:
-            ValueError: If limits are not properly ordered.
-
-        """
-        if self.small >= self.medium:
-            msg = f'small ({self.small}s) must be less than medium ({self.medium}s)'
-            raise ValueError(msg)
-        if self.medium >= self.large:
-            msg = f'medium ({self.medium}s) must be less than large ({self.large}s)'
-            raise ValueError(msg)
-        if self.large > self.xlarge:
-            msg = f'large ({self.large}s) must be less than or equal to xlarge ({self.xlarge}s)'
-            raise ValueError(msg)
-        return self
-
-    def get_limit(self, size: TestSize) -> float:
-        """Get the time limit for a test size.
-
-        Args:
-            size: The test size category.
-
-        Returns:
-            The time limit in seconds for the given test size.
-
-        Example:
-            >>> config = TimeLimitConfig()
-            >>> config.get_limit(TestSize.SMALL)
-            1.0
-
-        """
-        limits = {
-            TestSize.SMALL: self.small,
-            TestSize.MEDIUM: self.medium,
-            TestSize.LARGE: self.large,
-            TestSize.XLARGE: self.xlarge,
-        }
-        return limits[size]
-
-
-# Default configuration matching Google's test size definitions
-DEFAULT_TIME_LIMIT_CONFIG = TimeLimitConfig()
-
+# Fixed time limits matching Google's test size definitions
+# These are DEFINITIONS, not defaults that can be overridden
 SMALL_LIMIT = TimeLimit(limit=1.0)
 MEDIUM_LIMIT = TimeLimit(limit=300.0)
 LARGE_LIMIT = TimeLimit(limit=900.0)
 XLARGE_LIMIT = TimeLimit(limit=900.0)
 
-# Mapping of test sizes to their limits
+# Mapping of test sizes to their fixed limits
 TIME_LIMITS = {
     TestSize.SMALL: SMALL_LIMIT,
     TestSize.MEDIUM: MEDIUM_LIMIT,
@@ -233,11 +168,20 @@ TIME_LIMITS = {
 
 
 def get_limit(size: TestSize) -> TimeLimit:
-    """Get the time limit for a test size.
+    """Get the fixed time limit for a test size.
 
-    Note: This function uses the hardcoded TIME_LIMITS mapping and is
-    kept for backward compatibility. For configurable limits, use
-    TimeLimitConfig.get_limit() instead.
+    Args:
+        size: The test size category.
+
+    Returns:
+        The TimeLimit for the given test size.
+
+    Example:
+        >>> get_limit(TestSize.SMALL).limit
+        1.0
+        >>> get_limit(TestSize.MEDIUM).limit
+        300.0
+
     """
     return TIME_LIMITS[size]
 
@@ -245,29 +189,29 @@ def get_limit(size: TestSize) -> TimeLimit:
 def validate(
     size: TestSize,
     duration: float,
-    config: TimeLimitConfig | None = None,
     test_nodeid: str = '',
 ) -> None:
-    """Validate a test's duration against its size's limit.
+    """Validate a test's duration against its size's fixed time limit.
+
+    Test sizes have fixed time limits that are not configurable. If a test
+    exceeds its limit, the correct action is to recategorize the test to
+    a larger size, not extend the limit.
 
     Args:
         size: The test size category.
-        duration: The actual test duration.
-        config: Optional time limit configuration. If None, uses
-            DEFAULT_TIME_LIMIT_CONFIG.
+        duration: The actual test duration in seconds.
         test_nodeid: Optional pytest node ID for enhanced error messages.
 
     Raises:
         TimingViolationError: If the test exceeds its time limit.
 
     Example:
-        >>> validate(TestSize.SMALL, 0.5)  # Uses default 1s limit
-        >>> validate(TestSize.SMALL, 2.0, config=TimeLimitConfig(small=5.0))  # Uses custom 5s limit
+        >>> validate(TestSize.SMALL, 0.5)  # Passes (0.5s < 1s limit)
+        >>> validate(TestSize.SMALL, 2.0)  # Raises TimingViolationError
         >>> validate(TestSize.SMALL, 2.0, test_nodeid='tests/test_slow.py::test_compute')
 
     """
-    effective_config = config if config is not None else DEFAULT_TIME_LIMIT_CONFIG
-    limit = effective_config.get_limit(size)
+    limit = get_limit(size).limit
     if duration > limit:
         raise TimingViolationError(
             test_size=size,
