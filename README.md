@@ -55,7 +55,7 @@ Options:
 
 - **Test size categorization**: Mark tests with `@pytest.mark.small`, `@pytest.mark.medium`, `@pytest.mark.large`, or `@pytest.mark.xlarge`
 - **Resource isolation**: Block network, filesystem, database, subprocess, and sleep access in small tests
-- **Configurable time limits**: Enforce size-specific time limits with customizable thresholds
+- **Fixed time limits**: Enforce Google's standard time limits (1s/5min/15min/15min)
 - **Distribution validation**: Ensure your test suite follows the recommended 80/15/5 test pyramid
 - **JSON/XML reporting**: Export test size reports for CI integration and dashboards
 - **Base test classes**: Inherit from `SmallTest`, `MediumTest`, `LargeTest`, or `XLargeTest`
@@ -64,12 +64,14 @@ Options:
 
 ## Test Size Categories
 
-| Size | Time Limit | Network | Filesystem | Database | Subprocess | Sleep |
-|------|------------|---------|------------|----------|------------|-------|
-| Small | 1 second | Blocked | Blocked | Blocked | Blocked | Blocked |
-| Medium | 5 minutes | Localhost | Allowed | Allowed | Allowed | Allowed |
-| Large | 15 minutes | Allowed | Allowed | Allowed | Allowed | Allowed |
-| XLarge | 15 minutes | Allowed | Allowed | Allowed | Allowed | Allowed |
+| Resource | Small | Medium | Large | XLarge |
+|----------|-------|--------|-------|--------|
+| **Time Limit** | 1s | 5min | 15min | 15min |
+| **Network** | ❌ Blocked | Localhost | ✓ Allowed | ✓ Allowed |
+| **Filesystem** | ❌ Blocked | ✓ Allowed | ✓ Allowed | ✓ Allowed |
+| **Database** | ❌ Blocked | ✓ Allowed | ✓ Allowed | ✓ Allowed |
+| **Subprocess** | ❌ Blocked | ✓ Allowed | ✓ Allowed | ✓ Allowed |
+| **Sleep** | ❌ Blocked | ✓ Allowed | ✓ Allowed | ✓ Allowed |
 
 ## Installation
 
@@ -167,12 +169,6 @@ pytest
 # Enforcement modes: "strict" (fail), "warn" (warning), "off" (disabled)
 test_categories_enforcement = "strict"
 test_categories_distribution_enforcement = "warn"
-
-# Custom time limits (in seconds)
-test_categories_small_time_limit = "1.0"
-test_categories_medium_time_limit = "300.0"
-test_categories_large_time_limit = "900.0"
-test_categories_xlarge_time_limit = "900.0"
 ```
 
 ### Command-Line Options
@@ -184,18 +180,14 @@ CLI options override `pyproject.toml` settings:
 pytest --test-categories-enforcement=strict
 pytest --test-categories-distribution-enforcement=warn
 
-# Custom time limits
-pytest --test-categories-small-time-limit=2.0
-pytest --test-categories-medium-time-limit=600.0
-pytest --test-categories-large-time-limit=1800.0
-pytest --test-categories-xlarge-time-limit=1800.0
-
 # Reporting
 pytest --test-size-report=basic      # Summary report
 pytest --test-size-report=detailed   # Per-test details
 pytest --test-size-report=json       # JSON output
 pytest --test-size-report=json --test-size-report-file=report.json
 ```
+
+**Note:** Time limits are fixed per Google's testing standards and cannot be customized. This ensures consistent test categorization across all projects.
 
 ## Enforcement Modes
 
