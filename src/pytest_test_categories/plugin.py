@@ -27,7 +27,6 @@ that are easy to understand and maintain.
 
 from __future__ import annotations
 
-import tempfile
 from collections import defaultdict
 from contextlib import ExitStack
 from importlib.metadata import version
@@ -109,9 +108,8 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     """Add plugin-specific command-line options.
 
     This hook registers the --test-size-report option that controls
-    whether and how test size reports are generated, the
-    --test-categories-enforcement option for resource blocking control,
-    and the --test-categories-allowed-paths option for filesystem access.
+    whether and how test size reports are generated and the
+    --test-categories-enforcement option for resource blocking control.
 
     Args:
         parser: The pytest command-line option parser.
@@ -140,23 +138,10 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         choices=['off', 'warn', 'strict'],
         help='Set enforcement mode for test hermeticity (off, warn, strict). Overrides ini option.',
     )
-    group.addoption(
-        '--test-categories-allowed-paths',
-        action='store',
-        default=None,
-        help='Comma-separated paths allowed for filesystem access in small tests. Extends ini option.',
-    )
-
     parser.addini(
         'test_categories_enforcement',
         help='Enforcement mode for test hermeticity: off (default), warn, or strict',
         default='off',
-    )
-    parser.addini(
-        'test_categories_allowed_paths',
-        type='pathlist',
-        help='Paths allowed for filesystem access in small tests (extends default temp paths)',
-        default=[],
     )
 
     # Distribution enforcement options
@@ -418,11 +403,10 @@ def pytest_runtest_call(item: pytest.Item) -> Generator[None, None, None]:  # no
 
         # Filesystem and process blocking only applies to small tests
         if test_size == TestSize.SMALL:
-            # Activate filesystem blocker
+            # Activate filesystem blocker - blocks ALL filesystem access (no exceptions)
             filesystem_blocker = _get_filesystem_blocker(item.config)
             filesystem_blocker.current_test_nodeid = item.nodeid
-            allowed_paths = _get_allowed_paths(item)
-            filesystem_blocker.activate(test_size, enforcement_mode, allowed_paths)
+            filesystem_blocker.activate(test_size, enforcement_mode, frozenset())
             stack.callback(_safe_deactivate_filesystem, filesystem_blocker)
 
             # Activate process blocker
@@ -1046,51 +1030,6 @@ def _safe_deactivate_external_systems(detector: ExternalSystemsDetector) -> None
     """
     if detector.state.value == 'active':
         detector.deactivate()
-
-
-def _get_allowed_paths(item: pytest.Item) -> frozenset[Path]:
-    """Get the set of allowed filesystem paths for a test item.
-
-    This function computes the allowed paths from:
-    1. System temp directory (always allowed)
-    2. pytest's basetemp directory (where tmp_path is created)
-    3. User-configured paths from ini file
-    4. User-configured paths from CLI option
-
-    Args:
-        item: The test item being executed.
-
-    Returns:
-        A frozenset of Path objects that are allowed for filesystem access.
-
-    """
-    config = item.config
-    allowed: set[Path] = set()
-
-    # System temp directory is always allowed
-    allowed.add(Path(tempfile.gettempdir()).resolve())
-
-    # pytest's basetemp (where tmp_path fixture creates directories)
-    basetemp = config.getoption('basetemp', default=None)
-    if basetemp:
-        allowed.add(Path(basetemp).resolve())
-
-    # User-configured allowed paths from ini file (pathlist type)
-    ini_paths = config.getini('test_categories_allowed_paths')
-    if ini_paths:
-        for ini_path in ini_paths:
-            # ini pathlist returns Path objects, resolve them
-            allowed.add(Path(ini_path).resolve())
-
-    # User-configured allowed paths from CLI (comma-separated string)
-    cli_paths = config.getoption('--test-categories-allowed-paths', default=None)
-    if cli_paths:
-        for path_str in cli_paths.split(','):
-            stripped_path = path_str.strip()
-            if stripped_path:
-                allowed.add(Path(stripped_path).expanduser().resolve())
-
-    return frozenset(allowed)
 
 
 def _write_json_report(

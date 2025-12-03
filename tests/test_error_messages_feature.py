@@ -242,7 +242,8 @@ class DescribeFilesystemAccessViolationError:
 
         message = str(exc)
 
-        assert 'tmp_path' in message
+        # Remediation suggests pyfakefs and io.StringIO (not tmp_path which is now blocked)
+        assert 'pyfakefs' in message
         assert '@pytest.mark.medium' in message
 
     def it_includes_documentation_link(self) -> None:

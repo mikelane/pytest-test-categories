@@ -17,7 +17,6 @@ Configuration is applied in the following order (later overrides earlier):
 |----------|------------|------------|---------|
 | Enforcement | `test_categories_enforcement` | `--test-categories-enforcement` | `off` |
 | Distribution | `test_categories_distribution_enforcement` | `--test-categories-distribution-enforcement` | `off` |
-| Allowed Paths | `test_categories_allowed_paths` | `--test-categories-allowed-paths` | `[]` |
 | Report | - | `--test-size-report` | none |
 | Report File | - | `--test-size-report-file` | none |
 
@@ -42,12 +41,6 @@ test_categories_enforcement = "warn"
 # Distribution enforcement (test pyramid validation)
 # Options: "strict", "warn", "off"
 test_categories_distribution_enforcement = "warn"
-
-# Additional allowed paths for filesystem access in small tests
-test_categories_allowed_paths = [
-    "tests/fixtures/",
-    "src/mypackage/data/",
-]
 ```
 
 ## pytest.ini
@@ -64,7 +57,6 @@ markers =
 
 test_categories_enforcement = warn
 test_categories_distribution_enforcement = warn
-test_categories_allowed_paths = tests/fixtures/,src/mypackage/data/
 ```
 
 ## Command-Line Options
@@ -117,21 +109,6 @@ pytest --test-categories-enforcement=off
 | `off` | No enforcement, violations not detected |
 | `warn` | Violations emit pytest warnings, tests continue |
 | `strict` | Violations raise exceptions, tests fail |
-
-### Allowed Filesystem Paths
-
-Add additional allowed paths for filesystem access in small tests:
-
-```bash
-# Single path
-pytest --test-categories-allowed-paths=tests/fixtures/
-
-# Multiple paths (comma-separated)
-pytest --test-categories-allowed-paths=tests/fixtures/,src/mypackage/data/
-
-# Home directory expansion works
-pytest --test-categories-allowed-paths=~/test-data/
-```
 
 ### Distribution Enforcement
 
@@ -237,14 +214,6 @@ If no configuration is provided:
 - Time limits are enforced during test execution
 - Unmarked tests trigger a warning but are allowed to run
 
-### Default Allowed Filesystem Paths
-
-Even without configuration, small tests can access these paths:
-
-1. **System temp directory**: `tempfile.gettempdir()` and subdirectories
-2. **pytest basetemp**: Where `tmp_path` fixture creates directories
-3. **Test-specific tmp_path**: Automatically allowed when using the fixture
-
 ## Example Complete Configuration
 
 ```toml
@@ -269,12 +238,6 @@ markers = [
 test_categories_enforcement = "warn"
 test_categories_distribution_enforcement = "warn"
 
-# Plugin configuration - allowed paths
-test_categories_allowed_paths = [
-    "tests/fixtures/",
-    "src/mypackage/data/",
-]
-
 # Default report option
 addopts = ["--test-size-report=basic"]
 ```
@@ -287,7 +250,6 @@ addopts = ["--test-size-report=basic"]
 |--------|------|---------|-------------|
 | `test_categories_enforcement` | string | `"off"` | Resource isolation enforcement mode: `"strict"`, `"warn"`, or `"off"` |
 | `test_categories_distribution_enforcement` | string | `"off"` | Distribution validation enforcement mode: `"strict"`, `"warn"`, or `"off"` |
-| `test_categories_allowed_paths` | pathlist | `[]` | Additional paths allowed for filesystem access in small tests |
 
 ### CLI Options
 
@@ -297,7 +259,6 @@ addopts = ["--test-size-report=basic"]
 | `--test-size-report-file` | path | none | Output file path for JSON report (requires `--test-size-report=json`) |
 | `--test-categories-enforcement` | choice | none | Override resource isolation enforcement mode from command line |
 | `--test-categories-distribution-enforcement` | choice | none | Override distribution enforcement mode from command line |
-| `--test-categories-allowed-paths` | string | none | Comma-separated paths allowed for filesystem access (extends ini option) |
 
 ## Source Code References
 

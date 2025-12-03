@@ -228,9 +228,9 @@ class FilesystemAccessViolationError(HermeticityViolationError):
 
         if test_size == TestSize.SMALL:
             suggestions = [
-                "Use pytest's tmp_path fixture for temporary files",
-                'Mock file operations using pytest-mock (mocker fixture) or pyfakefs',
+                'Use pyfakefs for comprehensive filesystem mocking (pip install pyfakefs)',
                 'Use io.StringIO or io.BytesIO for in-memory file-like objects',
+                'Mock file operations using pytest-mock (mocker.patch("builtins.open", ...))',
             ]
             if operation in (FsOp.READ, FsOp.STAT):
                 suggestions.append('Embed test data as Python constants or use importlib.resources')

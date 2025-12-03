@@ -46,7 +46,6 @@ from typing import (
 
 from pydantic import Field
 
-from pytest_test_categories.adapters.fake_filesystem import is_path_under_allowed
 from pytest_test_categories.exceptions import FilesystemAccessViolationError
 from pytest_test_categories.ports.filesystem import (
     FilesystemBlockerPort,
@@ -182,8 +181,11 @@ class FilesystemPatchingBlocker(FilesystemBlockerPort):
         """Check if filesystem access to path is allowed by test size rules.
 
         Rules applied:
-        - SMALL: Block all filesystem access (except allowed paths)
+        - SMALL: Block ALL filesystem access (no exceptions, no escape hatches)
         - MEDIUM/LARGE/XLARGE: Allow all filesystem access
+
+        Small tests must be pure - no I/O of any kind. If a test needs filesystem
+        access, it should use @pytest.mark.medium or mock with pyfakefs/io.StringIO.
 
         Args:
             path: The target path (resolved to absolute).
@@ -193,10 +195,8 @@ class FilesystemPatchingBlocker(FilesystemBlockerPort):
             True if the access is allowed, False if it should be blocked.
 
         """
-        if self.current_test_size == TestSize.SMALL:
-            return is_path_under_allowed(path, self.current_allowed_paths)
-
-        return True
+        # BREAKING: No paths are allowed for small tests - strict hermeticity
+        return self.current_test_size != TestSize.SMALL
 
     def _do_on_violation(
         self,
