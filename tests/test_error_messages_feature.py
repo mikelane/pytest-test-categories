@@ -109,7 +109,7 @@ class DescribeFormatErrorMessage:
         assert error_code.why_it_matters in message
 
     def it_includes_remediation_section(self) -> None:
-        """Verify formatted messages include numbered remediation steps."""
+        """Verify formatted messages include bullet-point remediation options."""
         error_code = ERROR_CODES['network_violation']
 
         message = format_error_message(
@@ -118,10 +118,9 @@ class DescribeFormatErrorMessage:
             remediation=['Mock the network call', 'Use dependency injection'],
         )
 
-        assert '1.' in message
-        assert '2.' in message
-        assert 'Mock the network call' in message
-        assert 'Use dependency injection' in message
+        assert 'To fix this (choose one):' in message
+        assert '\u2022 Mock the network call' in message
+        assert '\u2022 Use dependency injection' in message
 
     def it_includes_documentation_link(self) -> None:
         """Verify formatted messages include documentation link."""

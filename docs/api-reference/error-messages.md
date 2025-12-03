@@ -47,10 +47,10 @@ Why it matters:
   introduce non-determinism, external dependencies, and can cause flaky tests
   due to network latency or failures.
 
-To fix this:
-  1. Mock the network call using responses, httpretty, or respx
-  2. Use dependency injection to provide a fake HTTP client
-  3. Change test category to @pytest.mark.medium (if network access is required)
+To fix this (choose one):
+  • Mock the network call using responses, httpretty, or respx
+  • Use dependency injection to provide a fake HTTP client
+  • Change test category to @pytest.mark.medium (if network access is required)
 
 See: https://pytest-test-categories.readthedocs.io/en/latest/errors/network-isolation.html
 ======================================================================
@@ -88,12 +88,12 @@ Why it matters:
   introduces I/O overhead, potential race conditions, and dependencies on
   the test environment state.
 
-To fix this:
-  1. Use pytest's tmp_path fixture for temporary files
-  2. Mock file operations using pytest-mock (mocker fixture) or pyfakefs
-  3. Use io.StringIO or io.BytesIO for in-memory file-like objects
-  4. Embed test data as Python constants or use importlib.resources
-  5. Change test category to @pytest.mark.medium (if filesystem access is required)
+To fix this (choose one):
+  • Use pytest's tmp_path fixture for temporary files
+  • Mock file operations using pytest-mock (mocker fixture) or pyfakefs
+  • Use io.StringIO or io.BytesIO for in-memory file-like objects
+  • Embed test data as Python constants or use importlib.resources
+  • Change test category to @pytest.mark.medium (if filesystem access is required)
 
 See: https://pytest-test-categories.readthedocs.io/en/latest/errors/filesystem-isolation.html
 ======================================================================
@@ -138,11 +138,11 @@ Why it matters:
   Subprocess spawning introduces non-determinism from external process behavior,
   I/O overhead from process creation, and timing variability that causes flaky tests.
 
-To fix this:
-  1. Mock subprocess.run using pytest-mock (mocker.patch)
-  2. Use dependency injection to provide a fake command executor
-  3. Test the logic that prepares subprocess arguments, not the spawn itself
-  4. Change test category to @pytest.mark.medium (if subprocess is required)
+To fix this (choose one):
+  • Mock subprocess.run using pytest-mock (mocker.patch)
+  • Use dependency injection to provide a fake command executor
+  • Test the logic that prepares subprocess arguments, not the spawn itself
+  • Change test category to @pytest.mark.medium (if subprocess is required)
 
 See: https://pytest-test-categories.readthedocs.io/en/latest/errors/process-isolation.html
 ======================================================================
@@ -188,12 +188,12 @@ Why it matters:
   Database connections introduce I/O operations, external state dependencies,
   and additional complexity that can cause non-deterministic behavior.
 
-To fix this:
-  1. Mock sqlite3.connect using pytest-mock (mocker.patch)
-  2. Use dependency injection to provide a fake database/repository
-  3. Use in-memory data structures (dict, list) for test data
-  4. Test business logic separately from database operations
-  5. Change test category to @pytest.mark.medium (if database access is required)
+To fix this (choose one):
+  • Mock sqlite3.connect using pytest-mock (mocker.patch)
+  • Use dependency injection to provide a fake database/repository
+  • Use in-memory data structures (dict, list) for test data
+  • Test business logic separately from database operations
+  • Change test category to @pytest.mark.medium (if database access is required)
 
 See: https://pytest-test-categories.readthedocs.io/en/latest/errors/database-isolation.html
 ======================================================================
@@ -240,12 +240,12 @@ Why it matters:
   timing assumptions, or polling patterns that should use condition-based
   waiting instead.
 
-To fix this:
-  1. Use proper synchronization instead of sleep (e.g., threading.Event)
-  2. Use condition-based waiting with polling and timeout
-  3. Mock time.sleep using pytest-mock (mocker.patch)
-  4. Use a FakeTimer or controllable time abstraction
-  5. Change test category to @pytest.mark.medium (if timing is required)
+To fix this (choose one):
+  • Use proper synchronization instead of sleep (e.g., threading.Event)
+  • Use condition-based waiting with polling and timeout
+  • Mock time.sleep using pytest-mock (mocker.patch)
+  • Use a FakeTimer or controllable time abstraction
+  • Change test category to @pytest.mark.medium (if timing is required)
 
 See: https://pytest-test-categories.readthedocs.io/en/latest/errors/sleep-blocking.html
 ======================================================================
@@ -291,11 +291,11 @@ Why it matters:
   indicates the test is doing too much work for its category, may have performance
   issues, or should be recategorized to a larger size.
 
-To fix this:
-  1. Optimize the test to run faster (reduce setup, use fixtures)
-  2. Mock slow dependencies (network, filesystem, database)
-  3. Split the test into smaller, focused tests
-  4. Change test category to @pytest.mark.medium (if more time is genuinely needed)
+To fix this (choose one):
+  • Optimize the test to run faster (reduce setup, use fixtures)
+  • Mock slow dependencies (network, filesystem, database)
+  • Split the test into smaller, focused tests
+  • Change test category to @pytest.mark.medium (if more time is genuinely needed)
 
 See: https://pytest-test-categories.readthedocs.io/en/latest/errors/timing-limits.html
 ======================================================================
