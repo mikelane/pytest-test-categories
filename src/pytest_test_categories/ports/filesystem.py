@@ -60,15 +60,14 @@ class FilesystemOperation(StrEnum):
     """Categories of filesystem operations for access control.
 
     Different test sizes may allow different operation types:
-    - SMALL: No operations allowed (except on allowed paths)
+    - SMALL: No operations allowed (strict hermeticity - no escape hatches)
     - MEDIUM: All operations allowed
     - LARGE/XLARGE: All operations allowed
 
-    Note: STAT operations (exists(), is_file(), etc.) are treated the same
-    as other operations - they are blocked on non-allowed paths and permitted
-    on allowed paths. There is no special exemption for read-only metadata
-    operations, as they still create dependencies on external filesystem state
-    and violate hermeticity.
+    Note: ALL filesystem operations are blocked for small tests, including
+    STAT operations (exists(), is_file(), etc.). There is no special exemption
+    for read-only metadata operations, as they still create dependencies on
+    external filesystem state and violate hermeticity.
 
     Attributes:
         READ: Reading file contents (open() for reading, Path.read_text(), etc.)
@@ -76,7 +75,7 @@ class FilesystemOperation(StrEnum):
         DELETE: Deleting files/directories (os.remove(), Path.unlink(), shutil.rmtree())
         CREATE: Creating files/directories (mkdir(), touch(), open() with 'x' mode)
         MODIFY: Modifying file metadata (chmod(), chown(), rename())
-        STAT: Reading file metadata (stat(), exists(), is_file() - blocked on non-allowed paths)
+        STAT: Reading file metadata (stat(), exists(), is_file() - blocked for small tests)
         LIST: Listing directory contents (listdir(), scandir(), iterdir())
 
     """
@@ -185,22 +184,22 @@ class FilesystemBlockerPort(BaseModel, ABC):
         Args:
             test_size: The size category of the current test. Determines
                 what filesystem access is allowed:
-                - SMALL: Block all filesystem access (except allowed paths)
+                - SMALL: Block ALL filesystem access (no escape hatches)
                 - MEDIUM/LARGE/XLARGE: Allow all filesystem access
             enforcement_mode: How to handle violations:
                 - STRICT: Raise HermeticityViolationError
                 - WARN: Emit warning, allow operation
                 - OFF: No enforcement
-            allowed_paths: Paths that are always allowed (e.g., tmp_path).
-                Tests can access these paths even when blocking is active.
+            allowed_paths: Legacy parameter retained for API compatibility.
+                This parameter is ignored for small tests (all paths blocked).
+                For medium/large/xlarge tests, all paths are allowed anyway.
 
         Raises:
             icontract.ViolationError: If blocker is not in INACTIVE state.
 
         Example:
-            >>> allowed = frozenset([Path('/tmp/pytest-of-user')])
-            >>> blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, allowed)
-            >>> # Now any file operations will be intercepted
+            >>> blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, frozenset())
+            >>> # Now any file operations will be blocked for small tests
 
         """
         self._do_activate(test_size, enforcement_mode, allowed_paths)
@@ -282,11 +281,9 @@ class FilesystemBlockerPort(BaseModel, ABC):
         Example:
             >>> blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, frozenset())
             >>> blocker.check_access_allowed(Path('/etc/passwd'), FilesystemOperation.READ)
-            False  # Small tests cannot access filesystem (no allowed paths)
-            >>> allowed = frozenset([Path('/tmp').resolve()])
-            >>> blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, allowed)
+            False  # Small tests cannot access ANY filesystem path
             >>> blocker.check_access_allowed(Path('/tmp/test.txt'), FilesystemOperation.WRITE)
-            True   # /tmp is in allowed paths
+            False  # Even /tmp is blocked - no escape hatches for small tests
 
         """
         return self._do_check_access_allowed(path, operation)

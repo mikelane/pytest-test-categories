@@ -107,7 +107,7 @@ class FakeFilesystemBlocker(FilesystemBlockerPort):
         """Check if filesystem access is allowed and record the attempt.
 
         Returns whether access would be allowed based on the test size:
-        - SMALL: Block all filesystem access (except allowed paths)
+        - SMALL: Block ALL filesystem access (no escape hatches)
         - MEDIUM/LARGE/XLARGE: Allow all filesystem access
 
         Args:

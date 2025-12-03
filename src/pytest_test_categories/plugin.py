@@ -351,7 +351,7 @@ def pytest_runtest_call(item: pytest.Item) -> Generator[None, None, None]:  # no
     - Large/XLarge tests: Full network access (ALLOW_ALL)
 
     Filesystem and process isolation (small tests only):
-    - Small tests: Filesystem access blocked (except allowed paths)
+    - Small tests: Filesystem access blocked (no escape hatches)
     - Small tests: Subprocess spawning blocked
     - Small tests: Database connections blocked
     - Small tests: Thread creation warnings emitted

@@ -182,7 +182,7 @@ class FilesystemAccessViolationError(HermeticityViolationError):
 
     This exception is raised when a test attempts filesystem access
     that violates its size category's restrictions:
-    - Small tests: No filesystem access (except allowed paths)
+    - Small tests: No filesystem access (strict hermeticity - no escape hatches)
     - Medium/Large/XLarge: All filesystem access allowed
 
     Attributes:
