@@ -188,7 +188,7 @@ def format_error_message(
     2. Test context (nodeid, size) if provided
     3. What happened (specific violation details)
     4. Why it matters (explanation from error code)
-    5. How to fix (numbered remediation steps)
+    5. How to fix (bullet-point remediation options)
     6. Documentation link
 
     Args:
@@ -245,9 +245,8 @@ def format_error_message(
     )
 
     # How to fix
-    lines.append('To fix this:')
-    for i, step in enumerate(remediation, 1):
-        lines.append(f'  {i}. {step}')
+    lines.append('To fix this (choose one):')
+    lines.extend(f'  \u2022 {step}' for step in remediation)
     lines.append('')
 
     # Documentation link
