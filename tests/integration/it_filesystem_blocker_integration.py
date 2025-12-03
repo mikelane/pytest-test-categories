@@ -63,8 +63,12 @@ class DescribeFilesystemPatchingBlockerIntegration:
         finally:
             blocker.reset()
 
-    def it_allows_access_to_allowed_paths_for_small_test(self, tmp_path: Path) -> None:
-        """Verify small tests can access files in allowed paths."""
+    def it_blocks_all_access_for_small_test_even_with_allowed_paths(self, tmp_path: Path) -> None:
+        """Verify small tests cannot access files even with allowed_paths set.
+
+        Note: This is a BREAKING change - allowed_paths is now ignored for small tests.
+        Small tests must be completely hermetic with no escape hatches.
+        """
         blocker = FilesystemPatchingBlocker()
         allowed_dir = tmp_path / 'allowed'
         allowed_dir.mkdir(parents=True, exist_ok=True)
@@ -75,32 +79,9 @@ class DescribeFilesystemPatchingBlockerIntegration:
         try:
             blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, allowed_paths)
 
-            with open(test_file, 'w') as f:  # noqa: PTH123
-                f.write('test content')
-
-            with open(test_file) as f:  # noqa: PTH123
-                content = f.read()
-
-            assert content == 'test content'
-
-        finally:
-            blocker.reset()
-
-    def it_blocks_access_outside_allowed_paths_for_small_test(self, tmp_path: Path) -> None:
-        """Verify small tests cannot access files outside allowed paths."""
-        blocker = FilesystemPatchingBlocker()
-        allowed_dir = tmp_path / 'allowed'
-        allowed_dir.mkdir(parents=True, exist_ok=True)
-        outside_file = tmp_path / 'outside' / 'test.txt'
-        outside_file.parent.mkdir(parents=True, exist_ok=True)
-
-        allowed_paths = frozenset([allowed_dir.resolve()])
-
-        try:
-            blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, allowed_paths)
-
+            # Even paths in allowed_paths are blocked for small tests
             with pytest.raises(FilesystemAccessViolationError):
-                open(outside_file, 'w')  # noqa: SIM115, PTH123
+                open(test_file, 'w')  # noqa: SIM115, PTH123
 
         finally:
             blocker.reset()
@@ -289,17 +270,15 @@ class DescribeFilesystemPatchingBlockerEdgeCases:
         with open(test_file, 'w') as f:  # noqa: PTH123
             f.write('after reset')
 
-    def it_preserves_open_functionality_for_allowed_paths(self, tmp_path: Path) -> None:
-        """Verify open() functionality is preserved when access is allowed."""
+    def it_preserves_open_functionality_for_medium_tests(self, tmp_path: Path) -> None:
+        """Verify open() functionality is preserved for medium tests."""
         blocker = FilesystemPatchingBlocker()
-        allowed_dir = tmp_path / 'preserved_functionality'
-        allowed_dir.mkdir(parents=True, exist_ok=True)
-        test_file = allowed_dir / 'test.txt'
-
-        allowed_paths = frozenset([allowed_dir.resolve()])
+        test_dir = tmp_path / 'preserved_functionality'
+        test_dir.mkdir(parents=True, exist_ok=True)
+        test_file = test_dir / 'test.txt'
 
         try:
-            blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, allowed_paths)
+            blocker.activate(TestSize.MEDIUM, EnforcementMode.STRICT, frozenset())
 
             with open(test_file, 'w', encoding='utf-8', newline='\n') as f:  # noqa: PTH123
                 f.write('line1\n')
@@ -513,8 +492,8 @@ class DescribePathBlocking:
         finally:
             blocker.reset()
 
-    def it_allows_pathlib_on_allowed_paths_for_small_tests(self, tmp_path: Path) -> None:
-        """Verify pathlib operations are allowed on allowed paths for small tests."""
+    def it_blocks_pathlib_even_on_allowed_paths_for_small_tests(self, tmp_path: Path) -> None:
+        """Verify pathlib operations are blocked on all paths for small tests (no escape hatches)."""
         blocker = FilesystemPatchingBlocker()
         allowed_dir = tmp_path / 'allowed_pathlib'
         allowed_dir.mkdir(parents=True, exist_ok=True)
@@ -525,10 +504,9 @@ class DescribePathBlocking:
         try:
             blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, allowed_paths)
 
-            Path(test_file).write_text('allowed content')
-            content = Path(test_file).read_text()
-
-            assert content == 'allowed content'
+            # Even paths in allowed_paths are blocked for small tests
+            with pytest.raises(FilesystemAccessViolationError):
+                Path(test_file).write_text('blocked content')
 
         finally:
             blocker.reset()
@@ -650,8 +628,8 @@ class DescribeShutilBlocking:
         finally:
             blocker.reset()
 
-    def it_allows_shutil_on_allowed_paths_for_small_tests(self, tmp_path: Path) -> None:
-        """Verify shutil operations are allowed on allowed paths for small tests."""
+    def it_blocks_shutil_even_on_allowed_paths_for_small_tests(self, tmp_path: Path) -> None:
+        """Verify shutil operations are blocked on all paths for small tests (no escape hatches)."""
         blocker = FilesystemPatchingBlocker()
         allowed_dir = tmp_path / 'allowed_shutil'
         allowed_dir.mkdir(parents=True, exist_ok=True)
@@ -664,9 +642,9 @@ class DescribeShutilBlocking:
         try:
             blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, allowed_paths)
 
-            shutil.copy(source, dest)
-
-            assert dest.read_text() == 'source content'
+            # Even paths in allowed_paths are blocked for small tests
+            with pytest.raises(FilesystemAccessViolationError):
+                shutil.copy(source, dest)
 
         finally:
             blocker.reset()
@@ -825,8 +803,8 @@ class DescribeOsModuleBlocking:
         finally:
             blocker.reset()
 
-    def it_allows_os_operations_on_allowed_paths_for_small_tests(self, tmp_path: Path) -> None:
-        """Verify os operations are allowed on allowed paths for small tests."""
+    def it_blocks_os_operations_even_on_allowed_paths_for_small_tests(self, tmp_path: Path) -> None:
+        """Verify os operations are blocked on all paths for small tests (no escape hatches)."""
         blocker = FilesystemPatchingBlocker()
         allowed_dir = tmp_path / 'allowed_os'
         allowed_dir.mkdir(parents=True, exist_ok=True)
@@ -837,9 +815,9 @@ class DescribeOsModuleBlocking:
         try:
             blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, allowed_paths)
 
-            os.mkdir(test_dir)  # noqa: PTH102
-
-            assert test_dir.exists()
+            # Even paths in allowed_paths are blocked for small tests
+            with pytest.raises(FilesystemAccessViolationError):
+                os.mkdir(test_dir)  # noqa: PTH102
 
         finally:
             blocker.reset()
@@ -860,8 +838,8 @@ class DescribeOsModuleBlocking:
         finally:
             blocker.reset()
 
-    def it_allows_os_rename_on_allowed_paths_for_small_tests(self, tmp_path: Path) -> None:
-        """Verify os.rename() is allowed on allowed paths for small tests."""
+    def it_blocks_os_rename_even_on_allowed_paths_for_small_tests(self, tmp_path: Path) -> None:
+        """Verify os.rename() is blocked on all paths for small tests (no escape hatches)."""
         blocker = FilesystemPatchingBlocker()
         allowed_dir = tmp_path / 'allowed_rename'
         allowed_dir.mkdir(parents=True, exist_ok=True)
@@ -874,11 +852,9 @@ class DescribeOsModuleBlocking:
         try:
             blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, allowed_paths)
 
-            os.rename(source, dest)  # noqa: PTH104
-
-            assert dest.exists()
-            assert not source.exists()
-            assert dest.read_text() == 'rename me'
+            # Even paths in allowed_paths are blocked for small tests
+            with pytest.raises(FilesystemAccessViolationError):
+                os.rename(source, dest)  # noqa: PTH104
 
         finally:
             blocker.reset()

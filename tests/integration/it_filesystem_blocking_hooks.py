@@ -1,10 +1,9 @@
 """Integration tests for filesystem blocking pytest hooks.
 
 These tests verify that filesystem blocking is properly integrated with pytest hooks:
-- pytest_configure registers the allowed_paths ini option
-- pytest_addoption adds CLI override for allowed paths
 - pytest_runtest_call activates blocking for small tests
-- tmp_path fixture is automatically allowed
+- ALL filesystem operations are blocked for small tests (no exceptions)
+- Medium/large/xlarge tests are not blocked
 
 All tests use @pytest.mark.medium since they involve real pytest infrastructure.
 """
@@ -12,40 +11,6 @@ All tests use @pytest.mark.medium since they involve real pytest infrastructure.
 from __future__ import annotations
 
 import pytest
-
-
-@pytest.mark.medium
-class DescribeFilesystemBlockingConfiguration:
-    """Integration tests for filesystem blocking configuration phase."""
-
-    def it_provides_allowed_paths_cli_option(self, pytester: pytest.Pytester) -> None:
-        """Verify plugin provides --test-categories-allowed-paths CLI option."""
-        result = pytester.runpytest('--help')
-
-        stdout = result.stdout.str()
-        assert '--test-categories-allowed-paths' in stdout
-
-    def it_registers_allowed_paths_ini_option(self, pytester: pytest.Pytester) -> None:
-        """Verify plugin registers the test_categories_allowed_paths ini option."""
-        pytester.makeini("""
-            [pytest]
-            test_categories_allowed_paths = /tmp/test
-        """)
-        pytester.makepyfile(
-            test_example="""
-            import pytest
-
-            @pytest.mark.small
-            def test_small():
-                assert True
-            """
-        )
-
-        result = pytester.runpytest('-v')
-
-        # Should not error on unknown ini option
-        assert 'INTERNALERROR' not in result.stdout.str()
-        assert 'unrecognized configuration option' not in result.stderr.str()
 
 
 @pytest.mark.medium
@@ -76,8 +41,14 @@ class DescribeFilesystemBlockingForSmallTests:
         assert 'FilesystemAccessViolationError' in stdout or 'HermeticityViolationError' in stdout
         result.assert_outcomes(failed=1)
 
-    def it_allows_tmp_path_for_small_tests(self, pytester: pytest.Pytester) -> None:
-        """Verify small tests can use pytest's tmp_path fixture."""
+    def it_blocks_tmp_path_for_small_tests(self, pytester: pytest.Pytester) -> None:
+        """Verify small tests cannot use pytest's tmp_path fixture (strict hermeticity).
+
+        This is a BREAKING change from previous versions. Small tests must now be
+        completely hermetic - no filesystem access at all, including tmp_path.
+        Tests that need filesystem access should use @pytest.mark.medium or mock
+        with pyfakefs/io.StringIO.
+        """
         pytester.makeini("""
             [pytest]
             test_categories_enforcement = strict
@@ -89,80 +60,18 @@ class DescribeFilesystemBlockingForSmallTests:
 
             @pytest.mark.small
             def test_small_with_tmp_path(tmp_path: Path):
-                # tmp_path should be allowed
+                # tmp_path is now blocked for small tests
                 test_file = tmp_path / 'test.txt'
-                test_file.write_text('hello')
-                assert test_file.read_text() == 'hello'
+                test_file.write_text('hello')  # Should fail
             """
         )
 
         result = pytester.runpytest('-v')
 
-        # Test should pass - tmp_path is automatically allowed
-        result.assert_outcomes(passed=1)
-
-    def it_allows_configured_paths_from_ini(self, pytester: pytest.Pytester) -> None:
-        """Verify small tests can access paths configured in ini file."""
-        # Create a temp file to use as allowed path
-        test_dir = pytester.mkdir('allowed_dir')
-        test_file = test_dir / 'data.txt'
-        test_file.write_text('test data')
-
-        # Escape backslashes for Windows compatibility in string literals
-        escaped_path = str(test_file).replace('\\', '\\\\')
-
-        pytester.makeini(f"""
-            [pytest]
-            test_categories_enforcement = strict
-            test_categories_allowed_paths = {test_dir}
-        """)
-        pytester.makepyfile(
-            test_example=f"""
-            import pytest
-
-            @pytest.mark.small
-            def test_small_with_allowed_path():
-                with open('{escaped_path}', 'r') as f:
-                    content = f.read()
-                assert content == 'test data'
-            """
-        )
-
-        result = pytester.runpytest('-v')
-
-        # Test should pass - path is in allowed list
-        result.assert_outcomes(passed=1)
-
-    def it_allows_configured_paths_from_cli(self, pytester: pytest.Pytester) -> None:
-        """Verify CLI allowed paths override/extend ini settings."""
-        # Create a temp file to use as allowed path
-        test_dir = pytester.mkdir('cli_allowed_dir')
-        test_file = test_dir / 'cli_data.txt'
-        test_file.write_text('cli test data')
-
-        # Escape backslashes for Windows compatibility in string literals
-        escaped_path = str(test_file).replace('\\', '\\\\')
-
-        pytester.makeini("""
-            [pytest]
-            test_categories_enforcement = strict
-        """)
-        pytester.makepyfile(
-            test_example=f"""
-            import pytest
-
-            @pytest.mark.small
-            def test_small_with_cli_allowed_path():
-                with open('{escaped_path}', 'r') as f:
-                    content = f.read()
-                assert content == 'cli test data'
-            """
-        )
-
-        result = pytester.runpytest('-v', f'--test-categories-allowed-paths={test_dir}')
-
-        # Test should pass - path is allowed via CLI
-        result.assert_outcomes(passed=1)
+        # Test should fail - tmp_path is blocked for small tests
+        stdout = result.stdout.str()
+        assert 'FilesystemAccessViolationError' in stdout or 'HermeticityViolationError' in stdout
+        result.assert_outcomes(failed=1)
 
     def it_does_not_block_filesystem_when_enforcement_off(self, pytester: pytest.Pytester) -> None:
         """Verify filesystem is not blocked when enforcement=off."""
@@ -386,8 +295,8 @@ class DescribeFilesystemBlockingCleanup:
         # First test fails with violation, second test passes (open restored)
         result.assert_outcomes(passed=1, failed=1)
 
-    def it_handles_multiple_small_tests_sequentially(self, pytester: pytest.Pytester) -> None:
-        """Verify blocking works correctly across multiple small tests."""
+    def it_handles_multiple_small_tests_sequentially_all_blocked(self, pytester: pytest.Pytester) -> None:
+        """Verify blocking works correctly across multiple small tests - all are blocked."""
         pytester.makeini("""
             [pytest]
             test_categories_enforcement = strict
@@ -399,6 +308,7 @@ class DescribeFilesystemBlockingCleanup:
 
             @pytest.mark.small
             def test_small_1(tmp_path: Path):
+                # All filesystem access is blocked for small tests
                 (tmp_path / 'f1.txt').write_text('1')
                 assert True
 
@@ -416,5 +326,5 @@ class DescribeFilesystemBlockingCleanup:
 
         result = pytester.runpytest('-v')
 
-        # All tests should pass
-        result.assert_outcomes(passed=3)
+        # All tests should FAIL - filesystem is blocked for all small tests
+        result.assert_outcomes(failed=3)

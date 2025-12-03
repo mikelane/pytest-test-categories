@@ -60,7 +60,7 @@ The filesystem isolation feature implements Google's test size definitions from 
 
 | Test Size | Filesystem Access | Rationale |
 |-----------|------------------|-----------|
-| Small     | **Blocked** (except allowed paths) | Must be hermetic, run in memory only |
+| Small     | **Blocked** (no exceptions) | Must be hermetic, run in memory only |
 | Medium    | Allowed          | May use local filesystem for integration tests |
 | Large     | Allowed          | Integration tests may access real filesystems |
 | XLarge    | Allowed          | End-to-end tests may access real filesystems |
@@ -74,7 +74,15 @@ Small tests are the foundation of a healthy test suite. They must be:
 - **Deterministic**: Same input always produces same output
 - **Parallelizable**: Safe to run concurrently with other tests
 
-Filesystem isolation enforces hermeticity by blocking filesystem access in small tests, except for explicitly allowed paths.
+Filesystem isolation enforces strict hermeticity by blocking ALL filesystem access in small tests. There are no exceptions - if a test needs filesystem access, it should use `@pytest.mark.medium` or mock the filesystem with `pyfakefs` or `io.StringIO`/`io.BytesIO`.
+
+**Philosophy: No Escape Hatches**
+
+The "no escape hatches" philosophy means:
+- If a test needs filesystem access AT ALL, it's not a small test
+- Small tests must be pure - no I/O of any kind
+- `tmp_path` is still filesystem I/O, even if it's "isolated"
+- Tests needing file operations should use `@pytest.mark.medium` or mock with `pyfakefs`/`io.StringIO`
 
 ### Medium, Large, and XLarge Tests
 
@@ -114,38 +122,7 @@ Filesystem operations are categorized as:
 | STAT | Read file metadata | `stat()`, `exists()`, `is_file()` |
 | LIST | List directory contents | `listdir()`, `scandir()`, `iterdir()` |
 
-All operations are blocked on non-allowed paths for small tests, including STAT operations. This ensures tests do not depend on external filesystem state.
-
-## Default Allowed Paths
-
-Certain paths are automatically allowed, even for small tests:
-
-### System Temp Directory
-
-The system temporary directory (`tempfile.gettempdir()`) and all its subdirectories are allowed. This includes:
-
-- `/tmp` on Linux/macOS
-- `C:\Users\<user>\AppData\Local\Temp` on Windows
-
-### pytest's basetemp Directory
-
-The pytest `tmp_path` fixture creates directories under pytest's basetemp. These are automatically allowed:
-
-- Default location: `{tempdir}/pytest-of-{username}/`
-- Custom location: Set via `--basetemp` CLI option
-
-### pytest Fixture Paths
-
-When your test uses `tmp_path` or `tmp_path_factory` fixtures, those paths are automatically added to the allowed list for that specific test.
-
-```python
-@pytest.mark.small
-def test_with_temp_file(tmp_path):
-    # tmp_path is automatically allowed
-    test_file = tmp_path / "data.txt"
-    test_file.write_text("hello")  # OK - under tmp_path
-    assert test_file.read_text() == "hello"
-```
+All operations are blocked for small tests, including STAT operations. This ensures tests do not depend on external filesystem state.
 
 ## Enabling Filesystem Isolation
 
@@ -196,9 +173,9 @@ Details:
   Attempted write on: /home/user/project/output/report.txt
 
 Small tests have restricted resource access. Options:
-  1. Use pytest's tmp_path fixture for temporary files
-  2. Mock file operations using pytest-mock (mocker fixture) or pyfakefs
-  3. Use io.StringIO or io.BytesIO for in-memory file-like objects
+  1. Use pyfakefs for comprehensive filesystem mocking (pip install pyfakefs)
+  2. Use io.StringIO or io.BytesIO for in-memory file-like objects
+  3. Mock file operations using pytest-mock (mocker.patch("builtins.open", ...))
   4. Embed test data as Python constants or use importlib.resources
   5. Change test category to @pytest.mark.medium (if filesystem access is required)
 
@@ -235,34 +212,6 @@ In off mode, filesystem isolation is disabled entirely. Use this for:
 - Specific test runs that require filesystem access
 - Debugging filesystem-related test issues
 
-## Adding Custom Allowed Paths
-
-You can configure additional paths that are always allowed for small tests.
-
-### Configuration via pyproject.toml
-
-```toml
-[tool.pytest.ini_options]
-test_categories_enforcement = "strict"
-
-# Additional allowed paths for filesystem access
-test_categories_allowed_paths = [
-    "tests/fixtures/",
-    "src/mypackage/data/",
-]
-```
-
-### Configuration via Command Line
-
-```bash
-pytest --test-categories-allowed-paths=tests/fixtures/,src/mypackage/data/
-```
-
-Paths can be:
-- Absolute paths: `/home/user/project/fixtures/`
-- Relative paths: `tests/fixtures/` (resolved from project root)
-- User-relative paths: `~/project/data/` (expanded with `~`)
-
 ## Understanding Error Messages
 
 When a filesystem violation occurs, the error message provides:
@@ -281,21 +230,21 @@ Attempted write on: /home/user/project/output/report.txt
 
 This tells you:
 - The test tried to **write** a file (not just read)
-- The path is **outside** all allowed directories
-- You need to either mock the write or use `tmp_path`
+- The path is being blocked for this small test
+- You need to either mock the write, use pyfakefs, or upgrade to `@pytest.mark.medium`
 
 ## Common Remediation Strategies
 
-### 1. Use tmp_path Fixture
+### 1. Use pyfakefs
 
-The simplest fix for tests that need temporary files:
+For comprehensive filesystem mocking (recommended):
 
 ```python
 @pytest.mark.small
-def test_save_report(tmp_path):
-    output_file = tmp_path / "report.txt"
-    save_report(output_file)
-    assert output_file.exists()
+def test_with_fake_filesystem(fs):  # pyfakefs fixture
+    fs.create_file("/etc/myapp/config.ini", contents="key=value")
+    config = load_config("/etc/myapp/config.ini")
+    assert config["key"] == "value"
 ```
 
 ### 2. Use io.StringIO or io.BytesIO
@@ -324,19 +273,7 @@ def test_config_loader(mocker):
     assert config["key"] == "value"
 ```
 
-### 4. Use pyfakefs
-
-For comprehensive filesystem mocking:
-
-```python
-@pytest.mark.small
-def test_with_fake_filesystem(fs):  # pyfakefs fixture
-    fs.create_file("/etc/myapp/config.ini", contents="key=value")
-    config = load_config("/etc/myapp/config.ini")
-    assert config["key"] == "value"
-```
-
-### 5. Embed Test Data
+### 4. Embed Test Data
 
 For read-only test data, embed it in your test code:
 
@@ -353,7 +290,7 @@ def test_config_parser():
     assert config["database"]["host"] == "localhost"
 ```
 
-### 6. Use importlib.resources
+### 5. Use importlib.resources
 
 For package data files:
 
@@ -367,15 +304,15 @@ def test_load_schema():
     assert "properties" in schema
 ```
 
-### 7. Change Test Size
+### 6. Change Test Size
 
 If the test legitimately requires filesystem access, change its category:
 
 ```python
 @pytest.mark.medium  # Medium tests can access filesystem
-def test_large_file_processing():
-    with open("/data/large_dataset.csv") as f:
-        process_file(f)
+def test_large_file_processing(tmp_path):
+    test_file = tmp_path / "dataset.csv"
+    # ... setup and test
 ```
 
 ## Best Practices
@@ -393,9 +330,9 @@ pytest --test-categories-enforcement=warn 2>&1 | grep "Filesystem access violati
 Address violations in order of test frequency:
 
 1. Fix small tests first (they run most often)
-2. Use tmp_path for tests that need real files
-3. Use mocking for tests that don't need real filesystem
-4. Change test size only when filesystem access is essential
+2. Use pyfakefs for tests that need filesystem semantics
+3. Use io.StringIO/io.BytesIO for file-like objects
+4. Change test size only when real filesystem access is essential
 
 ### 3. Use Dependency Injection
 
@@ -428,9 +365,9 @@ def test_save_report_to_file(tmp_path):
 
 If a test genuinely requires filesystem access, consider whether it belongs in a different size category:
 
-- **Small**: Pure functions, in-memory operations, mocked I/O
-- **Medium**: File operations with tmp_path, config file parsing
-- **Large**: Integration with real filesystem paths
+- **Small**: Pure functions, in-memory operations, mocked I/O (pyfakefs, io.StringIO)
+- **Medium**: File operations with tmp_path, config file parsing, local databases
+- **Large**: Integration with real filesystem paths, external services
 
 ## Related Documentation
 

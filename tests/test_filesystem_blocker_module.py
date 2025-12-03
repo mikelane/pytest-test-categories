@@ -95,8 +95,8 @@ class DescribeFakeFilesystemBlocker:
         assert blocker.current_enforcement_mode == EnforcementMode.WARN
         assert blocker.current_allowed_paths == allowed
 
-    def it_blocks_all_access_for_small_tests_without_allowed_paths(self) -> None:
-        """Verify small tests cannot access any filesystem without allowed paths."""
+    def it_blocks_all_access_for_small_tests(self) -> None:
+        """Verify small tests cannot access any filesystem - no exceptions."""
         blocker = FakeFilesystemBlocker()
         blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, frozenset())
 
@@ -104,23 +104,21 @@ class DescribeFakeFilesystemBlocker:
         assert blocker.check_access_allowed(Path('/home/user/file.txt'), FilesystemOperation.WRITE) is False
         assert blocker.check_access_allowed(Path('/tmp/test'), FilesystemOperation.CREATE) is False
 
-    def it_allows_access_to_allowed_paths_for_small_tests(self) -> None:
-        """Verify small tests can access allowed paths."""
+    def it_blocks_all_access_for_small_tests_even_with_allowed_paths_argument(self) -> None:
+        """Verify small tests block ALL filesystem access - allowed_paths is ignored.
+
+        Note: The allowed_paths parameter still exists in the interface for backward
+        compatibility, but it is ignored for small tests. This test verifies that
+        small tests are fully hermetic with no escape hatches.
+        """
         allowed = frozenset([Path('/tmp').resolve()])
         blocker = FakeFilesystemBlocker()
         blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, allowed)
 
-        assert blocker.check_access_allowed(Path('/tmp/test.txt'), FilesystemOperation.WRITE) is True
-        assert blocker.check_access_allowed(Path('/tmp/subdir/file.txt'), FilesystemOperation.READ) is True
-
-    def it_blocks_access_outside_allowed_paths_for_small_tests(self) -> None:
-        """Verify small tests cannot access paths outside allowed paths."""
-        allowed = frozenset([Path('/tmp').resolve()])
-        blocker = FakeFilesystemBlocker()
-        blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, allowed)
-
+        # Even paths that would match allowed_paths are blocked for small tests
+        assert blocker.check_access_allowed(Path('/tmp/test.txt'), FilesystemOperation.WRITE) is False
+        assert blocker.check_access_allowed(Path('/tmp/subdir/file.txt'), FilesystemOperation.READ) is False
         assert blocker.check_access_allowed(Path('/etc/passwd'), FilesystemOperation.READ) is False
-        assert blocker.check_access_allowed(Path('/home/user/file.txt'), FilesystemOperation.WRITE) is False
 
     def it_allows_all_access_for_medium_tests(self) -> None:
         """Verify medium tests can access any filesystem."""
@@ -161,6 +159,7 @@ class DescribeFakeFilesystemBlocker:
             test_nodeid='',
             allowed=False,
         )
+        # All paths are blocked for small tests (no tmp_path exception)
         assert blocker.access_attempts[1] == FilesystemAccessAttempt(
             path=Path('/tmp/test.txt'),
             operation=FilesystemOperation.WRITE,
@@ -255,56 +254,6 @@ class DescribeFakeFilesystemBlocker:
 
 
 @pytest.mark.small
-class DescribeAllowedPathMatching:
-    """Tests for allowed path matching logic."""
-
-    def it_allows_exact_path_match(self) -> None:
-        """Verify exact path matches are allowed."""
-        allowed = frozenset([Path('/tmp/test.txt').resolve()])
-        blocker = FakeFilesystemBlocker()
-        blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, allowed)
-
-        assert blocker.check_access_allowed(Path('/tmp/test.txt'), FilesystemOperation.READ) is True
-
-    def it_allows_child_paths(self) -> None:
-        """Verify child paths under allowed directories are allowed."""
-        allowed = frozenset([Path('/tmp').resolve()])
-        blocker = FakeFilesystemBlocker()
-        blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, allowed)
-
-        assert blocker.check_access_allowed(Path('/tmp/subdir/file.txt'), FilesystemOperation.WRITE) is True
-        assert blocker.check_access_allowed(Path('/tmp/deep/nested/path/file'), FilesystemOperation.CREATE) is True
-
-    def it_blocks_sibling_paths(self) -> None:
-        """Verify sibling paths are blocked."""
-        allowed = frozenset([Path('/tmp/allowed').resolve()])
-        blocker = FakeFilesystemBlocker()
-        blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, allowed)
-
-        assert blocker.check_access_allowed(Path('/tmp/other'), FilesystemOperation.READ) is False
-        assert blocker.check_access_allowed(Path('/tmp'), FilesystemOperation.LIST) is False
-
-    def it_blocks_parent_paths(self) -> None:
-        """Verify parent paths are blocked."""
-        allowed = frozenset([Path('/tmp/allowed/subdir').resolve()])
-        blocker = FakeFilesystemBlocker()
-        blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, allowed)
-
-        assert blocker.check_access_allowed(Path('/tmp/allowed'), FilesystemOperation.READ) is False
-        assert blocker.check_access_allowed(Path('/tmp'), FilesystemOperation.LIST) is False
-
-    def it_handles_multiple_allowed_paths(self) -> None:
-        """Verify multiple allowed paths work correctly."""
-        allowed = frozenset([Path('/tmp').resolve(), Path('/var/cache').resolve()])
-        blocker = FakeFilesystemBlocker()
-        blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, allowed)
-
-        assert blocker.check_access_allowed(Path('/tmp/file'), FilesystemOperation.READ) is True
-        assert blocker.check_access_allowed(Path('/var/cache/data'), FilesystemOperation.WRITE) is True
-        assert blocker.check_access_allowed(Path('/var/log/app.log'), FilesystemOperation.READ) is False
-
-
-@pytest.mark.small
 class DescribeFilesystemOperations:
     """Tests for different filesystem operation types."""
 
@@ -326,26 +275,6 @@ class DescribeFilesystemOperations:
         blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, frozenset())
 
         assert blocker.check_access_allowed(Path('/etc/passwd'), operation) is False
-
-    @pytest.mark.parametrize(
-        'operation',
-        [
-            FilesystemOperation.READ,
-            FilesystemOperation.WRITE,
-            FilesystemOperation.DELETE,
-            FilesystemOperation.CREATE,
-            FilesystemOperation.MODIFY,
-            FilesystemOperation.STAT,
-            FilesystemOperation.LIST,
-        ],
-    )
-    def it_allows_all_operation_types_on_allowed_paths(self, operation: FilesystemOperation) -> None:
-        """Verify all operation types are allowed on allowed paths."""
-        allowed = frozenset([Path('/tmp').resolve()])
-        blocker = FakeFilesystemBlocker()
-        blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, allowed)
-
-        assert blocker.check_access_allowed(Path('/tmp/test'), operation) is True
 
     def it_treats_stat_operations_the_same_as_other_operations(self) -> None:
         """Verify STAT operations are blocked just like other operations (no special exemption)."""
@@ -426,14 +355,15 @@ class DescribeFilesystemPatchingBlocker:
 
         blocker.deactivate()
 
-    def it_allows_access_to_allowed_paths_for_small_tests(self) -> None:
-        """Verify small tests can access allowed paths."""
+    def it_blocks_all_access_for_small_tests_even_with_allowed_paths(self) -> None:
+        """Verify small tests block ALL filesystem - allowed_paths is ignored."""
         allowed = frozenset([Path('/tmp').resolve()])
         blocker = FilesystemPatchingBlocker()
         blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, allowed)
 
-        assert blocker.check_access_allowed(Path('/tmp/test.txt'), FilesystemOperation.WRITE) is True
-        assert blocker.check_access_allowed(Path('/tmp/subdir/file.txt'), FilesystemOperation.READ) is True
+        # Even paths in allowed_paths are blocked for small tests (no escape hatches)
+        assert blocker.check_access_allowed(Path('/tmp/test.txt'), FilesystemOperation.WRITE) is False
+        assert blocker.check_access_allowed(Path('/tmp/subdir/file.txt'), FilesystemOperation.READ) is False
 
         blocker.deactivate()
 

@@ -40,46 +40,6 @@ from pytest_test_categories.ports.network import EnforcementMode
 from pytest_test_categories.types import TestSize
 
 
-def is_path_under_allowed(path: Path, allowed_paths: frozenset[Path]) -> bool:
-    """Check if a path is under any of the allowed paths.
-
-    A path is considered "under" an allowed path if:
-    - It is exactly equal to an allowed path
-    - It is a child/descendant of an allowed path
-
-    Args:
-        path: The path to check (should be resolved/absolute).
-        allowed_paths: Set of allowed base paths.
-
-    Returns:
-        True if the path is under any allowed path, False otherwise.
-
-    Example:
-        >>> allowed = frozenset([Path('/tmp')])
-        >>> is_path_under_allowed(Path('/tmp/test.txt'), allowed)
-        True
-        >>> is_path_under_allowed(Path('/etc/passwd'), allowed)
-        False
-
-    """
-    resolved_path = path.resolve()
-
-    for allowed_path in allowed_paths:
-        resolved_allowed = allowed_path.resolve()
-
-        if resolved_path == resolved_allowed:
-            return True
-
-        try:
-            resolved_path.relative_to(resolved_allowed)
-        except ValueError:
-            continue
-        else:
-            return True
-
-    return False
-
-
 class FakeFilesystemBlocker(FilesystemBlockerPort):
     """Test double for filesystem blocking that records attempts without real patching.
 
@@ -147,7 +107,7 @@ class FakeFilesystemBlocker(FilesystemBlockerPort):
         """Check if filesystem access is allowed and record the attempt.
 
         Returns whether access would be allowed based on the test size:
-        - SMALL: Block all filesystem access (except allowed paths)
+        - SMALL: Block ALL filesystem access (no escape hatches)
         - MEDIUM/LARGE/XLARGE: Allow all filesystem access
 
         Args:
@@ -173,20 +133,25 @@ class FakeFilesystemBlocker(FilesystemBlockerPort):
 
         return allowed
 
-    def _is_access_allowed(self, path: Path) -> bool:
-        """Determine if filesystem access is allowed based on test size and allowed paths.
+    def _is_access_allowed(self, path: Path) -> bool:  # noqa: ARG002
+        """Determine if filesystem access is allowed based on test size.
+
+        Rules applied:
+        - SMALL: Block ALL filesystem access (no exceptions, no escape hatches)
+        - MEDIUM/LARGE/XLARGE: Allow all filesystem access
+
+        Small tests must be pure - no I/O of any kind. If a test needs filesystem
+        access, it should use @pytest.mark.medium or mock with pyfakefs/io.StringIO.
 
         Args:
-            path: The target path.
+            path: The target path (unused but kept for interface consistency).
 
         Returns:
             True if allowed, False otherwise.
 
         """
-        if self.current_test_size == TestSize.SMALL:
-            return is_path_under_allowed(path, self.current_allowed_paths)
-
-        return True
+        # BREAKING: No paths are allowed for small tests - strict hermeticity
+        return self.current_test_size != TestSize.SMALL
 
     def _do_on_violation(
         self,

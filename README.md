@@ -66,7 +66,7 @@ Options:
 
 | Size | Time Limit | Network | Filesystem | Database | Subprocess | Sleep |
 |------|------------|---------|------------|----------|------------|-------|
-| Small | 1 second | Blocked | tmp_path only | Blocked | Blocked | Blocked |
+| Small | 1 second | Blocked | Blocked | Blocked | Blocked | Blocked |
 | Medium | 5 minutes | Localhost | Allowed | Allowed | Allowed | Allowed |
 | Large | 15 minutes | Allowed | Allowed | Allowed | Allowed | Allowed |
 | XLarge | 15 minutes | Allowed | Allowed | Allowed | Allowed | Allowed |
@@ -173,11 +173,6 @@ test_categories_small_time_limit = "1.0"
 test_categories_medium_time_limit = "300.0"
 test_categories_large_time_limit = "900.0"
 test_categories_xlarge_time_limit = "900.0"
-
-# Additional allowed paths for filesystem access in small tests
-test_categories_allowed_paths = [
-    "tests/fixtures/",
-]
 ```
 
 ### Command-Line Options
@@ -194,9 +189,6 @@ pytest --test-categories-small-time-limit=2.0
 pytest --test-categories-medium-time-limit=600.0
 pytest --test-categories-large-time-limit=1800.0
 pytest --test-categories-xlarge-time-limit=1800.0
-
-# Additional allowed paths (comma-separated)
-pytest --test-categories-allowed-paths=tests/fixtures/,tests/data/
 
 # Reporting
 pytest --test-size-report=basic      # Summary report
