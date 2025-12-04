@@ -15,52 +15,106 @@
 </p>
 
 <p align="center">
-  A pytest plugin that enforces test timing constraints, resource isolation, and validates test size distributions based on Google's "Software Engineering at Google" best practices.
+  <strong>Enforce Google's hermetic testing practices in Python.</strong><br>
+  Block network, filesystem, and subprocess access in unit tests. Validate your test pyramid. Eliminate flaky tests.
 </p>
 
-**[Documentation](https://pytest-test-categories.readthedocs.io)** | **[PyPI](https://pypi.org/project/pytest-test-categories/)** | **[GitHub](https://github.com/mikelane/pytest-test-categories)**
+<p align="center">
+  <a href="https://pytest-test-categories.readthedocs.io">Documentation</a> •
+  <a href="https://pypi.org/project/pytest-test-categories/">PyPI</a> •
+  <a href="#quickstart">Quickstart</a> •
+  <a href="#why-pytest-test-categories">Why?</a>
+</p>
+
+---
+
+## Quickstart
+
+```bash
+# Install
+pip install pytest-test-categories
+
+# Mark your tests
+# @pytest.mark.small  - Fast, hermetic (no I/O)
+# @pytest.mark.medium - Can use localhost, filesystem
+# @pytest.mark.large  - Full network access
+
+# Enable enforcement in pyproject.toml
+# test_categories_enforcement = "strict"
+
+# Run pytest as usual
+pytest
+```
+
+<!-- TODO: Add asciinema demo here -->
+<!-- [![asciicast](https://asciinema.org/a/XXXXX.svg)](https://asciinema.org/a/XXXXX) -->
+
+---
+
+## Table of Contents
+
+- [Why pytest-test-categories?](#why-pytest-test-categories)
+- [Test Size Categories](#test-size-categories)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [Enforcement Modes](#enforcement-modes)
+- [Philosophy: No Escape Hatches](#philosophy-no-override-markers)
+- [Test Distribution Targets](#test-distribution-targets)
+- [Reporting](#reporting)
+- [Documentation](#documentation)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
 
 ## Why pytest-test-categories?
 
 ### The Problem
 
+**Flaky tests are a symptom. Hidden external dependencies are the disease.**
+
 Most test suites suffer from:
 
-- **Flaky tests** due to network timeouts, race conditions, or shared state
-- **Slow CI pipelines** because tests lack time budgets
-- **Testing pyramid inversion** with too many slow integration tests and too few fast unit tests
-- **No enforced boundaries** between unit, integration, and system tests
+- **Flaky tests** - Tests that pass locally but fail in CI due to network timeouts, race conditions, or shared state
+- **Slow CI pipelines** - No time budgets means tests grow unbounded
+- **Inverted test pyramid** - Too many slow integration tests, too few fast unit tests
+- **No enforced boundaries** - "Unit tests" that secretly hit the database, network, or filesystem
+
+The root cause? Tests with hidden external dependencies that make them non-deterministic.
 
 ### The Solution
 
-pytest-test-categories brings Google's battle-tested testing philosophy to Python:
+pytest-test-categories brings Google's battle-tested testing philosophy (from *"Software Engineering at Google"*) to Python:
 
-1. **Categorize tests by size** (small, medium, large, xlarge) with clear resource constraints
-2. **Enforce hermeticity** by blocking network, filesystem, database, and subprocess access in small tests
-3. **Enforce time limits** so slow tests fail fast
-4. **Validate distribution** to maintain a healthy 80/15/5 test pyramid
+| What | How |
+|------|-----|
+| **Categorize tests by size** | `@pytest.mark.small`, `medium`, `large`, `xlarge` |
+| **Enforce hermeticity** | Block network, filesystem, database, subprocess in small tests |
+| **Enforce time limits** | 1s for small, 5min for medium, 15min for large |
+| **Validate distribution** | Maintain healthy 80/15/5 test pyramid |
 
 When a small test tries to access the network, it fails immediately with actionable guidance:
 
 ```
-HermeticityViolationError: Network access blocked in small test
+======================================================================
+[TC001] Network Violation
+======================================================================
+Category: SMALL
 
-Options:
-  1. Mock the network call using responses, httpretty, or respx
-  2. Use dependency injection to provide a fake HTTP client
-  3. Change test category to @pytest.mark.medium (if network is required)
+What happened:
+  SMALL test attempted network connection to api.example.com:443
+
+To fix this (choose one):
+  • Mock the network call using responses, httpretty, or respx
+  • Use dependency injection to provide a fake HTTP client
+  • Change test category to @pytest.mark.medium
+======================================================================
 ```
 
-## Features
+<p align="right">(<a href="#table-of-contents">back to top</a>)</p>
 
-- **Test size categorization**: Mark tests with `@pytest.mark.small`, `@pytest.mark.medium`, `@pytest.mark.large`, or `@pytest.mark.xlarge`
-- **Resource isolation**: Block network, filesystem, database, subprocess, and sleep access in small tests
-- **Fixed time limits**: Enforce Google's standard time limits (1s/5min/15min/15min)
-- **Distribution validation**: Ensure your test suite follows the recommended 80/15/5 test pyramid
-- **JSON/XML reporting**: Export test size reports for CI integration and dashboards
-- **Base test classes**: Inherit from `SmallTest`, `MediumTest`, `LargeTest`, or `XLargeTest`
-- **Zero overhead**: Less than 1% performance impact on test execution
-- **Parallel execution**: Full pytest-xdist compatibility for distributed testing
+---
 
 ## Test Size Categories
 
@@ -72,6 +126,12 @@ Options:
 | **Database** | ❌ Blocked | ✓ Allowed | ✓ Allowed | ✓ Allowed |
 | **Subprocess** | ❌ Blocked | ✓ Allowed | ✓ Allowed | ✓ Allowed |
 | **Sleep** | ❌ Blocked | ✓ Allowed | ✓ Allowed | ✓ Allowed |
+
+**Small tests** must be *hermetic* - completely isolated from external resources. This eliminates flakiness at the source.
+
+<p align="right">(<a href="#table-of-contents">back to top</a>)</p>
+
+---
 
 ## Installation
 
@@ -92,6 +152,10 @@ uv add pytest-test-categories
 ```bash
 poetry add pytest-test-categories
 ```
+
+<p align="right">(<a href="#table-of-contents">back to top</a>)</p>
+
+---
 
 ## Quick Start
 
@@ -160,6 +224,10 @@ Run pytest as usual:
 pytest
 ```
 
+<p align="right">(<a href="#table-of-contents">back to top</a>)</p>
+
+---
+
 ## Configuration
 
 ### pyproject.toml
@@ -189,6 +257,10 @@ pytest --test-size-report=json --test-size-report-file=report.json
 
 **Note:** Time limits are fixed per Google's testing standards and cannot be customized. This ensures consistent test categorization across all projects.
 
+<p align="right">(<a href="#table-of-contents">back to top</a>)</p>
+
+---
+
 ## Enforcement Modes
 
 | Mode | Behavior | Use Case |
@@ -209,6 +281,10 @@ test_categories_enforcement = "warn"
 # Week 5+: Enforced - violations fail the build
 test_categories_enforcement = "strict"
 ```
+
+<p align="right">(<a href="#table-of-contents">back to top</a>)</p>
+
+---
 
 ## Philosophy: No Override Markers
 
@@ -243,15 +319,23 @@ def test_api_call(httpx_mock):
 
 See the [Design Philosophy](https://pytest-test-categories.readthedocs.io/en/latest/architecture/design-philosophy.html) documentation for the full rationale.
 
+<p align="right">(<a href="#table-of-contents">back to top</a>)</p>
+
+---
+
 ## Test Distribution Targets
 
 | Size | Target Percentage | Tolerance |
 |------|-------------------|-----------|
-| Small | 80% | +/- 5% |
-| Medium | 15% | +/- 5% |
-| Large/XLarge | 5% | +/- 3% |
+| Small | 80% | ± 5% |
+| Medium | 15% | ± 5% |
+| Large/XLarge | 5% | ± 3% |
 
 When distribution enforcement is enabled, pytest will warn or fail if your test distribution falls outside these ranges.
+
+<p align="right">(<a href="#table-of-contents">back to top</a>)</p>
+
+---
 
 ## Reporting
 
@@ -277,7 +361,8 @@ pytest --test-size-report=json
 pytest --test-size-report=json --test-size-report-file=report.json
 ```
 
-#### JSON Report Structure
+<details>
+<summary><strong>JSON Report Structure</strong></summary>
 
 ```json
 {
@@ -314,6 +399,12 @@ pytest --test-size-report=json --test-size-report-file=report.json
 }
 ```
 
+</details>
+
+<p align="right">(<a href="#table-of-contents">back to top</a>)</p>
+
+---
+
 ## Documentation
 
 For comprehensive documentation, visit **[pytest-test-categories.readthedocs.io](https://pytest-test-categories.readthedocs.io)**:
@@ -325,7 +416,7 @@ For comprehensive documentation, visit **[pytest-test-categories.readthedocs.io]
 - **[API Reference](https://pytest-test-categories.readthedocs.io/en/latest/api-reference/index.html)** - Markers, fixtures, and error messages
 - **[Architecture](https://pytest-test-categories.readthedocs.io/en/latest/architecture/index.html)** - Design philosophy and ADRs
 
-## Project Resources
+### Project Resources
 
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines
 - **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** - Community standards
@@ -333,6 +424,10 @@ For comprehensive documentation, visit **[pytest-test-categories.readthedocs.io]
 - **[ROADMAP.md](ROADMAP.md)** - Project vision and milestones
 - **[GitHub Discussions](https://github.com/mikelane/pytest-test-categories/discussions)** - Questions and ideas
 - **[Issue Tracker](https://github.com/mikelane/pytest-test-categories/issues)** - Bug reports and feature requests
+
+<p align="right">(<a href="#table-of-contents">back to top</a>)</p>
+
+---
 
 ## Contributing
 
@@ -347,10 +442,17 @@ We welcome contributions! Please read our [CONTRIBUTING.md](CONTRIBUTING.md) for
 5. **Run pre-commit hooks** to ensure quality: `uv run pre-commit run --all-files`
 6. **Open a pull request** linking to your issue
 
+<p align="right">(<a href="#table-of-contents">back to top</a>)</p>
+
+---
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
 
 ---
 
-Happy testing!
+<p align="center">
+  <strong>Happy testing!</strong><br>
+  <sub>Built with the belief that flaky tests are a solved problem.</sub>
+</p>
