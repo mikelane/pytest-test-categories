@@ -47,7 +47,9 @@ pytest
 ```
 
 <p align="center">
-  <img src="docs/_static/demo.gif" alt="pytest-test-categories demo" width="800">
+  <a href="https://asciinema.org/a/TSznHwCgTiKUwGWaVpUA7RTZR?autoplay=1">
+    <img src="https://asciinema.org/a/TSznHwCgTiKUwGWaVpUA7RTZR.svg" alt="pytest-test-categories demo" width="800">
+  </a>
 </p>
 
 ---
