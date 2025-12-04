@@ -46,12 +46,6 @@ pip install pytest-test-categories
 pytest
 ```
 
-<p align="center">
-  <a href="https://asciinema.org/a/TSznHwCgTiKUwGWaVpUA7RTZR?autoplay=1">
-    <img src="https://asciinema.org/a/TSznHwCgTiKUwGWaVpUA7RTZR.svg" alt="pytest-test-categories demo" width="800">
-  </a>
-</p>
-
 ---
 
 ## Table of Contents
