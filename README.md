@@ -46,8 +46,7 @@ pip install pytest-test-categories
 pytest
 ```
 
-<!-- TODO: Add asciinema demo here -->
-<!-- [![asciicast](https://asciinema.org/a/XXXXX.svg)](https://asciinema.org/a/XXXXX) -->
+[![asciicast](https://asciinema.org/a/TSznHwCgTiKUwGWaVpUA7RTZR.svg)](https://asciinema.org/a/TSznHwCgTiKUwGWaVpUA7RTZR?autoplay=1&loop=1)
 
 ---
 
