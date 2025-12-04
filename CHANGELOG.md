@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## v1.1.0 (2025-12-04)
+
+### Breaking Changes
+
+- **Strict filesystem blocking**: Small tests now block ALL filesystem access, including `tmp_path` and `tempfile`. Use `pyfakefs` or `io.StringIO`/`io.BytesIO` for in-memory file handling in small tests. (#195)
+- **Fixed time limits**: Time limits are no longer configurable. They are fixed per Google's testing standards: 1s (small), 5min (medium), 15min (large/xlarge). (#189)
+
+### Changed
+
+- Remediation lists in violation messages now use bullet points instead of numbered lists for consistency (#196)
+
+### Added
+
+- CI, coverage, and downloads badges to README (#190)
+- Enhanced PyPI package metadata for better discoverability (#191)
+- Mocking libraries guide and enhanced quickstart examples in documentation (#192)
+- Improved `pytest --markers` descriptions with constraint details
+
+### Fixed
+
+- Documentation inconsistencies referencing "allowed paths" after filesystem blocking was made strict
+
 ## v1.0.0 (2025-12-01)
 
 ### Highlights
@@ -18,7 +40,7 @@ This is the first stable release of pytest-test-categories, bringing Google's ba
 #### Resource Isolation (Hermeticity)
 
 - **Network isolation**: Block socket connections in small tests (#72, #74, #76)
-- **Filesystem isolation**: Block pathlib, os, and shutil operations outside allowed paths (#120, #132)
+- **Filesystem isolation**: Block pathlib, os, and shutil operations in small tests (#120, #132)
 - **Process isolation**: Block subprocess calls in small tests (#133)
 - **Database isolation**: Block common database connections in small tests
 - **Sleep blocking**: Block time.sleep() in small tests to enforce fast execution (#118)
@@ -27,9 +49,7 @@ This is the first stable release of pytest-test-categories, bringing Google's ba
 
 #### Configuration
 
-- **Configurable time limits**: Set custom time limits per test size category (#117)
 - **Configurable distribution targets**: Customize target percentages and tolerances (#165)
-- **Allowed paths**: Configure additional allowed filesystem paths for small tests
 - **Enforcement modes**: Choose between `off`, `warn`, and `strict` enforcement
 
 #### Reporting
