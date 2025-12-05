@@ -248,9 +248,37 @@ def product_repository(sample_products):
     return repo
 ```
 
-### File Fixtures with tmp_path
+### File Fixtures with pyfakefs (for Small Tests)
 
-Use `tmp_path` for tests that need file operations:
+Use `pyfakefs` for small tests that need file operations without real I/O:
+
+```python
+@pytest.fixture
+def csv_data():
+    """Sample CSV data as a constant (no I/O needed)."""
+    return "name,price\nWidget,9.99\nGadget,19.99\n"
+
+@pytest.fixture
+def json_data():
+    """Sample JSON data as a constant (no I/O needed)."""
+    import json
+    return json.dumps([
+        {"name": "Widget", "price": 9.99},
+        {"name": "Gadget", "price": 19.99},
+    ])
+
+# For tests that need filesystem semantics, use pyfakefs
+@pytest.mark.small
+def test_csv_parser(fs, csv_data):  # pyfakefs fixture
+    """Test CSV parsing with fake filesystem."""
+    fs.create_file("/data/products.csv", contents=csv_data)
+    products = parse_csv("/data/products.csv")
+    assert len(products) == 2
+```
+
+### File Fixtures with tmp_path (for Medium Tests)
+
+Use `tmp_path` for medium tests that need real file operations:
 
 ```python
 @pytest.fixture
@@ -258,7 +286,7 @@ def csv_file(tmp_path):
     """Create a sample CSV file for testing.
 
     Uses tmp_path for isolated filesystem access.
-    Safe for small tests.
+    Requires @pytest.mark.medium (filesystem access).
     """
     csv_path = tmp_path / "data.csv"
     csv_path.write_text("name,price\nWidget,9.99\nGadget,19.99\n")

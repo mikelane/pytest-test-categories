@@ -69,7 +69,7 @@ See: https://pytest-test-categories.readthedocs.io/en/latest/errors/network-isol
 
 **Exception:** `FilesystemAccessViolationError`
 
-**When it occurs:** A small test attempts to access the filesystem outside of allowed paths (temp directories).
+**When it occurs:** A small test attempts to access the filesystem.
 
 **Example output:**
 
@@ -84,13 +84,13 @@ What happened:
   Attempted read on filesystem path: /home/user/config.yaml
 
 Why it matters:
-  Small tests should not access the filesystem directly. Filesystem access
-  introduces I/O overhead, potential race conditions, and dependencies on
-  the test environment state.
+  Small tests must be hermetic and cannot access the filesystem. Filesystem
+  access introduces I/O overhead, potential race conditions, and dependencies
+  on the test environment state.
 
 To fix this (choose one):
-  • Use pytest's tmp_path fixture for temporary files
-  • Mock file operations using pytest-mock (mocker fixture) or pyfakefs
+  • Use pyfakefs for comprehensive filesystem mocking
+  • Mock file operations using pytest-mock (mocker fixture)
   • Use io.StringIO or io.BytesIO for in-memory file-like objects
   • Embed test data as Python constants or use importlib.resources
   • Change test category to @pytest.mark.medium (if filesystem access is required)
@@ -99,19 +99,13 @@ See: https://pytest-test-categories.readthedocs.io/en/latest/errors/filesystem-i
 ======================================================================
 ```
 
-**Allowed Paths (always permitted):**
-
-1. System temp directory (`tempfile.gettempdir()`)
-2. pytest's basetemp directory
-3. Paths configured via `test_categories_allowed_paths`
-
 **Remediation:**
 
-- Use `tmp_path` fixture for temporary files
-- Mock filesystem operations
-- Use in-memory file-like objects
+- Use `pyfakefs` for comprehensive filesystem mocking
+- Use `io.StringIO` or `io.BytesIO` for in-memory file-like objects
+- Mock filesystem operations with `pytest-mock`
 - Embed test data as constants
-- Upgrade to `@pytest.mark.medium`
+- Upgrade to `@pytest.mark.medium` (which allows `tmp_path`)
 
 ---
 
@@ -301,28 +295,16 @@ See: https://pytest-test-categories.readthedocs.io/en/latest/errors/timing-limit
 ======================================================================
 ```
 
-**Default Time Limits:**
+**Time Limits (Fixed):**
 
-| Size | Default Limit | Configurable |
-|------|---------------|--------------|
-| Small | 1 second | Yes |
-| Medium | 300 seconds (5 min) | Yes |
-| Large | 900 seconds (15 min) | Yes |
-| XLarge | 900 seconds (15 min) | Yes |
+| Size | Limit |
+|------|-------|
+| Small | 1 second |
+| Medium | 300 seconds (5 min) |
+| Large | 900 seconds (15 min) |
+| XLarge | 900 seconds (15 min) |
 
-**Configuration:**
-
-```toml
-# pyproject.toml
-[tool.pytest.ini_options]
-test_categories_small_time_limit = 2.0
-test_categories_medium_time_limit = 600.0
-```
-
-```bash
-# Command line
-pytest --test-categories-small-time-limit=2.0
-```
+Time limits are fixed per Google's testing standards and cannot be customized. This ensures consistent test categorization across all projects.
 
 **Remediation:**
 

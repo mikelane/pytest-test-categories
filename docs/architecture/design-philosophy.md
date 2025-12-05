@@ -7,7 +7,7 @@ This document explains the core design philosophy behind pytest-test-categories 
 pytest-test-categories is built on a fundamental principle: **small tests must be truly hermetic**. This means:
 
 - No network access (not even localhost for small tests)
-- No filesystem access (except pytest's `tmp_path`)
+- No filesystem access (ALL access blocked, including `tmp_path`)
 - No subprocess spawning
 - No database connections (including in-memory SQLite)
 - No sleep calls
@@ -174,9 +174,10 @@ def test_file_operations(fs):
     ...
 ```
 
-**Difference**: pyfakefs replaces the filesystem with an in-memory fake. pytest-test-categories blocks access entirely for small tests. Both approaches work; they solve different problems:
-- pyfakefs: "I need to test file operations"
-- pytest-test-categories: "I need to enforce that small tests don't do file I/O"
+**Difference**: pyfakefs replaces the filesystem with an in-memory fake. pytest-test-categories blocks access entirely for small tests. These are **complementary** approaches:
+- Use **pyfakefs** in small tests when you need filesystem semantics
+- Use **tmp_path** in medium tests when you need real filesystem access
+- pytest-test-categories enforces which approach is valid for each test size
 
 ### freezegun/time-machine
 

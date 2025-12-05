@@ -1,16 +1,8 @@
 # Filesystem Isolation Examples
 
-> **PLANNED FEATURE - Coming in v0.5.0**
->
-> These examples demonstrate the **expected behavior** once filesystem isolation is fully released.
-> The design is documented in [ADR-002](../architecture/adr-002-filesystem-isolation.md).
-> The error messages, CLI options, and markers shown below are **not yet available**.
->
-> Track progress: [Epic #66](https://github.com/mikelane/pytest-test-categories/issues/66)
-
 ## Prerequisites
 
-To follow these examples when the feature is released, you may want to install optional mocking libraries:
+To follow these examples, you may want to install optional mocking libraries:
 
 ```bash
 # For comprehensive filesystem mocking
@@ -58,7 +50,31 @@ HermeticityViolationError: Filesystem access attempted
 Attempted create on: /home/user/project/output/
 ```
 
-### Fixed Test Using tmp_path
+### Fixed Test Using pyfakefs
+
+```python
+# tests/test_reports.py
+import pytest
+
+
+@pytest.mark.small
+def test_generate_report(fs):  # pyfakefs fixture
+    """Generate a report file using fake filesystem."""
+    # Arrange: Create output directory in fake filesystem
+    fs.create_dir("/output")
+    report_path = "/output/report.txt"
+
+    # Act: Generate the report (writes to fake filesystem)
+    with open(report_path, "w") as f:
+        f.write("Test Report\n==========\nAll tests passed.")
+
+    # Assert: Verify the report was created correctly
+    with open(report_path) as f:
+        content = f.read()
+    assert "All tests passed" in content
+```
+
+### Fixed Test Using tmp_path (Medium Test)
 
 ```python
 # tests/test_reports.py
@@ -67,7 +83,7 @@ from pathlib import Path
 import pytest
 
 
-@pytest.mark.small
+@pytest.mark.medium  # Medium tests can access the filesystem
 def test_generate_report(tmp_path):
     """Generate a report file using pytest's tmp_path fixture."""
     # Arrange: Create output directory in temp space
@@ -169,7 +185,7 @@ def test_load_config_parses_yaml(mocker):
     assert config["database"]["port"] == 5432
 ```
 
-### Fixed Test Using tmp_path
+### Fixed Test Using tmp_path (Medium Test)
 
 ```python
 # tests/test_config.py
@@ -188,7 +204,7 @@ database:
 """
 
 
-@pytest.mark.small
+@pytest.mark.medium  # Medium tests can access the filesystem
 def test_load_config_from_file(tmp_path):
     """Load configuration from a real file in temp space."""
     # Arrange: Create config file in temp directory
@@ -294,7 +310,7 @@ HermeticityViolationError: Filesystem access attempted
 Attempted list on: /home/user/project/data/input/
 ```
 
-### Fixed Test Using tmp_path
+### Fixed Test Using tmp_path (Medium Test)
 
 ```python
 # tests/test_processor.py
@@ -305,7 +321,7 @@ import pytest
 from myapp.processor import process_data_files
 
 
-@pytest.mark.small
+@pytest.mark.medium  # Medium tests can access the filesystem
 def test_process_data_files(tmp_path):
     """Process all data files in a directory."""
     # Arrange: Create test directory structure
@@ -390,7 +406,7 @@ HermeticityViolationError: Filesystem access attempted
 Attempted create on: /home/user/project/logs/
 ```
 
-### Fixed Test Using tmp_path
+### Fixed Test Using tmp_path (Medium Test)
 
 ```python
 # tests/test_logging.py
@@ -401,7 +417,7 @@ import pytest
 from myapp.logging import setup_logging, get_logger
 
 
-@pytest.mark.small
+@pytest.mark.medium  # Medium tests can access the filesystem
 def test_logging_creates_file(tmp_path):
     """Logging creates a log file in temp directory."""
     # Arrange: Set up logging in temp directory
@@ -524,35 +540,6 @@ def test_create_tables(mocker):
     assert "CREATE TABLE users" in executed_sql
 ```
 
-### Fixed Test With Allowed Fixtures Path
-
-```toml
-# pyproject.toml
-[tool.pytest.ini_options]
-test_categories_allowed_paths = ["tests/fixtures/"]
-```
-
-```python
-# tests/test_database.py
-from pathlib import Path
-
-import pytest
-
-from myapp.database import execute_sql
-
-
-@pytest.mark.small
-def test_create_tables(mocker):
-    """Create database tables from SQL file (fixture path allowed)."""
-    mock_conn = mocker.Mock()
-    # This path is now allowed via configuration
-    sql_file = Path("tests/fixtures/schema.sql")
-
-    execute_sql(mock_conn, sql_file.read_text())
-
-    mock_conn.execute.assert_called()
-```
-
 ## Example 6: Using Medium Test Size
 
 Sometimes filesystem access is genuinely required. In these cases, use a medium test:
@@ -615,12 +602,6 @@ markers = [
 
 # Enable strict filesystem and network isolation
 test_categories_enforcement = "strict"
-
-# Allow reading from test fixtures directory
-test_categories_allowed_paths = [
-    "tests/fixtures/",
-    "tests/data/",
-]
 ```
 
 ### pytest.ini
@@ -634,7 +615,6 @@ markers =
     xlarge: Extended tests (< 15min)
 
 test_categories_enforcement = strict
-test_categories_allowed_paths = tests/fixtures/,tests/data/
 ```
 
 ### CI Pipeline Example

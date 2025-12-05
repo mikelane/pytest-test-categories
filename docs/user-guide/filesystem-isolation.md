@@ -1,13 +1,5 @@
 # Filesystem Isolation for Hermetic Tests
 
-> **PLANNED FEATURE - Coming in v0.5.0**
->
-> This documentation describes filesystem isolation features that are **currently being implemented**.
-> The design is documented in [ADR-002](../architecture/adr-002-filesystem-isolation.md).
-> Implementation will follow in Issues #92 (port interface), #93 (adapters), and #95 (pytest integration).
->
-> Track progress: [Epic #66](https://github.com/mikelane/pytest-test-categories/issues/66)
-
 ## What is Filesystem Isolation?
 
 Filesystem isolation is a test enforcement mechanism that prevents small tests from accessing the filesystem during execution. This ensures tests are **hermetic** - running entirely in memory with no external dependencies.

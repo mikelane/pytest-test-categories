@@ -7,7 +7,7 @@ A pytest plugin that enforces test timing constraints, resource isolation, and v
 **pytest-test-categories** helps you maintain a healthy, reliable test suite by:
 
 - **Categorizing tests by size**: Mark tests as `small`, `medium`, `large`, or `xlarge` based on their execution characteristics
-- **Enforcing time limits**: Automatically fail tests that exceed their allocated time limit (configurable)
+- **Enforcing time limits**: Automatically fail tests that exceed their allocated time limit
 - **Validating test distribution**: Ensure your test suite follows the recommended test pyramid (80/15/5)
 - **Enforcing resource isolation**: Block network, filesystem, database, subprocess, and sleep access in small tests to ensure hermeticity
 - **Zero-overhead design**: Less than 1% overhead on test execution
@@ -16,7 +16,7 @@ A pytest plugin that enforces test timing constraints, resource isolation, and v
 
 | Size | Time Limit | Network | Filesystem | Database | Subprocess | Sleep |
 |------|------------|---------|------------|----------|------------|-------|
-| Small | 1 second | Blocked | tmp_path only | Blocked | Blocked | Blocked |
+| Small | 1 second | Blocked | Blocked | Blocked | Blocked | Blocked |
 | Medium | 5 minutes | Localhost | Allowed | Allowed | Allowed | Allowed |
 | Large | 15 minutes | Allowed | Allowed | Allowed | Allowed | Allowed |
 | XLarge | 15 minutes | Allowed | Allowed | Allowed | Allowed | Allowed |

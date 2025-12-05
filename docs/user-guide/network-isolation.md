@@ -190,30 +190,6 @@ In off mode, network isolation is disabled entirely. Use this for:
 - Specific test runs that require network access
 - Debugging network-related test issues
 
-## Allowed Hosts Configuration
-
-You can configure hosts that are always allowed, even for small tests.
-
-### Configuration via pyproject.toml
-
-```toml
-[tool.pytest.ini_options]
-test_categories_enforcement = "strict"
-
-# Hosts allowed for all test sizes
-test_categories_allowed_hosts = [
-    "localhost",
-    "127.0.0.1",
-    "::1",
-]
-```
-
-### Configuration via Command Line
-
-```bash
-pytest --test-categories-allowed-hosts=localhost,127.0.0.1
-```
-
 ## Common Remediation Strategies
 
 ### 1. Use responses Library

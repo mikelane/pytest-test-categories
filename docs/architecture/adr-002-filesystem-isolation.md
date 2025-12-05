@@ -2,15 +2,15 @@
 
 ## Status
 
-**Implemented** (v0.7.0)
+**Implemented** (v1.0.0, updated v1.1.0)
 
 > **Implementation Complete**: All components are fully implemented and production-ready:
 > - `FilesystemBlockerPort` interface with state machine
 > - `FilesystemPatchingBlocker` production adapter
 > - `FakeFilesystemBlocker` test adapter
 > - `FilesystemAccessViolationError` exception with remediation guidance
-> - Pytest hook integration with `--test-categories-allowed-paths` CLI option
-> - Small tests: filesystem blocked except for allowed paths (tmp_path, tempdir)
+> - Pytest hook integration
+> - Small tests: **ALL filesystem access blocked** (no exceptions)
 
 ### No Override Markers - By Design
 
@@ -19,11 +19,11 @@ This is a deliberate architectural decision, not a missing feature.
 
 **Rationale:**
 - Small tests must be hermetic. Period. No escape hatches.
-- If a test needs filesystem access beyond temp directories, it should be `@pytest.mark.medium`.
+- If a test needs filesystem access AT ALL, it should be `@pytest.mark.medium`.
 - Override markers would undermine the entire philosophy and make enforcement meaningless.
-- The correct remediation is to use `tmp_path`, mock filesystem operations, or upgrade the test category.
+- The correct remediation is to use `pyfakefs`, `io.StringIO`/`io.BytesIO`, or upgrade the test category.
 
-**If you need filesystem access in a test, use `tmp_path` fixture or change to `@pytest.mark.medium`.**
+**If you need filesystem access in a test, use `pyfakefs` for mocking, `io.StringIO`/`io.BytesIO` for in-memory file-like objects, or change to `@pytest.mark.medium`.**
 
 ## Context
 
@@ -105,15 +105,19 @@ Python provides multiple ways to access the filesystem:
 - `io.open()` - Alias for built-in open
 - `io.FileIO` - Low-level file I/O
 
-### Research: Allowed Paths for Small Tests
+### Design: No Allowed Paths for Small Tests
 
-Certain paths should be allowed even for small tests:
+Small tests have **no allowed paths** - ALL filesystem access is blocked. This includes:
 
-1. **pytest's tmp_path fixture**: Provided by pytest, isolated per-test
-2. **pytest's tmp_path_factory**: Session-scoped temp directories
-3. **System temp directory**: `tempfile.gettempdir()` and subdirectories
-4. **Package resources**: `importlib.resources` for reading bundled data
-5. **User-configured paths**: Custom allowlist via configuration
+1. ~~pytest's tmp_path fixture~~ - **Blocked** (filesystem I/O)
+2. ~~System temp directory~~ - **Blocked** (filesystem I/O)
+3. ~~User-configured paths~~ - **Not supported** (no escape hatches)
+
+For small tests, use instead:
+- `pyfakefs` for comprehensive filesystem mocking
+- `io.StringIO` or `io.BytesIO` for in-memory file-like objects
+- `importlib.resources` for reading bundled package data
+- Embedded test data as Python constants
 
 ### Research: Existing Solutions
 
@@ -299,10 +303,10 @@ Implements `FilesystemBlockerPort` by:
    - Normalize path (remove `.`, `..`, trailing slashes)
    - Handle both string paths and Path objects
 
-3. **Allowed Path Checking** - Path is allowed if:
-   - It is under an allowed path (parent check)
-   - It matches a user-configured pattern
-   - All operation types (including STAT) follow the same rules - no special exemptions
+3. **Access Checking for Small Tests** - ALL filesystem access is blocked:
+   - No allowed paths for small tests
+   - All operation types (including STAT) are blocked
+   - No exceptions or escape hatches
 
 4. **Violation Handling**:
    - STRICT mode: Raise `FilesystemAccessViolationError`
@@ -346,14 +350,11 @@ class FilesystemPatchingBlocker(FilesystemBlockerPort):
     def _do_deactivate(self) -> None:
         """Restore original filesystem functions."""
 
-    def _is_path_allowed(self, path: Path, operation: FilesystemOperation) -> bool:
-        """Check if path is in allowed set or user allowlist.
+    def _is_access_allowed(self, path: Path, operation: FilesystemOperation) -> bool:
+        """Check if filesystem access is allowed.
 
-        Path resolution:
-        1. Convert to Path if string
-        2. Resolve to absolute path
-        3. Resolve symlinks (handle dangling symlinks gracefully)
-        4. Check if path is under any allowed path
+        For small tests: ALL access is blocked (returns False)
+        For medium/large/xlarge tests: ALL access is allowed (returns True)
 
         """
 ```
@@ -428,9 +429,9 @@ class FilesystemAccessViolationError(HermeticityViolationError):
         """Get remediation suggestions based on test size and operation."""
         if test_size == TestSize.SMALL:
             suggestions = [
-                'Use pytest\'s tmp_path fixture for temporary files',
-                'Mock file operations using pytest-mock (mocker fixture) or pyfakefs',
+                'Use pyfakefs for comprehensive filesystem mocking (pip install pyfakefs)',
                 'Use io.StringIO or io.BytesIO for in-memory file-like objects',
+                'Mock file operations using pytest-mock (mocker.patch("builtins.open", ...))',
             ]
             if operation in (FilesystemOperation.READ, FilesystemOperation.STAT):
                 suggestions.append('Embed test data as Python constants or use importlib.resources')
@@ -439,71 +440,25 @@ class FilesystemAccessViolationError(HermeticityViolationError):
         return []
 ```
 
-### 7. Allowed Paths Detection
+### 7. No Allowed Paths for Small Tests
 
-The plugin automatically detects and allows these paths:
-
-```python
-def get_default_allowed_paths(config: pytest.Config) -> frozenset[Path]:
-    """Determine default allowed paths for filesystem isolation.
-
-    Returns paths that are always safe to access during tests:
-    1. System temp directory (tempfile.gettempdir())
-    2. pytest's basetemp directory (--basetemp or default)
-    3. User-configured additional paths
-
-    Args:
-        config: pytest Config object.
-
-    Returns:
-        Frozen set of allowed Path objects.
-
-    """
-    allowed: set[Path] = set()
-
-    # System temp directory
-    allowed.add(Path(tempfile.gettempdir()).resolve())
-
-    # pytest's basetemp (where tmp_path is created)
-    basetemp = config.getoption('basetemp', default=None)
-    if basetemp:
-        allowed.add(Path(basetemp).resolve())
-    else:
-        # Default pytest basetemp location (resolve username at runtime)
-        import getpass
-        allowed.add(Path(tempfile.gettempdir()).resolve() / f'pytest-of-{getpass.getuser()}')
-
-    # User-configured allowed paths from pytest.ini / pyproject.toml
-    configured_paths = config.getini('test_categories_allowed_paths')
-    for path_str in configured_paths:
-        allowed.add(Path(path_str).expanduser().resolve())
-
-    return frozenset(allowed)
-```
-
-For per-test allowed paths (tmp_path fixture):
+Small tests have **no allowed paths**. ALL filesystem access is blocked. This is intentional:
 
 ```python
-def get_test_allowed_paths(item: pytest.Item) -> frozenset[Path]:
-    """Get allowed paths for a specific test item.
+def is_filesystem_allowed(test_size: TestSize) -> bool:
+    """Determine if filesystem access is allowed for a test size.
 
-    Includes paths from fixtures like tmp_path that are test-specific.
-
-    Args:
-        item: pytest test item.
-
-    Returns:
-        Additional allowed paths for this specific test.
+    Small tests: NO filesystem access allowed (returns False)
+    Medium/Large/XLarge tests: Filesystem access allowed (returns True)
 
     """
-    allowed: set[Path] = set()
-
-    # If test uses tmp_path fixture, add that path
-    # Note: This requires fixture resolution, which happens during setup
-    # We may need to hook into pytest_fixture_post_process or similar
-
-    return frozenset(allowed)
+    return test_size != TestSize.SMALL
 ```
+
+If a test needs filesystem access, the options are:
+1. Use `pyfakefs` for comprehensive filesystem mocking (stays `@pytest.mark.small`)
+2. Use `io.StringIO`/`io.BytesIO` for in-memory file-like objects (stays `@pytest.mark.small`)
+3. Change to `@pytest.mark.medium` (allows real filesystem via `tmp_path`)
 
 ### 8. Configuration Schema
 
@@ -513,27 +468,17 @@ Support configuration via `pyproject.toml`:
 [tool.pytest.ini_options]
 # Global enforcement mode (applies to all resource types)
 test_categories_enforcement = "strict"  # or "warn" or "off"
-
-# Additional allowed paths for filesystem access (small tests)
-test_categories_allowed_paths = [
-    "tests/fixtures/",
-    "src/mypackage/data/",
-]
 ```
 
 > **Note on STAT operations**: STAT operations (`os.path.exists()`, `Path.is_file()`, etc.)
-> are treated identically to other filesystem operations - blocked on non-allowed paths,
-> permitted on allowed paths. There is no special exemption for read-only metadata operations,
+> are treated identically to other filesystem operations - blocked for small tests.
+> There is no special exemption for read-only metadata operations,
 > as they still create dependencies on external filesystem state and violate hermeticity.
 
-CLI options (extend existing):
+CLI options:
 
 ```bash
-# Already exists from v0.4.0
 pytest --test-categories-enforcement=strict|warn|off
-
-# New option for filesystem
-pytest --test-categories-allowed-paths=path1,path2
 ```
 
 ### 9. Integration Points
@@ -557,11 +502,8 @@ def pytest_runtest_call(item: pytest.Item) -> Generator[None, None, None]:
     test_size = get_test_size(item)
 
     if test_size == TestSize.SMALL and state.enforcement_mode != EnforcementMode.OFF:
-        # Compute allowed paths for this test
-        allowed_paths = get_default_allowed_paths(item.config) | get_test_allowed_paths(item)
-
         try:
-            blocker.activate(test_size, state.enforcement_mode, allowed_paths)
+            blocker.activate(test_size, state.enforcement_mode)
             yield
         finally:
             blocker.deactivate()
@@ -585,10 +527,11 @@ Details:
   Attempted write on: /home/user/project/output/report.txt
 
 Small tests have restricted resource access. Options:
-  1. Use pytest's tmp_path fixture for temporary files
-  2. Mock file operations using pytest-mock (mocker fixture) or pyfakefs
-  3. Use io.StringIO or io.BytesIO for in-memory file-like objects
-  4. Change test category to @pytest.mark.medium (if filesystem access is required)
+  - Use pyfakefs for comprehensive filesystem mocking (pip install pyfakefs)
+  - Use io.StringIO or io.BytesIO for in-memory file-like objects
+  - Mock file operations using pytest-mock (mocker.patch("builtins.open", ...))
+  - Embed test data as Python constants or use importlib.resources
+  - Change test category to @pytest.mark.medium (if filesystem access is required)
 
 Documentation: See docs/architecture/adr-002-filesystem-isolation.md
 ============================================================
@@ -728,11 +671,9 @@ Estimated overhead: <1ms per filesystem operation (dominated by actual I/O in pr
 - Integration tests with production adapter
 
 ### Phase 3: Pytest Integration (Issue #94)
-- Add `--test-categories-allowed-paths` CLI option
-- Add `test_categories_allowed_paths` ini option
-- Implement allowed path detection (tmp_path, basetemp)
 - Hook into `pytest_runtest_call`
 - End-to-end tests with pytester
+- Block ALL filesystem access for small tests (no allowed paths)
 
 ### Phase 4: Extended Operations (Issue #95)
 - Patch `os.open`, `os.mkdir`, `os.remove`, etc.

@@ -41,17 +41,18 @@ def sample_user():
 
 | Fixture | Description | Why Allowed |
 |---------|-------------|-------------|
-| `tmp_path` | Temporary directory (function-scoped) | Auto-cleaned, isolated per test |
-| `tmp_path_factory` | Factory for temp directories | Used within allowed scope |
 | `monkeypatch` | Attribute/environment patching | For test isolation |
 | `mocker` (pytest-mock) | Mock factory | Essential for test doubles |
 | `capsys` / `capfd` | Capture stdout/stderr | No external I/O |
 | `caplog` | Capture log output | No external I/O |
+| `fs` (pyfakefs) | Fake filesystem | In-memory, no real I/O |
 
 **Fixtures to Avoid in Small Tests:**
 
 | Fixture | Why Avoid |
 |---------|-----------|
+| `tmp_path` | Filesystem access blocked in small tests |
+| `tmp_path_factory` | Filesystem access blocked in small tests |
 | Database fixtures | External I/O dependency |
 | Network fixtures | Network access blocked |
 | File fixtures with real paths | Filesystem access blocked |
@@ -304,5 +305,4 @@ While pytest-test-categories doesn't provide fixtures directly, these modules ha
 
 | Component | Location |
 |-----------|----------|
-| Allowed paths (tmp_path) | [`plugin.py#_get_allowed_paths`](https://github.com/mikelane/pytest-test-categories/blob/main/src/pytest_test_categories/plugin.py) |
 | Filesystem blocker | [`adapters/filesystem.py`](https://github.com/mikelane/pytest-test-categories/blob/main/src/pytest_test_categories/adapters/filesystem.py) |

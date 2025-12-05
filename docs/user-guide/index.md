@@ -39,19 +39,17 @@ mocking-and-small-tests
 
 | Marker | Time Limit | Network | Filesystem | Subprocess | Database | Sleep | Threading |
 |--------|------------|---------|------------|------------|----------|-------|-----------|
-| `@pytest.mark.small` | 1 second | Blocked | Blocked* | Blocked | Blocked | Blocked | Warned |
+| `@pytest.mark.small` | 1 second | Blocked | Blocked | Blocked | Blocked | Blocked | Warned |
 | `@pytest.mark.medium` | 5 minutes | Localhost | Allowed | Allowed | Allowed | Allowed | Allowed |
 | `@pytest.mark.large` | 15 minutes | Allowed | Allowed | Allowed | Allowed | Allowed | Allowed |
 | `@pytest.mark.xlarge` | 15 minutes | Allowed | Allowed | Allowed | Allowed | Allowed | Allowed |
-
-*Small tests can access `tmp_path`, system temp directories, and configured allowed paths.
 
 ### Resource Isolation Summary
 
 | Resource | Small Tests | Medium Tests | Large/XLarge Tests |
 |----------|-------------|--------------|-------------------|
 | **Network** | Blocked | Localhost only | Allowed |
-| **Filesystem** | Blocked (except tmp_path) | Allowed | Allowed |
+| **Filesystem** | Blocked | Allowed | Allowed |
 | **Subprocess** | Blocked | Allowed | Allowed |
 | **Database** | Blocked (including :memory:) | Allowed | Allowed |
 | **Sleep** | Blocked | Allowed | Allowed |

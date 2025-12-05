@@ -60,7 +60,7 @@ Before categorizing tests, understand what each size means:
 
 | Size | Time Limit | Network | Filesystem | External Systems |
 |------|-----------|---------|------------|------------------|
-| Small | 1 second | Blocked | `tmp_path` only | None |
+| Small | 1 second | Blocked | Blocked | None |
 | Medium | 5 minutes | Localhost only | Allowed | Containers OK |
 | Large | 15 minutes | Allowed | Allowed | Allowed |
 | XLarge | 15 minutes | Allowed | Allowed | Allowed |
@@ -89,7 +89,8 @@ Create a simple checklist:
 
 - **Pure unit tests** (no I/O, no mocking needed) -> `@pytest.mark.small`
 - **Tests with mocked HTTP/database** -> `@pytest.mark.small`
-- **Tests using `tmp_path`** -> `@pytest.mark.small`
+- **Tests using `pyfakefs` or `io.StringIO`** -> `@pytest.mark.small`
+- **Tests using `tmp_path`** -> `@pytest.mark.medium` (filesystem access)
 - **Tests using localhost servers** -> `@pytest.mark.medium`
 - **Tests using testcontainers** -> `@pytest.mark.medium(allow_external_systems=True)`
 - **Tests calling real external APIs** -> `@pytest.mark.large`
@@ -275,10 +276,22 @@ def test_read_config():
     assert config["database"]["host"] == "localhost"
 ```
 
-#### After (Using tmp_path)
+#### After (Using pyfakefs - stays small)
 
 ```python
 @pytest.mark.small
+def test_read_config(fs):  # pyfakefs fixture
+    fs.create_file("/config/settings.yaml", contents="database:\n  host: localhost\n")
+
+    config = load_config("/config/settings.yaml")
+
+    assert config["database"]["host"] == "localhost"
+```
+
+#### After (Using tmp_path - medium test)
+
+```python
+@pytest.mark.medium  # Medium tests can access filesystem
 def test_read_config(tmp_path):
     config_file = tmp_path / "settings.yaml"
     config_file.write_text("database:\n  host: localhost\n")

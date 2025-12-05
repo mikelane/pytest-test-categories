@@ -1,13 +1,5 @@
 # Troubleshooting Filesystem Violations
 
-> **PLANNED FEATURE - Coming in v0.5.0**
->
-> This troubleshooting guide describes error messages and behaviors that will be available
-> once filesystem isolation is fully released. The design is documented in
-> [ADR-002](../architecture/adr-002-filesystem-isolation.md).
->
-> Track progress: [Epic #66](https://github.com/mikelane/pytest-test-categories/issues/66)
-
 This guide helps you identify and fix filesystem access violations in your test suite.
 
 ## Understanding the Error Message
@@ -26,11 +18,11 @@ Details:
   Attempted write on: /home/user/project/output/report.txt
 
 Small tests have restricted resource access. Options:
-  1. Use pytest's tmp_path fixture for temporary files
-  2. Mock file operations using pytest-mock (mocker fixture) or pyfakefs
-  3. Use io.StringIO or io.BytesIO for in-memory file-like objects
-  4. Embed test data as Python constants or use importlib.resources
-  5. Change test category to @pytest.mark.medium (if filesystem access is required)
+  - Use pyfakefs for comprehensive filesystem mocking (pip install pyfakefs)
+  - Use io.StringIO or io.BytesIO for in-memory file-like objects
+  - Mock file operations using pytest-mock (mocker.patch("builtins.open", ...))
+  - Embed test data as Python constants or use importlib.resources
+  - Change test category to @pytest.mark.medium (if filesystem access is required)
 
 Documentation: See docs/architecture/adr-002-filesystem-isolation.md
 ============================================================
@@ -65,12 +57,25 @@ def test_generate_report():
     assert output.exists()
 ```
 
-**Fix**: Use pytest's `tmp_path` fixture:
+**Fix Option 1**: Use `pyfakefs` for in-memory filesystem:
+
+```python
+@pytest.mark.small
+def test_generate_report(fs):  # pyfakefs fixture
+    fs.create_dir("/output")
+    output = "/output/report.txt"
+    with open(output, "w") as f:
+        f.write("Report content")
+    with open(output) as f:
+        assert f.read() == "Report content"
+```
+
+**Fix Option 2**: Use `@pytest.mark.medium` with `tmp_path`:
 
 ```python
 from pathlib import Path
 
-@pytest.mark.small
+@pytest.mark.medium  # Medium tests can access filesystem
 def test_generate_report(tmp_path):
     output = tmp_path / "report.txt"
     output.write_text("Report content")
@@ -145,12 +150,22 @@ def test_setup_logging():
     setup_logging(log_dir)
 ```
 
-**Fix**: Use tmp_path:
+**Fix Option 1**: Use `pyfakefs`:
+
+```python
+@pytest.mark.small
+def test_setup_logging(fs):  # pyfakefs fixture
+    fs.create_dir("/logs")
+    setup_logging("/logs")
+    # Verify in fake filesystem
+```
+
+**Fix Option 2**: Use `@pytest.mark.medium` with `tmp_path`:
 
 ```python
 from pathlib import Path
 
-@pytest.mark.small
+@pytest.mark.medium  # Medium tests can access filesystem
 def test_setup_logging(tmp_path):
     log_dir = tmp_path / "logs"
     log_dir.mkdir()
@@ -160,13 +175,13 @@ def test_setup_logging(tmp_path):
 
 ### 4. Checking File Existence
 
-**Symptom**: Stat operation on a non-allowed path.
+**Symptom**: Stat operation blocked.
 
 ```
 Attempted stat on: /home/user/project/data/users.json
 ```
 
-**Cause**: Test checks if a file exists outside allowed paths:
+**Cause**: Test checks if a file exists (filesystem access blocked for small tests):
 
 ```python
 from pathlib import Path
@@ -189,10 +204,10 @@ def test_handles_missing_file(mocker):
     assert result == []  # Falls back to empty list
 ```
 
-Or create the file in tmp_path:
+Or use `@pytest.mark.medium` with `tmp_path`:
 
 ```python
-@pytest.mark.small
+@pytest.mark.medium  # Medium tests can access filesystem
 def test_data_file_loaded(tmp_path):
     data_file = tmp_path / "users.json"
     data_file.write_text('[{"name": "Alice"}]')
@@ -222,15 +237,7 @@ def test_parse_xml():
     assert result.root.tag == "document"
 ```
 
-**Fix Option 1**: Add fixture directory to allowed paths:
-
-```toml
-# pyproject.toml
-[tool.pytest.ini_options]
-test_categories_allowed_paths = ["tests/fixtures/"]
-```
-
-**Fix Option 2**: Embed fixture data in the test:
+**Fix Option 1**: Embed fixture data in the test:
 
 ```python
 SAMPLE_XML = """
@@ -246,7 +253,7 @@ def test_parse_xml():
     assert result.root.tag == "document"
 ```
 
-**Fix Option 3**: Use importlib.resources for package fixtures:
+**Fix Option 2**: Use importlib.resources for package fixtures:
 
 ```python
 from importlib import resources
@@ -278,10 +285,23 @@ def test_clear_cache():
     assert not cache_file.exists()
 ```
 
-**Fix**: Use tmp_path for the cache:
+**Fix Option 1**: Use `pyfakefs`:
 
 ```python
 @pytest.mark.small
+def test_clear_cache(fs):  # pyfakefs fixture
+    fs.create_file("/tmp/cache.db", contents=b"cached data")
+
+    clear_cache("/tmp/cache.db")
+
+    import os
+    assert not os.path.exists("/tmp/cache.db")
+```
+
+**Fix Option 2**: Use `@pytest.mark.medium` with `tmp_path`:
+
+```python
+@pytest.mark.medium  # Medium tests can access filesystem
 def test_clear_cache(tmp_path):
     cache_file = tmp_path / "cache.db"
     cache_file.write_bytes(b"cached data")
@@ -311,10 +331,24 @@ def test_discover_plugins():
     assert len(plugins) > 0
 ```
 
-**Fix**: Create test plugins in tmp_path:
+**Fix Option 1**: Use `pyfakefs`:
 
 ```python
 @pytest.mark.small
+def test_discover_plugins(fs):  # pyfakefs fixture
+    fs.create_dir("/plugins")
+    fs.create_file("/plugins/plugin_a.py", contents="# Plugin A")
+    fs.create_file("/plugins/plugin_b.py", contents="# Plugin B")
+
+    plugins = discover_plugins("/plugins")
+
+    assert len(plugins) == 2
+```
+
+**Fix Option 2**: Use `@pytest.mark.medium` with `tmp_path`:
+
+```python
+@pytest.mark.medium  # Medium tests can access filesystem
 def test_discover_plugins(tmp_path):
     plugin_dir = tmp_path / "plugins"
     plugin_dir.mkdir()
@@ -410,16 +444,16 @@ Consider deferring such access or using lazy initialization.
 
 ### Phase 2: Quick Wins
 
-1. Add commonly-used fixture directories to allowed paths
-2. Replace hardcoded paths with tmp_path fixture
-3. Convert string literals to StringIO/BytesIO
-4. Add missing `tmp_path` fixture parameters
+1. Use `pyfakefs` for tests that need filesystem semantics
+2. Use `io.StringIO`/`io.BytesIO` for file-like objects
+3. Convert string literals to embedded Python constants
+4. Change tests that genuinely need filesystem to `@pytest.mark.medium`
 
 ### Phase 3: Refactoring
 
 1. Introduce dependency injection for file operations
 2. Create abstraction layers for filesystem access
-3. Build test fixtures that create needed files in tmp_path
+3. Use `pyfakefs` for comprehensive filesystem mocking
 4. Move test data into embedded constants or package resources
 
 ### Phase 4: Enforcement
@@ -432,8 +466,8 @@ Consider deferring such access or using lazy initialization.
    ```
 
 2. Add pre-commit hook to catch violations locally
-3. Document filesystem mocking patterns for the team
-4. Update test templates to use tmp_path by default
+3. Document filesystem mocking patterns for the team (pyfakefs, io.StringIO)
+4. Update test templates to use pyfakefs or io.StringIO by default
 
 ## Debugging Access Patterns
 
@@ -476,7 +510,7 @@ coverage report --show-missing
 
 ### Recategorize the Test
 
-If a test genuinely requires filesystem access beyond tmp_path, it's not a small test - recategorize it:
+If a test genuinely requires filesystem access, it's not a small test - recategorize it:
 
 ```python
 @pytest.mark.medium  # Recategorized: requires filesystem access

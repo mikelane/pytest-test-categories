@@ -23,9 +23,9 @@ def test_example():
 
 | Property | Value |
 |----------|-------|
-| Time Limit | 1 second (default) |
+| Time Limit | 1 second |
 | Network Access | Blocked |
-| Filesystem Access | Blocked (except temp paths) |
+| Filesystem Access | Blocked |
 | Subprocess Spawning | Blocked |
 | Database Access | Blocked |
 | Sleep Calls | Blocked |
@@ -75,7 +75,7 @@ def test_example():
 
 | Property | Value |
 |----------|-------|
-| Time Limit | 300 seconds / 5 minutes (default) |
+| Time Limit | 300 seconds / 5 minutes |
 | Network Access | Localhost only |
 | Filesystem Access | Allowed |
 | Subprocess Spawning | Allowed |
@@ -137,7 +137,7 @@ def test_example():
 
 | Property | Value |
 |----------|-------|
-| Time Limit | 900 seconds / 15 minutes (default) |
+| Time Limit | 900 seconds / 15 minutes |
 | Network Access | Allowed |
 | Filesystem Access | Allowed |
 | Subprocess Spawning | Allowed |
@@ -188,7 +188,7 @@ def test_example():
 
 | Property | Value |
 |----------|-------|
-| Time Limit | 900 seconds / 15 minutes (default) |
+| Time Limit | 900 seconds / 15 minutes |
 | Network Access | Allowed |
 | Filesystem Access | Allowed |
 | Subprocess Spawning | Allowed |
