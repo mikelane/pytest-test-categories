@@ -5,22 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## v1.2.0 (2025-12-23)
 
-### Added
+### Feat
 
-- **Marker inheritance conflict warnings**: Warns when test classes have conflicting size markers from inheritance (#160)
-  - Detects multiple base class conflicts (e.g., `class TestFoo(SmallTest, MediumTest)`)
-  - Detects child class overriding parent marker (e.g., `@pytest.mark.medium` on child when parent has `@pytest.mark.small`)
-  - Detects method marker conflicting with class marker
-  - Warnings include guidance on resolving conflicts
-  - Use `@pytest.mark.small(override=True)` to suppress warnings for intentional overrides
-- **Per-test performance baselines**: Define custom timeout limits stricter than category defaults using `@pytest.mark.small(timeout=0.1)`. When a test exceeds its custom baseline, a distinct `PerformanceBaselineViolationError` is raised showing both the baseline and category limits. JSON reports track baseline violations separately from timing violations. (#162)
-- **Auto-categorization suggestions**: New `--test-categories-suggest` flag runs tests in observation mode and suggests appropriate size categories based on detected behavior (#159)
-  - Detects network, filesystem, subprocess, database, and sleep usage
-  - Analyzes execution time to suggest appropriate categories
-  - Groups suggestions into upgrades, downgrades, and uncategorized tests
-  - Optional JSON output via `--test-categories-suggest-output=<file>` for CI integration
+- Add auto-categorization suggestions mode (#210)
+- Add per-test performance baselines (#209)
+- Warn on marker inheritance conflicts (#208)
+
+### Fix
+
+- resolve scheduled workflow failures
 
 ## v1.1.0 (2025-12-04)
 
