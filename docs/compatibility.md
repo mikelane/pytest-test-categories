@@ -20,7 +20,7 @@ pytest-test-categories is designed to work alongside the existing pytest ecosyst
 | `pytest-benchmark` | ✅ Compatible | Benchmarks work; mind category time limits |
 | `hypothesis` | ✅ Compatible | Property-based testing works normally |
 | `pytest-asyncio` | ✅ Compatible | Async tests work normally |
-| `testcontainers` | ✅ Compatible | Use `@pytest.mark.medium` for container tests |
+| `testcontainers` | ✅ Compatible | Use `@pytest.mark.large` for container tests (orchestration required) |
 
 ## Detailed Notes
 
@@ -75,7 +75,7 @@ For hermetic small tests, you need to mock HTTP calls. We recommend:
 
 | Library | Style | Best For |
 |---------|-------|----------|
-| `pytest-httpx` | Context manager / fixture | HTTPX users |
+| `pytest-httpx` | Pytest fixture | HTTPX users |
 | `responses` | Decorator / context manager | Requests users |
 | `httpretty` | Context manager | Any HTTP library |
 | `respx` | Async-first | Async HTTPX users |
@@ -100,22 +100,22 @@ For tests that involve time:
 
 | Library | Performance | API Style |
 |---------|-------------|-----------|
-| `time-machine` | Fast (C extension) | Context manager |
+| `time-machine` | Fast (C extension) | Decorator / context manager |
 | `freezegun` | Slower (pure Python) | Decorator / context manager |
 
 **Example with time-machine:**
 ```python
+import time_machine
+
 @pytest.mark.small
-def test_expiration_check(time_machine):
-    time_machine.move_to("2024-01-01 12:00:00")
-
+@time_machine.travel("2024-01-01 12:00:00", tick=False)
+def test_expiration_check():
     token = create_token(expires_in_seconds=3600)
-
-    time_machine.move_to("2024-01-01 12:30:00")
     assert token.is_valid()
 
-    time_machine.move_to("2024-01-01 14:00:00")
-    assert not token.is_valid()
+    # Advance time by 2 hours
+    with time_machine.travel("2024-01-01 14:00:00", tick=False):
+        assert not token.is_valid()
 ```
 
 ## Recommended Stack

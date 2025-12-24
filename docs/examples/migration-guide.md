@@ -366,6 +366,8 @@ def test_something(mocker):
     assert get_settings()["key"] == "value"
 ```
 
+> **Note**: This pattern only works if the module hasn't been imported yet. For already-imported modules, use `importlib.reload()` after patching, or refactor to lazy loading (the architectural fix above).
+
 ### 2. Libraries That Probe the Filesystem
 
 **Symptom**: Unexpected filesystem violation from code you didn't write.
@@ -437,13 +439,16 @@ def test_retry():
     )
 ```
 
-**Tactical Fix**: Use `freezegun`, `time-machine`, or mock `time.sleep`.
+**Tactical Fix**: Use `freezegun`, `time-machine`, or mock `time.sleep` directly.
 ```python
 @pytest.mark.small
-def test_with_time_machine(time_machine):
-    time_machine.move_to("2024-01-01")
-    # time.sleep() won't actually sleep
+def test_retry_timing(mocker):
+    mock_sleep = mocker.patch("time.sleep")  # Prevents actual sleeping
+    result = retry_with_backoff(lambda: "success")
+    assert mock_sleep.call_count >= 0  # Verify sleep was called (or not)
 ```
+
+> **Note**: `time-machine` and `freezegun` mock time-related functions like `time.time()` and `datetime.now()`, but `time.sleep()` will still actually sleep unless you mock it separately.
 
 ### 4. Subprocess in Unexpected Places
 
@@ -460,7 +465,7 @@ def test_with_time_machine(time_machine):
 ```python
 @pytest.mark.small
 def test_git_info(mocker):
-    mocker.patch("subprocess.run", return_value=Mock(
+    mocker.patch("subprocess.run", return_value=mocker.Mock(
         stdout="abc123\n", returncode=0
     ))
     result = get_git_commit()
