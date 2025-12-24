@@ -26,6 +26,14 @@
   <a href="#why-pytest-test-categories">Why?</a>
 </p>
 
+<p align="center">
+  <em>
+    <strong>This is an architecture tool disguised as a testing plugin.</strong><br>
+    When small tests are truly hermetic, code naturally evolves toward explicit boundaries<br>
+    and injectable dependencies. Strict enforcement isn't punitive—it's design feedback.
+  </em>
+</p>
+
 ---
 
 ## Quickstart
