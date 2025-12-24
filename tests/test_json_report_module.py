@@ -589,3 +589,146 @@ class DescribeJsonReportFromTestSizeReport:
 
         assert json_report.tests[0].size == 'unsized'
         assert 'hermeticity:network' in json_report.tests[0].violations
+
+
+@pytest.mark.small
+class DescribeViolationsSummaryWithBaseline:
+    """Test suite for ViolationsSummary with baseline violations."""
+
+    def it_creates_with_baseline_field(self) -> None:
+        """Create violations summary with baseline field."""
+        violations = ViolationsSummary(baseline=1)
+
+        assert violations.baseline == 1
+
+    def it_defaults_baseline_to_zero(self) -> None:
+        """Default baseline violations to 0."""
+        violations = ViolationsSummary()
+
+        assert violations.baseline == 0
+
+    def it_serializes_baseline_to_dict(self) -> None:
+        """Serialize baseline violations to dictionary format."""
+        violations = ViolationsSummary(timing=1, baseline=2)
+
+        result = violations.model_dump()
+
+        assert result['baseline'] == 2
+        assert result['timing'] == 1
+
+
+@pytest.mark.small
+class DescribeJsonReportWithBaselineViolations:
+    """Test suite for JSON report baseline violation handling."""
+
+    def it_includes_baseline_violations_in_summary(self) -> None:
+        """Include baseline violations count in JSON report summary."""
+        test_report = TestSizeReport()
+        test_report.add_test(
+            'test_slow.py::test_exceeded_baseline',
+            TestSize.SMALL,
+            duration=0.15,
+            outcome='failed',
+        )
+        test_report.add_baseline_violation(
+            'test_slow.py::test_exceeded_baseline',
+            baseline=0.1,
+            category_limit=1.0,
+            actual=0.15,
+        )
+
+        stats = DistributionStats.update_counts({TestSize.SMALL: 1})
+
+        json_report = JsonReport.from_test_size_report(
+            test_report=test_report,
+            distribution_stats=stats,
+            version='0.7.0',
+        )
+
+        assert json_report.summary.violations.baseline == 1
+
+    def it_includes_baseline_violation_in_per_test_entry(self) -> None:
+        """Include baseline violation marker in per-test violations list."""
+        test_report = TestSizeReport()
+        test_report.add_test(
+            'test_slow.py::test_exceeded_baseline',
+            TestSize.SMALL,
+            duration=0.15,
+            outcome='failed',
+        )
+        test_report.add_baseline_violation(
+            'test_slow.py::test_exceeded_baseline',
+            baseline=0.1,
+            category_limit=1.0,
+            actual=0.15,
+        )
+
+        stats = DistributionStats.update_counts({TestSize.SMALL: 1})
+
+        json_report = JsonReport.from_test_size_report(
+            test_report=test_report,
+            distribution_stats=stats,
+            version='0.7.0',
+        )
+
+        test_entry = json_report.tests[0]
+        assert 'baseline' in test_entry.violations
+
+    def it_distinguishes_baseline_from_timing_violations(self) -> None:
+        """Distinguish baseline violations from regular timing violations."""
+        test_report = TestSizeReport()
+        # Test that exceeds baseline (0.15s > 0.1s baseline)
+        test_report.add_test(
+            'test_baseline.py::test_exceeded_baseline',
+            TestSize.SMALL,
+            duration=0.15,
+            outcome='failed',
+        )
+        test_report.add_baseline_violation(
+            'test_baseline.py::test_exceeded_baseline',
+            baseline=0.1,
+            category_limit=1.0,
+            actual=0.15,
+        )
+        # Test that exceeds category limit (1.5s > 1.0s limit)
+        test_report.add_test(
+            'test_timing.py::test_exceeded_limit',
+            TestSize.SMALL,
+            duration=1.5,
+            outcome='failed',
+        )
+
+        stats = DistributionStats.update_counts({TestSize.SMALL: 2})
+
+        json_report = JsonReport.from_test_size_report(
+            test_report=test_report,
+            distribution_stats=stats,
+            version='0.7.0',
+        )
+
+        assert json_report.summary.violations.baseline == 1
+        assert json_report.summary.violations.timing == 1
+
+        # Check per-test entries
+        baseline_test = next(t for t in json_report.tests if t.name == 'test_baseline.py::test_exceeded_baseline')
+        timing_test = next(t for t in json_report.tests if t.name == 'test_timing.py::test_exceeded_limit')
+        assert 'baseline' in baseline_test.violations
+        assert 'timing' not in baseline_test.violations
+        assert 'timing' in timing_test.violations
+        assert 'baseline' not in timing_test.violations
+
+    def it_handles_no_baseline_violations(self) -> None:
+        """Handle case when there are no baseline violations."""
+        test_report = TestSizeReport()
+        test_report.add_test('test_fast.py::test_quick', TestSize.SMALL, duration=0.05, outcome='passed')
+
+        stats = DistributionStats.update_counts({TestSize.SMALL: 1})
+
+        json_report = JsonReport.from_test_size_report(
+            test_report=test_report,
+            distribution_stats=stats,
+            version='0.7.0',
+        )
+
+        assert json_report.summary.violations.baseline == 0
+        assert json_report.tests[0].violations == []

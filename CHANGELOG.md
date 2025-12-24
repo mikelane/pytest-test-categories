@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Detects method marker conflicting with class marker
   - Warnings include guidance on resolving conflicts
   - Use `@pytest.mark.small(override=True)` to suppress warnings for intentional overrides
+- **Per-test performance baselines**: Define custom timeout limits stricter than category defaults using `@pytest.mark.small(timeout=0.1)`. When a test exceeds its custom baseline, a distinct `PerformanceBaselineViolationError` is raised showing both the baseline and category limits. JSON reports track baseline violations separately from timing violations. (#162)
 
 ## v1.1.0 (2025-12-04)
 

@@ -12,7 +12,10 @@ import pytest
 
 from pytest_test_categories.services.timing_validation import TimingValidationService
 from pytest_test_categories.timers import FakeTimer
-from pytest_test_categories.timing import TimingViolationError
+from pytest_test_categories.timing import (
+    PerformanceBaselineViolationError,
+    TimingViolationError,
+)
 from pytest_test_categories.types import (
     TestSize,
     TestTimer,
@@ -239,3 +242,110 @@ class DescribeCleanupTimer:
 
         # Should be the same dictionary object
         assert id(timers) == original_dict_id
+
+
+@pytest.mark.small
+class DescribeValidateTimingWithBaseline:
+    """Test suite for validate_timing_with_baseline method."""
+
+    def it_passes_when_duration_is_within_baseline(self) -> None:
+        """Pass validation when duration is within custom baseline."""
+        service = TimingValidationService()
+
+        # Should not raise exception
+        service.validate_timing_with_baseline(
+            test_size=TestSize.SMALL,
+            duration=0.05,
+            baseline=0.1,
+        )
+
+    def it_raises_baseline_violation_when_exceeding_baseline(self) -> None:
+        """Raise PerformanceBaselineViolationError when exceeding baseline."""
+        service = TimingValidationService()
+
+        with pytest.raises(PerformanceBaselineViolationError):
+            service.validate_timing_with_baseline(
+                test_size=TestSize.SMALL,
+                duration=0.15,  # Exceeds 0.1 baseline
+                baseline=0.1,
+            )
+
+    def it_falls_back_to_category_limit_when_no_baseline(self) -> None:
+        """Fall back to category limit when baseline is None."""
+        service = TimingValidationService()
+
+        with pytest.raises(TimingViolationError):
+            service.validate_timing_with_baseline(
+                test_size=TestSize.SMALL,
+                duration=1.5,  # Exceeds 1.0 category limit
+                baseline=None,
+            )
+
+    def it_passes_within_category_limit_without_baseline(self) -> None:
+        """Pass when duration is within category limit and no baseline."""
+        service = TimingValidationService()
+
+        # Should not raise exception
+        service.validate_timing_with_baseline(
+            test_size=TestSize.SMALL,
+            duration=0.5,  # Within 1.0 category limit
+            baseline=None,
+        )
+
+    def it_raises_value_error_when_baseline_exceeds_category_limit(self) -> None:
+        """Raise ValueError when baseline exceeds category limit."""
+        service = TimingValidationService()
+
+        with pytest.raises(ValueError, match=r'baseline.*category limit'):
+            service.validate_timing_with_baseline(
+                test_size=TestSize.SMALL,
+                duration=0.5,
+                baseline=2.0,  # Exceeds 1.0 category limit
+            )
+
+    def it_works_with_medium_test_size(self) -> None:
+        """Handle medium test size correctly."""
+        service = TimingValidationService()
+
+        with pytest.raises(PerformanceBaselineViolationError):
+            service.validate_timing_with_baseline(
+                test_size=TestSize.MEDIUM,
+                duration=10.0,  # Exceeds 5.0 baseline
+                baseline=5.0,
+            )
+
+    def it_works_with_large_test_size(self) -> None:
+        """Handle large test size correctly."""
+        service = TimingValidationService()
+
+        with pytest.raises(PerformanceBaselineViolationError):
+            service.validate_timing_with_baseline(
+                test_size=TestSize.LARGE,
+                duration=100.0,  # Exceeds 60.0 baseline
+                baseline=60.0,
+            )
+
+    def it_works_with_xlarge_test_size(self) -> None:
+        """Handle xlarge test size correctly."""
+        service = TimingValidationService()
+
+        with pytest.raises(PerformanceBaselineViolationError):
+            service.validate_timing_with_baseline(
+                test_size=TestSize.XLARGE,
+                duration=200.0,  # Exceeds 120.0 baseline
+                baseline=120.0,
+            )
+
+    def it_includes_test_nodeid_in_error(self) -> None:
+        """Include test nodeid in error message."""
+        service = TimingValidationService()
+
+        with pytest.raises(PerformanceBaselineViolationError) as exc_info:
+            service.validate_timing_with_baseline(
+                test_size=TestSize.SMALL,
+                duration=0.15,
+                baseline=0.1,
+                test_nodeid='tests/test_slow.py::test_compute',
+            )
+
+        assert 'tests/test_slow.py::test_compute' in str(exc_info.value)

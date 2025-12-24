@@ -55,6 +55,7 @@ pytest
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Configuration](#configuration)
+- [Performance Baselines](#performance-baselines)
 - [Enforcement Modes](#enforcement-modes)
 - [Philosophy: No Escape Hatches](#philosophy-no-override-markers)
 - [Test Distribution Targets](#test-distribution-targets)
@@ -254,6 +255,48 @@ pytest --test-size-report=json --test-size-report-file=report.json
 
 **Note:** Time limits are fixed per Google's testing standards and cannot be customized. This ensures consistent test categorization across all projects.
 
+### Performance Baselines
+
+For performance-critical code paths, you can set custom timeout limits stricter than the category default:
+
+```python
+import pytest
+
+@pytest.mark.small(timeout=0.1)  # Must complete in 100ms instead of 1s
+def test_critical_path():
+    """This test must be fast - we're testing a hot path."""
+    result = critical_computation()
+    assert result == expected
+
+@pytest.mark.medium(timeout=5.0)  # Must complete in 5s instead of 5min
+def test_database_query():
+    """Query performance is critical for user experience."""
+    results = db.execute(query)
+    assert len(results) > 0
+```
+
+When a test exceeds its custom baseline, you get a distinct error:
+
+```
+======================================================================
+[TC008] Performance Baseline Violation
+======================================================================
+Test: tests/test_api.py::test_critical_path
+Category: SMALL
+
+What happened:
+  Test exceeded custom performance baseline: 0.15s > 0.1s (baseline)
+  (Category limit: 1.0s)
+
+To fix this (choose one):
+  - Optimize the code to meet the performance baseline
+  - Increase the baseline if the current limit is too strict
+  - Remove the baseline to use the default category limit
+======================================================================
+```
+
+**Note:** The baseline must be less than or equal to the category's time limit.
+
 <p align="right">(<a href="#table-of-contents">back to top</a>)</p>
 
 ---
@@ -374,6 +417,7 @@ pytest --test-size-report=json --test-size-report-file=report.json
     },
     "violations": {
       "timing": 0,
+      "baseline": 0,
       "hermeticity": {
         "network": 0,
         "filesystem": 0,
