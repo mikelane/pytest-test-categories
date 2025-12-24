@@ -449,6 +449,8 @@ class PluginState(BaseModel):
     distribution_config: object | None = None  # DistributionConfig, avoiding circular import
     # Violation tracker for hermeticity enforcement summary
     violation_tracker: object | None = None  # ViolationTracker, avoiding circular import
+    # Suggestion collector for auto-categorization suggestions
+    suggestion_collector: object | None = None  # SuggestionCollector, avoiding circular import
 
     def __init__(self, **data: object) -> None:
         """Initialize PluginState with defaults for circular import fields."""

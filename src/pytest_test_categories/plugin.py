@@ -27,6 +27,7 @@ that are easy to understand and maintain.
 
 from __future__ import annotations
 
+import json
 from collections import defaultdict
 from contextlib import ExitStack
 from importlib.metadata import version
@@ -66,9 +67,13 @@ from pytest_test_categories.services.distribution_validation import (
     DistributionViolationError,
 )
 from pytest_test_categories.services.hermeticity_summary import HermeticitySummaryService
+from pytest_test_categories.services.suggestion_summary import SuggestionSummaryService
 from pytest_test_categories.services.test_discovery import TestDiscoveryService
 from pytest_test_categories.services.test_reporting import TestReportingService
 from pytest_test_categories.services.timing_validation import TimingValidationService
+from pytest_test_categories.suggestion import (
+    SuggestionCollector,
+)
 from pytest_test_categories.timers import WallTimer
 from pytest_test_categories.timing import (
     PerformanceBaselineViolationError,
@@ -213,6 +218,20 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         default='',
     )
 
+    # Auto-categorization suggestion options
+    group.addoption(
+        '--test-categories-suggest',
+        action='store_true',
+        default=False,
+        help='Analyze tests and suggest appropriate size categories based on observed behavior.',
+    )
+    group.addoption(
+        '--test-categories-suggest-output',
+        action='store',
+        default=None,
+        help='Output file path for JSON suggestion report (requires --test-categories-suggest).',
+    )
+
 
 @pytest.hookimpl(tryfirst=True)
 def pytest_configure(config: pytest.Config) -> None:
@@ -249,6 +268,10 @@ def pytest_configure(config: pytest.Config) -> None:
     report_option = config_adapter.get_option('--test-size-report')
     session_state.test_size_report = TestReportingService().create_report_if_requested(report_option)
 
+    # Initialize suggestion collector if suggest mode is enabled
+    if config_adapter.get_option('--test-categories-suggest'):
+        session_state.suggestion_collector = SuggestionCollector()
+
 
 @pytest.hookimpl(tryfirst=True)
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
@@ -256,6 +279,9 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
     config_adapter = PytestConfigAdapter(config)
     session_state = config_adapter.get_plugin_state()
     discovery_service = _ensure_discovery_service(session_state)
+
+    # Get suggestion collector if in suggest mode
+    suggestion_collector = cast('SuggestionCollector | None', session_state.suggestion_collector)
 
     # Count tests by size using the discovery service
     counts: dict[TestSize, int] = defaultdict(int)
@@ -266,6 +292,10 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
             counts[test_size] += 1
             # Append size label to test node ID
             item_adapter.set_nodeid(f'{item_adapter.nodeid} {test_size.label}')
+
+        # Record current size in suggestion collector (includes None for uncategorized)
+        if suggestion_collector is not None:
+            suggestion_collector.record_current_size(item.nodeid, test_size)
 
     # Update distribution stats with the counts
     current_stats = config_adapter.get_distribution_stats()
@@ -512,6 +542,11 @@ def pytest_runtest_makereport(item: pytest.Item) -> Generator[None, None, None]:
         )
         timing_service.cleanup_timer(session_state.timers, item.nodeid)
 
+    # Record execution time in suggestion collector if in suggest mode
+    suggestion_collector = cast('SuggestionCollector | None', session_state.suggestion_collector)
+    if suggestion_collector is not None and duration is not None:
+        suggestion_collector.record_execution_time(item.nodeid, duration)
+
 
 @pytest.hookimpl
 def pytest_terminal_summary(terminalreporter: pytest.TerminalReporter) -> None:
@@ -543,6 +578,17 @@ def pytest_terminal_summary(terminalreporter: pytest.TerminalReporter) -> None:
             test_report.write_detailed_report(terminalreporter)
         else:
             test_report.write_basic_report(terminalreporter)
+
+    # Write suggestion summary if in suggest mode
+    suggestion_collector = cast('SuggestionCollector | None', session_state.suggestion_collector)
+    if suggestion_collector is not None:
+        suggestion_service = SuggestionSummaryService()
+        suggestion_service.write_suggestion_summary(suggestion_collector, writer)
+
+        # Write JSON output if requested
+        json_output_path = config_adapter.get_option('--test-categories-suggest-output')
+        if json_output_path:
+            _write_suggestion_json_report(suggestion_collector, json_output_path)
 
 
 # =============================================================================
@@ -1071,3 +1117,33 @@ def _write_json_report(
     else:
         terminalreporter.write_line('')
         terminalreporter.write_line(json_output)
+
+
+def _write_suggestion_json_report(
+    collector: SuggestionCollector,
+    output_path_str: object,
+) -> None:
+    """Write suggestion report to JSON file.
+
+    Args:
+        collector: The SuggestionCollector with observed data.
+        output_path_str: The output file path.
+
+    """
+    suggestions = collector.generate_suggestions()
+    output_data = {
+        'version': PLUGIN_VERSION,
+        'suggestions': [
+            {
+                'test_nodeid': s.test_nodeid,
+                'current_size': s.current_size.value if s.current_size else None,
+                'suggested_size': s.suggested_size.value,
+                'reason': s.reason,
+            }
+            for s in suggestions
+        ],
+    }
+
+    output_path = Path(str(output_path_str))
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(output_data, indent=2))
