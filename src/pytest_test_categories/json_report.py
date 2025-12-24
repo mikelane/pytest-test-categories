@@ -75,13 +75,14 @@ class HermeticityViolationsSummary(BaseModel):
 class ViolationsSummary(BaseModel):
     """Summary of test violations.
 
-    Tracks counts of timing and hermeticity violations across
+    Tracks counts of timing, baseline, and hermeticity violations across
     all tests in the suite.
     """
 
     model_config = ConfigDict(frozen=True)
 
     timing: int = Field(default=0, ge=0)
+    baseline: int = Field(default=0, ge=0)
     hermeticity: HermeticityViolationsSummary = Field(default_factory=HermeticityViolationsSummary)
 
 
@@ -113,6 +114,60 @@ class JsonTestEntry(BaseModel):
     duration: float | None
     status: str
     violations: list[str]
+
+
+def _build_distribution(distribution_stats: DistributionStats) -> dict[str, DistributionSizeEntry]:
+    """Build the distribution dictionary from stats."""
+    counts = distribution_stats.counts
+    percentages = distribution_stats.calculate_percentages()
+
+    return {
+        'small': DistributionSizeEntry(
+            count=counts.small,
+            percentage=percentages.small,
+            target=DISTRIBUTION_TARGETS['small'].target,
+        ),
+        'medium': DistributionSizeEntry(
+            count=counts.medium,
+            percentage=percentages.medium,
+            target=DISTRIBUTION_TARGETS['medium'].target,
+        ),
+        'large': DistributionSizeEntry(
+            count=counts.large,
+            percentage=percentages.large,
+            target=DISTRIBUTION_TARGETS['large_xlarge'].target * 0.8,
+        ),
+        'xlarge': DistributionSizeEntry(
+            count=counts.xlarge,
+            percentage=percentages.xlarge,
+            target=DISTRIBUTION_TARGETS['large_xlarge'].target * 0.2,
+        ),
+    }
+
+
+def _build_hermeticity_lookup(violation_tracker: ViolationTracker | None) -> dict[str, list[str]]:
+    """Build per-test hermeticity violations lookup."""
+    test_hermeticity_violations: dict[str, list[str]] = {}
+    if violation_tracker is not None:
+        for violation_type in ViolationType:
+            for nodeid in violation_tracker.get_test_nodeids_by_type(violation_type):
+                if nodeid not in test_hermeticity_violations:
+                    test_hermeticity_violations[nodeid] = []
+                test_hermeticity_violations[nodeid].append(f'hermeticity:{violation_type.value}')
+    return test_hermeticity_violations
+
+
+def _build_hermeticity_summary(violation_tracker: ViolationTracker | None) -> HermeticityViolationsSummary:
+    """Build hermeticity violations summary."""
+    if violation_tracker is None:
+        return HermeticityViolationsSummary()
+    return HermeticityViolationsSummary(
+        network=violation_tracker.count_by_type(ViolationType.NETWORK),
+        filesystem=violation_tracker.count_by_type(ViolationType.FILESYSTEM),
+        process=violation_tracker.count_by_type(ViolationType.PROCESS),
+        database=violation_tracker.count_by_type(ViolationType.DATABASE),
+        sleep=violation_tracker.count_by_type(ViolationType.SLEEP),
+    )
 
 
 class JsonReport(BaseModel):
@@ -153,42 +208,11 @@ class JsonReport(BaseModel):
 
         """
         timestamp = datetime.now(tz=UTC)
-        counts = distribution_stats.counts
-        percentages = distribution_stats.calculate_percentages()
-
-        distribution = {
-            'small': DistributionSizeEntry(
-                count=counts.small,
-                percentage=percentages.small,
-                target=DISTRIBUTION_TARGETS['small'].target,
-            ),
-            'medium': DistributionSizeEntry(
-                count=counts.medium,
-                percentage=percentages.medium,
-                target=DISTRIBUTION_TARGETS['medium'].target,
-            ),
-            'large': DistributionSizeEntry(
-                count=counts.large,
-                percentage=percentages.large,
-                target=DISTRIBUTION_TARGETS['large_xlarge'].target * 0.8,
-            ),
-            'xlarge': DistributionSizeEntry(
-                count=counts.xlarge,
-                percentage=percentages.xlarge,
-                target=DISTRIBUTION_TARGETS['large_xlarge'].target * 0.2,
-            ),
-        }
-
-        # Build per-test hermeticity violations lookup
-        test_hermeticity_violations: dict[str, list[str]] = {}
-        if violation_tracker is not None:
-            for violation_type in ViolationType:
-                for nodeid in violation_tracker.get_test_nodeids_by_type(violation_type):
-                    if nodeid not in test_hermeticity_violations:
-                        test_hermeticity_violations[nodeid] = []
-                    test_hermeticity_violations[nodeid].append(f'hermeticity:{violation_type.value}')
+        distribution = _build_distribution(distribution_stats)
+        test_hermeticity_violations = _build_hermeticity_lookup(violation_tracker)
 
         timing_violations = 0
+        baseline_violations = 0
         tests: list[JsonTestEntry] = []
 
         for size in TestSize:
@@ -197,27 +221,23 @@ class JsonReport(BaseModel):
                 duration = test_report.test_durations.get(nodeid)
                 outcome = test_report.test_outcomes.get(nodeid, 'unknown')
 
-                if test_report.exceeds_time_limit(nodeid, size):
+                if test_report.has_baseline_violation(nodeid):
+                    violations.append('baseline')
+                    baseline_violations += 1
+                elif test_report.exceeds_time_limit(nodeid, size):
                     violations.append('timing')
                     timing_violations += 1
 
-                # Add hermeticity violations for this test
                 violations.extend(test_hermeticity_violations.get(nodeid, []))
-
                 tests.append(
                     JsonTestEntry(
-                        name=nodeid,
-                        size=size.value,
-                        duration=duration,
-                        status=outcome,
-                        violations=violations,
+                        name=nodeid, size=size.value, duration=duration, status=outcome, violations=violations
                     )
                 )
 
         for nodeid in test_report.unsized_tests:
             duration = test_report.test_durations.get(nodeid)
             outcome = test_report.test_outcomes.get(nodeid, 'unknown')
-
             tests.append(
                 JsonTestEntry(
                     name=nodeid,
@@ -228,28 +248,14 @@ class JsonReport(BaseModel):
                 )
             )
 
-        total_tests = test_report.get_total_tests()
-
-        # Build hermeticity violations summary
-        hermeticity_summary = HermeticityViolationsSummary()
-        if violation_tracker is not None:
-            hermeticity_summary = HermeticityViolationsSummary(
-                network=violation_tracker.count_by_type(ViolationType.NETWORK),
-                filesystem=violation_tracker.count_by_type(ViolationType.FILESYSTEM),
-                process=violation_tracker.count_by_type(ViolationType.PROCESS),
-                database=violation_tracker.count_by_type(ViolationType.DATABASE),
-                sleep=violation_tracker.count_by_type(ViolationType.SLEEP),
-            )
-
         summary = JsonReportSummary(
-            total_tests=total_tests,
+            total_tests=test_report.get_total_tests(),
             distribution=distribution,
-            violations=ViolationsSummary(timing=timing_violations, hermeticity=hermeticity_summary),
+            violations=ViolationsSummary(
+                timing=timing_violations,
+                baseline=baseline_violations,
+                hermeticity=_build_hermeticity_summary(violation_tracker),
+            ),
         )
 
-        return cls(
-            version=version,
-            timestamp=timestamp,
-            summary=summary,
-            tests=tests,
-        )
+        return cls(version=version, timestamp=timestamp, summary=summary, tests=tests)

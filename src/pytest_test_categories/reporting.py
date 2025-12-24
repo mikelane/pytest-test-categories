@@ -33,6 +33,19 @@ def _default_sized_tests() -> defaultdict[TestSize, list[str]]:
     return defaultdict(list)
 
 
+class BaselineViolation(BaseModel):
+    """Record of a performance baseline violation.
+
+    Tracks when a test exceeds its custom performance baseline, which is
+    stricter than the category's default time limit.
+    """
+
+    nodeid: str
+    baseline: float
+    category_limit: float
+    actual: float
+
+
 class TestSizeReport(BaseModel):
     """Generator for test size reports."""
 
@@ -40,6 +53,7 @@ class TestSizeReport(BaseModel):
     unsized_tests: list[str] = Field(default_factory=list)
     test_durations: dict[str, float] = Field(default_factory=dict)
     test_outcomes: dict[str, str] = Field(default_factory=dict)
+    baseline_violations: dict[str, BaselineViolation] = Field(default_factory=dict)
 
     def add_test(
         self, nodeid: str, size: TestSize | None, duration: float | None = None, outcome: str = 'passed'
@@ -62,6 +76,41 @@ class TestSizeReport(BaseModel):
             self.test_durations[nodeid] = duration
 
         self.test_outcomes[nodeid] = outcome
+
+    def add_baseline_violation(
+        self,
+        nodeid: str,
+        baseline: float,
+        category_limit: float,
+        actual: float,
+    ) -> None:
+        """Record a baseline violation for a test.
+
+        Args:
+            nodeid: The pytest node ID of the test
+            baseline: The custom baseline limit in seconds
+            category_limit: The category's default time limit in seconds
+            actual: The actual test duration in seconds
+
+        """
+        self.baseline_violations[nodeid] = BaselineViolation(
+            nodeid=nodeid,
+            baseline=baseline,
+            category_limit=category_limit,
+            actual=actual,
+        )
+
+    def has_baseline_violation(self, nodeid: str) -> bool:
+        """Check if a test has a baseline violation.
+
+        Args:
+            nodeid: The pytest node ID of the test
+
+        Returns:
+            True if the test exceeded its custom baseline.
+
+        """
+        return nodeid in self.baseline_violations
 
     def get_total_tests(self) -> int:
         """Get the total number of tests in the report."""

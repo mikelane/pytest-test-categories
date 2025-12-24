@@ -188,6 +188,50 @@ class TestDiscoveryService:
 
         return effective_size
 
+    def get_timeout(self, item: TestItemPort) -> float | None:
+        """Get the custom timeout from a test item's size marker.
+
+        Extracts the optional `timeout` kwarg from the test's size marker.
+        This allows tests to define stricter performance baselines than the
+        category's default time limit.
+
+        Args:
+            item: The test item to inspect for timeout.
+
+        Returns:
+            The timeout value in seconds if specified, None otherwise.
+
+        Example:
+            >>> # Test with @pytest.mark.small(timeout=0.1)
+            >>> item = FakeTestItem(
+            ...     nodeid='test.py::test_fast',
+            ...     markers={'small': FakeMarker('small', kwargs={'timeout': 0.1})}
+            ... )
+            >>> timeout = service.get_timeout(item)
+            >>> assert timeout == 0.1
+
+            >>> # Test without timeout
+            >>> item = FakeTestItem(
+            ...     nodeid='test.py::test_normal',
+            ...     markers={'small': FakeMarker('small')}
+            ... )
+            >>> timeout = service.get_timeout(item)
+            >>> assert timeout is None
+
+        """
+        # Find the size marker
+        for size in TestSize:
+            marker_kwargs = item.get_marker_kwargs(size.marker_name)
+            if marker_kwargs:
+                timeout = marker_kwargs.get('timeout')
+                if timeout is not None:
+                    # timeout can be float, int, or string from marker kwargs
+                    return float(str(timeout))
+                return None
+
+        # No size marker found
+        return None
+
     def _check_inheritance_conflicts(self, item: TestItemPort, effective_size: TestSize) -> None:
         """Check for marker inheritance conflicts and emit warnings.
 

@@ -18,14 +18,16 @@ from tests._fixtures.warning_system import FakeWarningSystem
 class FakeMarker:
     """Fake marker for testing."""
 
-    def __init__(self, name: str) -> None:
-        """Initialize fake marker with name.
+    def __init__(self, name: str, kwargs: dict[str, object] | None = None) -> None:
+        """Initialize fake marker with name and optional kwargs.
 
         Args:
             name: The marker name.
+            kwargs: Optional keyword arguments for the marker.
 
         """
         self.name = name
+        self.kwargs = kwargs or {}
 
 
 @pytest.mark.small
@@ -210,3 +212,117 @@ class DescribeTestDiscoveryService:
         warnings = warning_system.get_warnings()
         assert len(warnings) == 3
         assert all(cat == pytest.PytestWarning for _, cat in warnings)
+
+
+@pytest.mark.small
+class DescribeGetTimeout:
+    """Tests for get_timeout method to extract custom baselines from markers."""
+
+    def it_returns_none_when_no_timeout_specified(self) -> None:
+        """Return None when marker has no timeout kwarg."""
+        small_marker = FakeMarker('small')
+        test_item = FakeTestItem(
+            nodeid='test_module.py::test_function',
+            markers={'small': small_marker},
+        )
+        warning_system = FakeWarningSystem()
+        service = TestDiscoveryService(warning_system=warning_system)
+
+        result = service.get_timeout(test_item)
+
+        assert result is None
+
+    def it_returns_timeout_from_small_marker(self) -> None:
+        """Extract timeout from @pytest.mark.small(timeout=0.1)."""
+        small_marker = FakeMarker('small', kwargs={'timeout': 0.1})
+        test_item = FakeTestItem(
+            nodeid='test_module.py::test_function',
+            markers={'small': small_marker},
+        )
+        warning_system = FakeWarningSystem()
+        service = TestDiscoveryService(warning_system=warning_system)
+
+        result = service.get_timeout(test_item)
+
+        assert result == 0.1
+
+    def it_returns_timeout_from_medium_marker(self) -> None:
+        """Extract timeout from @pytest.mark.medium(timeout=5.0)."""
+        medium_marker = FakeMarker('medium', kwargs={'timeout': 5.0})
+        test_item = FakeTestItem(
+            nodeid='test_module.py::test_function',
+            markers={'medium': medium_marker},
+        )
+        warning_system = FakeWarningSystem()
+        service = TestDiscoveryService(warning_system=warning_system)
+
+        result = service.get_timeout(test_item)
+
+        assert result == 5.0
+
+    def it_returns_timeout_from_large_marker(self) -> None:
+        """Extract timeout from @pytest.mark.large(timeout=60.0)."""
+        large_marker = FakeMarker('large', kwargs={'timeout': 60.0})
+        test_item = FakeTestItem(
+            nodeid='test_module.py::test_function',
+            markers={'large': large_marker},
+        )
+        warning_system = FakeWarningSystem()
+        service = TestDiscoveryService(warning_system=warning_system)
+
+        result = service.get_timeout(test_item)
+
+        assert result == 60.0
+
+    def it_returns_timeout_from_xlarge_marker(self) -> None:
+        """Extract timeout from @pytest.mark.xlarge(timeout=120.0)."""
+        xlarge_marker = FakeMarker('xlarge', kwargs={'timeout': 120.0})
+        test_item = FakeTestItem(
+            nodeid='test_module.py::test_function',
+            markers={'xlarge': xlarge_marker},
+        )
+        warning_system = FakeWarningSystem()
+        service = TestDiscoveryService(warning_system=warning_system)
+
+        result = service.get_timeout(test_item)
+
+        assert result == 120.0
+
+    def it_returns_none_when_no_size_marker(self) -> None:
+        """Return None when test has no size marker."""
+        test_item = FakeTestItem(nodeid='test_module.py::test_function')
+        warning_system = FakeWarningSystem()
+        service = TestDiscoveryService(warning_system=warning_system)
+
+        result = service.get_timeout(test_item)
+
+        assert result is None
+
+    def it_ignores_other_kwargs_in_marker(self) -> None:
+        """Extract only timeout, ignoring other kwargs."""
+        small_marker = FakeMarker('small', kwargs={'timeout': 0.1, 'allow_external_systems': True})
+        test_item = FakeTestItem(
+            nodeid='test_module.py::test_function',
+            markers={'small': small_marker},
+        )
+        warning_system = FakeWarningSystem()
+        service = TestDiscoveryService(warning_system=warning_system)
+
+        result = service.get_timeout(test_item)
+
+        assert result == 0.1
+
+    def it_handles_integer_timeout_value(self) -> None:
+        """Accept integer timeout values (converted to float)."""
+        small_marker = FakeMarker('small', kwargs={'timeout': 1})
+        test_item = FakeTestItem(
+            nodeid='test_module.py::test_function',
+            markers={'small': small_marker},
+        )
+        warning_system = FakeWarningSystem()
+        service = TestDiscoveryService(warning_system=warning_system)
+
+        result = service.get_timeout(test_item)
+
+        assert result == 1.0
+        assert isinstance(result, float)

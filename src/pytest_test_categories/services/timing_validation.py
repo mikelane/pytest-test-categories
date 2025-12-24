@@ -32,6 +32,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from pytest_test_categories import timing
+from pytest_test_categories.timing import validate_with_baseline
 from pytest_test_categories.types import (
     TestSize,
     TestTimer,
@@ -163,3 +164,43 @@ class TimingValidationService:
 
         """
         timers.pop(nodeid, None)
+
+    def validate_timing_with_baseline(
+        self,
+        test_size: TestSize,
+        duration: float,
+        baseline: float | None,
+        test_nodeid: str = '',
+    ) -> None:
+        """Validate test timing against a custom baseline or category limit.
+
+        When a custom baseline is provided, the test must complete within that
+        stricter limit. If the baseline is exceeded, a PerformanceBaselineViolationError
+        is raised. If no baseline is provided, falls back to standard category limit
+        validation.
+
+        This delegates to the timing module's validate_with_baseline() function
+        to check if the duration is within the baseline or category limit.
+
+        Args:
+            test_size: The size category of the test.
+            duration: The test duration in seconds.
+            baseline: Optional custom performance baseline in seconds.
+                If None, uses the category's default time limit.
+            test_nodeid: Optional pytest node ID for enhanced error messages.
+
+        Raises:
+            PerformanceBaselineViolationError: If duration exceeds the custom baseline.
+            TimingViolationError: If duration exceeds category limit (when no baseline).
+            ValueError: If baseline exceeds the category's time limit.
+
+        Example:
+            >>> service = TimingValidationService()
+            >>> service.validate_timing_with_baseline(TestSize.SMALL, 0.05, baseline=0.1)  # OK
+            >>> service.validate_timing_with_baseline(TestSize.SMALL, 0.15, baseline=0.1)
+            Traceback (most recent call last):
+                ...
+            PerformanceBaselineViolationError: ...
+
+        """
+        validate_with_baseline(test_size, duration, baseline, test_nodeid)

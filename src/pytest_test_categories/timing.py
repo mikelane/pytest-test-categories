@@ -35,10 +35,12 @@ __all__ = [
     'SMALL_LIMIT',
     'TIME_LIMITS',
     'XLARGE_LIMIT',
+    'PerformanceBaselineViolationError',
     'TimeLimit',
     'TimingViolationError',
     'get_limit',
     'validate',
+    'validate_with_baseline',
 ]
 
 
@@ -138,6 +140,96 @@ class TimingViolationError(Exception):
         return suggestions
 
 
+class PerformanceBaselineViolationError(Exception):
+    """Exception raised when a test exceeds its custom performance baseline.
+
+    This exception is raised when a test's execution time exceeds a custom
+    performance baseline that is stricter than the category's default limit.
+    Custom baselines allow performance-critical tests to fail early when
+    they regress, even if they're still within the category limit.
+
+    The error message includes:
+    - Error code [TC007]
+    - Test identification (nodeid, size category)
+    - Baseline vs actual duration
+    - Category limit for context
+    - Why performance baselines matter
+    - Remediation suggestions
+    - Documentation link
+
+    Attributes:
+        test_size: The test's size category.
+        test_nodeid: The pytest node ID of the failing test.
+        baseline_limit: The custom performance baseline in seconds.
+        category_limit: The category's default time limit in seconds.
+        actual: The actual test duration in seconds.
+
+    Example:
+        >>> raise PerformanceBaselineViolationError(
+        ...     test_size=TestSize.SMALL,
+        ...     test_nodeid='tests/test_critical.py::test_fast_path',
+        ...     baseline_limit=0.1,
+        ...     category_limit=1.0,
+        ...     actual=0.25
+        ... )
+
+    """
+
+    def __init__(
+        self,
+        test_size: TestSize,
+        test_nodeid: str,
+        baseline_limit: float,
+        category_limit: float,
+        actual: float,
+    ) -> None:
+        """Initialize a performance baseline violation error.
+
+        Args:
+            test_size: The test's size category.
+            test_nodeid: The pytest node ID of the failing test.
+            baseline_limit: The custom performance baseline in seconds.
+            category_limit: The category's default time limit in seconds.
+            actual: The actual test duration in seconds.
+
+        """
+        self.test_size = test_size
+        self.test_nodeid = test_nodeid
+        self.baseline_limit = baseline_limit
+        self.category_limit = category_limit
+        self.actual = actual
+
+        remediation = self._get_remediation()
+        what_happened = (
+            f'{test_size.name} test exceeded performance baseline of {baseline_limit:.1f}s '
+            f'(took {actual:.1f}s, category limit is {category_limit:.1f}s)'
+        )
+
+        message = format_error_message(
+            error_code=ERROR_CODES['performance_baseline_violation'],
+            what_happened=what_happened,
+            remediation=remediation,
+            test_nodeid=test_nodeid,
+            test_size=test_size.name,
+        )
+        super().__init__(message)
+
+    @staticmethod
+    def _get_remediation() -> list[str]:
+        """Get remediation suggestions for baseline violations.
+
+        Returns:
+            List of remediation suggestions.
+
+        """
+        return [
+            'Optimize the test to meet its performance baseline',
+            'Review recent changes that may have caused performance regression',
+            'Relax the baseline timeout if the current value is too aggressive',
+            'Profile the test to identify performance bottlenecks',
+        ]
+
+
 class TimeLimit(BaseModel):
     """Fixed time limit for a test size category.
 
@@ -217,5 +309,66 @@ def validate(
             test_size=size,
             test_nodeid=test_nodeid,
             limit=limit,
+            actual=duration,
+        )
+
+
+def validate_with_baseline(
+    size: TestSize,
+    duration: float,
+    baseline: float | None,
+    test_nodeid: str = '',
+) -> None:
+    """Validate a test's duration against a custom baseline or category limit.
+
+    When a custom baseline is provided, the test must complete within that
+    stricter limit. If the baseline is exceeded, a PerformanceBaselineViolationError
+    is raised. If no baseline is provided, falls back to standard category limit
+    validation.
+
+    The baseline must be less than or equal to the category's time limit.
+    This ensures that custom baselines are always stricter than the default.
+
+    Args:
+        size: The test size category.
+        duration: The actual test duration in seconds.
+        baseline: Optional custom performance baseline in seconds.
+            If None, uses the category's default time limit.
+        test_nodeid: Optional pytest node ID for enhanced error messages.
+
+    Raises:
+        PerformanceBaselineViolationError: If duration exceeds the custom baseline.
+        TimingViolationError: If duration exceeds category limit (when no baseline).
+        ValueError: If baseline exceeds the category's time limit.
+
+    Example:
+        >>> # Test with custom baseline
+        >>> validate_with_baseline(TestSize.SMALL, 0.05, baseline=0.1)  # OK
+        >>> validate_with_baseline(TestSize.SMALL, 0.15, baseline=0.1)  # Raises PerformanceBaselineViolationError
+
+        >>> # Test without baseline (uses category limit)
+        >>> validate_with_baseline(TestSize.SMALL, 0.5, baseline=None)  # OK
+        >>> validate_with_baseline(TestSize.SMALL, 1.5, baseline=None)  # Raises TimingViolationError
+
+    """
+    category_limit = get_limit(size).limit
+
+    # If no baseline, fall back to standard validation
+    if baseline is None:
+        validate(size, duration, test_nodeid)
+        return
+
+    # Validate that baseline doesn't exceed category limit
+    if baseline > category_limit:
+        msg = f'baseline ({baseline}s) cannot exceed category limit ({category_limit}s)'
+        raise ValueError(msg)
+
+    # Check against custom baseline
+    if duration > baseline:
+        raise PerformanceBaselineViolationError(
+            test_size=size,
+            test_nodeid=test_nodeid,
+            baseline_limit=baseline,
+            category_limit=category_limit,
             actual=duration,
         )

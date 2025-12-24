@@ -70,7 +70,10 @@ from pytest_test_categories.services.test_discovery import TestDiscoveryService
 from pytest_test_categories.services.test_reporting import TestReportingService
 from pytest_test_categories.services.timing_validation import TimingValidationService
 from pytest_test_categories.timers import WallTimer
-from pytest_test_categories.timing import TimingViolationError
+from pytest_test_categories.timing import (
+    PerformanceBaselineViolationError,
+    TimingViolationError,
+)
 from pytest_test_categories.types import (
     TestSize,
     TimerState,
@@ -491,8 +494,10 @@ def pytest_runtest_makereport(item: pytest.Item) -> Generator[None, None, None]:
     # Validate timing if test has a size marker
     if test_size and duration is not None:
         try:
-            timing_service.validate_timing(test_size, duration)
-        except TimingViolationError as e:
+            # Check for custom timeout baseline from marker
+            custom_timeout = discovery_service.get_timeout(item_adapter)
+            timing_service.validate_timing_with_baseline(test_size, duration, custom_timeout, item.nodeid)
+        except (PerformanceBaselineViolationError, TimingViolationError, ValueError) as e:
             report.longrepr = str(e)
             report.outcome = 'failed'
 

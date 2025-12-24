@@ -144,6 +144,17 @@ TIMING_VIOLATION = ErrorCode(
     doc_url=f'{DOCS_BASE_URL}/errors/timing-limits.html',
 )
 
+PERFORMANCE_BASELINE_VIOLATION = ErrorCode(
+    code='TC008',
+    title='Performance Baseline Violation',
+    why_it_matters=(
+        'This test has a custom performance baseline stricter than its category limit. '
+        'Custom baselines are used for performance-critical tests that must complete faster '
+        'than the category default to catch performance regressions early.'
+    ),
+    doc_url=f'{DOCS_BASE_URL}/errors/performance-baselines.html',
+)
+
 # =============================================================================
 # Distribution Warnings (TC200-TC299)
 # =============================================================================
@@ -170,6 +181,7 @@ ERROR_CODES: dict[str, ErrorCode] = {
     'database_violation': DATABASE_VIOLATION,
     'sleep_violation': SLEEP_VIOLATION,
     'timing_violation': TIMING_VIOLATION,
+    'performance_baseline_violation': PERFORMANCE_BASELINE_VIOLATION,
     'distribution_warning': DISTRIBUTION_WARNING,
 }
 

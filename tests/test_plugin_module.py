@@ -440,6 +440,7 @@ class DescribePytestRuntestMakereport:
 
         mock_discovery_service = Mock(spec=TestDiscoveryService)
         mock_discovery_service.find_test_size.return_value = TestSize.SMALL
+        mock_discovery_service.get_timeout.return_value = None  # No custom baseline
         item.config._test_categories_state.test_discovery_service = mock_discovery_service
 
         gen = pytest_runtest_makereport(item)
@@ -482,6 +483,7 @@ class DescribePytestRuntestMakereport:
 
         mock_discovery_service = Mock(spec=TestDiscoveryService)
         mock_discovery_service.find_test_size.return_value = TestSize.SMALL
+        mock_discovery_service.get_timeout.return_value = None  # No custom baseline
         item.config._test_categories_state.test_discovery_service = mock_discovery_service
 
         gen = pytest_runtest_makereport(item)
