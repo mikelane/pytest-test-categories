@@ -109,6 +109,74 @@ class PytestItemAdapter(TestItemPort):
             return {}
         return dict(marker.kwargs)
 
+    def get_class_hierarchy(self) -> list[tuple[str, dict[str, object]]]:
+        """Get the class hierarchy with markers for conflict detection.
+
+        Inspects the test item's class and its MRO (Method Resolution Order)
+        to find all size markers defined at each level. This enables detection
+        of marker inheritance conflicts.
+
+        Returns:
+            List of tuples containing (class_name, markers) for each class
+            in the hierarchy. Returns empty list for function-level tests.
+
+        """
+        # Get the parent class of the test function (if any)
+        parent = getattr(self._item, 'cls', None)
+        if parent is None:
+            return []
+
+        hierarchy: list[tuple[str, dict[str, object]]] = []
+        size_marker_names = {'small', 'medium', 'large', 'xlarge'}
+
+        # Walk the MRO to find markers at each level
+        for cls in parent.__mro__:
+            if cls is object:
+                continue
+
+            # Check for pytestmark attribute on this specific class (not inherited)
+            class_markers: dict[str, object] = {}
+            if 'pytestmark' in cls.__dict__:
+                pytestmark = cls.__dict__['pytestmark']
+                # pytestmark can be a single Mark or a list of Marks
+                marks = [pytestmark] if not isinstance(pytestmark, list) else pytestmark
+                for mark in marks:
+                    if hasattr(mark, 'name') and mark.name in size_marker_names:
+                        class_markers[mark.name] = mark
+
+            hierarchy.append((cls.__name__, class_markers))
+
+        return hierarchy
+
+    def get_method_markers(self) -> dict[str, object]:
+        """Get markers applied directly to the test method.
+
+        Retrieves markers defined directly on the test function itself,
+        not inherited from the class or module. This enables detection
+        of method-level marker conflicts with class-level markers.
+
+        Returns:
+            Dictionary of marker names to marker objects for method-level markers.
+
+        """
+        size_marker_names = {'small', 'medium', 'large', 'xlarge'}
+        method_markers: dict[str, object] = {}
+
+        # Get the actual test function
+        func = getattr(self._item, 'obj', None)
+        if func is None:
+            return {}
+
+        # Check for pytestmark on the function itself
+        pytestmark = getattr(func, 'pytestmark', None)
+        if pytestmark is not None:
+            marks = [pytestmark] if not isinstance(pytestmark, list) else pytestmark
+            for mark in marks:
+                if hasattr(mark, 'name') and mark.name in size_marker_names:
+                    method_markers[mark.name] = mark
+
+        return method_markers
+
 
 class TerminalReporterAdapter(OutputWriterPort):
     """Production adapter that wraps pytest.TerminalReporter.

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Marker inheritance conflict warnings**: Warns when test classes have conflicting size markers from inheritance (#160)
+  - Detects multiple base class conflicts (e.g., `class TestFoo(SmallTest, MediumTest)`)
+  - Detects child class overriding parent marker (e.g., `@pytest.mark.medium` on child when parent has `@pytest.mark.small`)
+  - Detects method marker conflicting with class marker
+  - Warnings include guidance on resolving conflicts
+  - Use `@pytest.mark.small(override=True)` to suppress warnings for intentional overrides
+
 ## v1.1.0 (2025-12-04)
 
 ### Breaking Changes
