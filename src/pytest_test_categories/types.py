@@ -208,6 +208,45 @@ class TestItemPort(ABC):
 
         """
 
+    def get_class_hierarchy(self) -> list[tuple[str, dict[str, object]]]:
+        """Get the class hierarchy with markers for conflict detection.
+
+        Returns a list of (class_name, markers_dict) tuples, ordered from
+        the immediate class to the furthest ancestor. This is used to detect
+        marker inheritance conflicts.
+
+        Returns:
+            List of tuples containing (class_name, markers) for each class
+            in the hierarchy. Returns empty list if not applicable (e.g.,
+            for function-level tests or if hierarchy inspection is not supported).
+
+        Example:
+            >>> # For a test in TestChild(TestBase) where TestBase has @small
+            >>> hierarchy = item.get_class_hierarchy()
+            >>> # Returns: [('TestChild', {}), ('TestBase', {'small': marker})]
+
+        """
+        return []  # Default implementation for backward compatibility
+
+    def get_method_markers(self) -> dict[str, object]:
+        """Get markers applied directly to the test method.
+
+        Returns markers that are applied directly to the test method itself,
+        not inherited from the class. This is used to detect conflicts between
+        method-level and class-level markers.
+
+        Returns:
+            Dictionary of marker names to marker objects. Returns empty dict
+            if no method-level markers or if not applicable.
+
+        Example:
+            >>> # For @pytest.mark.medium on a method
+            >>> method_markers = item.get_method_markers()
+            >>> # Returns: {'medium': marker_object}
+
+        """
+        return {}  # Default implementation for backward compatibility
+
 
 class OutputWriterPort(ABC):
     """Abstract base class defining the output writer interface.

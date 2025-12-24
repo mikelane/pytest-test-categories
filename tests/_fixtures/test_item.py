@@ -116,3 +116,29 @@ class FakeTestItem(TestItemPort):
         if hasattr(marker, 'kwargs'):
             return dict(marker.kwargs)
         return {}
+
+    def get_class_hierarchy(self) -> list[tuple[str, dict[str, object]]]:
+        """Get the class hierarchy with markers.
+
+        Returns an empty list for basic FakeTestItem since it doesn't
+        have class hierarchy information. Subclasses can override this
+        to provide hierarchy data for testing conflict detection.
+
+        Returns:
+            Empty list (no hierarchy information available).
+
+        """
+        return []
+
+    def get_method_markers(self) -> dict[str, object]:
+        """Get markers applied directly to the test method.
+
+        Returns an empty dict for basic FakeTestItem since it doesn't
+        distinguish between method and class markers. Subclasses can
+        override this to provide method-specific marker data.
+
+        Returns:
+            Empty dict (no method-specific marker information).
+
+        """
+        return {}
