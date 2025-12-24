@@ -224,6 +224,108 @@ class DescribeSuggestionSummaryMultipleSuggestions:
 
 
 @pytest.mark.small
+class DescribeSuggestionSummaryMixedTransitions:
+    """Test suite for summary with mixed current_size to suggested_size transitions."""
+
+    def it_correctly_displays_each_upgrade_transition_individually(self) -> None:
+        """Each upgrade suggestion shows its own current -> suggested transition.
+
+        When upgrades contain tests with different current sizes (e.g., SMALL -> MEDIUM
+        and MEDIUM -> LARGE), each should display its own transition, not assume all
+        have the same current_size.
+        """
+        service = SuggestionSummaryService()
+        writer = StringBufferWriter()
+
+        # Mixed upgrade transitions: SMALL -> MEDIUM and MEDIUM -> LARGE
+        suggestions = [
+            TestSuggestion(
+                test_nodeid='test_a.py::test_network',
+                current_size=TestSize.SMALL,
+                suggested_size=TestSize.MEDIUM,
+                reason='network access detected',
+            ),
+            TestSuggestion(
+                test_nodeid='test_b.py::test_multiresource',
+                current_size=TestSize.MEDIUM,
+                suggested_size=TestSize.LARGE,
+                reason='multiple resource types',
+            ),
+        ]
+
+        service.write_suggestions(suggestions, writer)
+
+        output = '\n'.join(writer.get_output())
+        # Each test should show its correct current size in the output
+        assert 'test_a.py::test_network' in output
+        assert 'test_b.py::test_multiresource' in output
+        # The MEDIUM -> LARGE suggestion should show medium as current, not small
+        # It should NOT be grouped under a "small -> medium" header
+        assert '@pytest.mark.medium' in output
+        assert '@pytest.mark.large' in output
+
+    def it_correctly_displays_each_downgrade_transition_individually(self) -> None:
+        """Each downgrade suggestion shows its own current -> suggested transition.
+
+        When downgrades contain tests with different current sizes (e.g., LARGE -> SMALL
+        and MEDIUM -> SMALL), each should display its own transition.
+        """
+        service = SuggestionSummaryService()
+        writer = StringBufferWriter()
+
+        # Mixed downgrade transitions: LARGE -> SMALL and MEDIUM -> SMALL
+        suggestions = [
+            TestSuggestion(
+                test_nodeid='test_a.py::test_was_large',
+                current_size=TestSize.LARGE,
+                suggested_size=TestSize.SMALL,
+                reason='no external resources',
+            ),
+            TestSuggestion(
+                test_nodeid='test_b.py::test_was_medium',
+                current_size=TestSize.MEDIUM,
+                suggested_size=TestSize.SMALL,
+                reason='no external resources',
+            ),
+        ]
+
+        service.write_suggestions(suggestions, writer)
+
+        output = '\n'.join(writer.get_output())
+        # Each test should show its correct current size in the output
+        assert 'test_a.py::test_was_large' in output
+        assert 'test_b.py::test_was_medium' in output
+        # Both LARGE and MEDIUM should appear as current sizes in the output
+        # (not just the first one's current_size applied to all)
+        assert '@pytest.mark.large' in output
+        assert '@pytest.mark.medium' in output
+
+
+@pytest.mark.small
+class DescribeSuggestionSummaryIsUpgrade:
+    """Test suite for the _is_upgrade helper method."""
+
+    def it_returns_false_for_uncategorized_suggestions(self) -> None:
+        """Uncategorized suggestions (current_size=None) are not upgrades.
+
+        This tests the defensive check in _is_upgrade. While the main code path
+        filters uncategorized suggestions before calling _is_upgrade, this test
+        documents the expected behavior if _is_upgrade is called directly.
+        """
+        service = SuggestionSummaryService()
+        suggestion = TestSuggestion(
+            test_nodeid='test.py::test_fn',
+            current_size=None,
+            suggested_size=TestSize.SMALL,
+            reason='no external resources',
+        )
+
+        result = service._is_upgrade(suggestion)
+
+        assert result is False
+
+
+@pytest.mark.small
 class DescribeSuggestionSummaryFromSuggestionList:
     """Test suite for writing summary from a pre-computed list of suggestions."""
 

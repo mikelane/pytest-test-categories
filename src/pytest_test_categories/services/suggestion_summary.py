@@ -96,26 +96,28 @@ class SuggestionSummaryService:
         suggestions: list[TestSuggestion],
         writer: OutputWriterPort,
     ) -> None:
-        """Write suggestions grouped by category."""
-        # Group suggestions
-        upgrades: list[TestSuggestion] = []
-        downgrades: list[TestSuggestion] = []
+        """Write suggestions grouped by category and transition type."""
+        # Group suggestions by (current_size, suggested_size) for accurate headers
+        upgrade_groups: dict[tuple[TestSize, TestSize], list[TestSuggestion]] = {}
+        downgrade_groups: dict[tuple[TestSize, TestSize], list[TestSuggestion]] = {}
         uncategorized: list[TestSuggestion] = []
 
         for suggestion in suggestions:
             if suggestion.current_size is None:
                 uncategorized.append(suggestion)
             elif self._is_upgrade(suggestion):
-                upgrades.append(suggestion)
+                key = (suggestion.current_size, suggestion.suggested_size)
+                upgrade_groups.setdefault(key, []).append(suggestion)
             else:
-                downgrades.append(suggestion)
+                key = (suggestion.current_size, suggestion.suggested_size)
+                downgrade_groups.setdefault(key, []).append(suggestion)
 
-        # Write each group
-        if upgrades:
-            self._write_upgrade_section(upgrades, writer)
+        # Write each group with its own header
+        for (current, suggested), group_suggestions in sorted(upgrade_groups.items(), key=lambda x: x[0]):
+            self._write_upgrade_section(group_suggestions, current, suggested, writer)
 
-        if downgrades:
-            self._write_downgrade_section(downgrades, writer)
+        for (current, suggested), group_suggestions in sorted(downgrade_groups.items(), key=lambda x: x[0]):
+            self._write_downgrade_section(group_suggestions, current, suggested, writer)
 
         if uncategorized:
             self._write_uncategorized_section(uncategorized, writer)
@@ -147,13 +149,13 @@ class SuggestionSummaryService:
     def _write_upgrade_section(
         self,
         suggestions: list[TestSuggestion],
+        current_size: TestSize,
+        suggested_size: TestSize,
         writer: OutputWriterPort,
     ) -> None:
         """Write section for tests that should be upgraded."""
-        first = suggestions[0]
         writer.write_line(
-            f'Currently @pytest.mark.{first.current_size.value if first.current_size else "unmarked"} '
-            f'but should be @pytest.mark.{first.suggested_size.value}:'
+            f'Currently @pytest.mark.{current_size.value} but should be @pytest.mark.{suggested_size.value}:'
         )
         for suggestion in suggestions:
             writer.write_line(f'  {suggestion.test_nodeid} ({suggestion.reason})')
@@ -162,13 +164,13 @@ class SuggestionSummaryService:
     def _write_downgrade_section(
         self,
         suggestions: list[TestSuggestion],
+        current_size: TestSize,
+        suggested_size: TestSize,
         writer: OutputWriterPort,
     ) -> None:
         """Write section for tests that could be downgraded."""
-        first = suggestions[0]
         writer.write_line(
-            f'Currently @pytest.mark.{first.current_size.value if first.current_size else "unmarked"} '
-            f'but could be @pytest.mark.{first.suggested_size.value}:'
+            f'Currently @pytest.mark.{current_size.value} but could be @pytest.mark.{suggested_size.value}:'
         )
         for suggestion in suggestions:
             writer.write_line(f'  {suggestion.test_nodeid} ({suggestion.reason})')
