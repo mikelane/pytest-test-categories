@@ -319,6 +319,246 @@ def test_with_testcontainers(postgres_container):
     ...
 ```
 
+## Common Surprises When Enforcing Hermetic Tests
+
+> **If you hit one of these, the plugin is not being "overly strict."**
+> It is surfacing an implicit dependency you already had.
+
+This section covers the less obvious violations that catch developers off guard during migration.
+
+### 1. Import-Time Reads
+
+**Symptom**: Test fails immediately on import, before any test code runs.
+
+**Cause**: Libraries or modules that read from disk at import time—certificate bundles, timezone data, configuration discovery.
+
+**Examples**:
+```python
+# This library reads config on import
+import myapp.config  # Triggers filesystem access!
+
+@pytest.mark.small
+def test_something():
+    pass  # Test never runs—violation happens at import
+```
+
+**Architectural Fix**: Lazy loading, explicit configuration injection.
+```python
+# myapp/config.py - BEFORE (eager loading)
+settings = load_from_file("config.yaml")  # Runs at import!
+
+# myapp/config.py - AFTER (lazy loading)
+_settings = None
+
+def get_settings():
+    global _settings
+    if _settings is None:
+        _settings = load_from_file("config.yaml")
+    return _settings
+```
+
+**Tactical Fix**: Move import inside the test function or mock at module level.
+```python
+@pytest.mark.small
+def test_something(mocker):
+    mocker.patch("myapp.config.load_from_file", return_value={"key": "value"})
+    from myapp.config import get_settings  # Import after mock
+    assert get_settings()["key"] == "value"
+```
+
+> **Note**: This pattern only works if the module hasn't been imported yet. For already-imported modules, use `importlib.reload()` after patching, or refactor to lazy loading (the architectural fix above).
+
+### 2. Libraries That Probe the Filesystem
+
+**Symptom**: Unexpected filesystem violation from code you didn't write.
+
+**Cause**: Third-party libraries that stat files, read modules, or probe paths on import or first use.
+
+**Common Culprits**:
+- `pkg_resources` / `importlib.metadata` (reading package metadata)
+- `platformdirs` / `appdirs` (config file discovery)
+- `pathlib.Path.home()` (accessing home directory)
+- Certificate validation libraries
+
+**Tactical Fix**: Mock the specific function.
+```python
+@pytest.mark.small
+def test_with_platformdirs(mocker):
+    mocker.patch("platformdirs.user_config_dir", return_value="/fake/path")
+    # Now your code that uses platformdirs won't trigger violations
+```
+
+**Architectural Fix**: Wrap library calls behind ports.
+```python
+# ports/config_paths.py
+class ConfigPaths(Protocol):
+    def get_user_config_dir(self) -> Path: ...
+
+# adapters/real_config_paths.py
+class RealConfigPaths:
+    def get_user_config_dir(self) -> Path:
+        return Path(platformdirs.user_config_dir("myapp"))
+
+# adapters/fake_config_paths.py
+class FakeConfigPaths:
+    def get_user_config_dir(self) -> Path:
+        return Path("/fake/config")
+```
+
+### 3. Sleep Dependencies
+
+**Symptom**: Test blocked for calling `time.sleep()`.
+
+**Cause**: Code that waits for async operations, rate limiting, or retries.
+
+**Architectural Fix**: Inject clock/timer as a dependency.
+```python
+# BEFORE: Hard-coded sleep
+def retry_with_backoff(fn, max_attempts=3):
+    for i in range(max_attempts):
+        try:
+            return fn()
+        except Exception:
+            time.sleep(2 ** i)  # Violation!
+
+# AFTER: Injectable delay
+def retry_with_backoff(fn, max_attempts=3, delay_fn=time.sleep):
+    for i in range(max_attempts):
+        try:
+            return fn()
+        except Exception:
+            delay_fn(2 ** i)
+
+# In tests:
+@pytest.mark.small
+def test_retry():
+    delays = []
+    result = retry_with_backoff(
+        lambda: "success",
+        delay_fn=lambda x: delays.append(x)  # Capture, don't sleep
+    )
+```
+
+**Tactical Fix**: Use `freezegun`, `time-machine`, or mock `time.sleep` directly.
+```python
+@pytest.mark.small
+def test_retry_timing(mocker):
+    mock_sleep = mocker.patch("time.sleep")  # Prevents actual sleeping
+    result = retry_with_backoff(lambda: "success")
+    assert mock_sleep.call_count >= 0  # Verify sleep was called (or not)
+```
+
+> **Note**: `time-machine` and `freezegun` mock time-related functions like `time.time()` and `datetime.now()`, but `time.sleep()` will still actually sleep unless you mock it separately.
+
+### 4. Subprocess in Unexpected Places
+
+**Symptom**: Process spawn violation from library code.
+
+**Cause**: Libraries that shell out to system commands—git, gpg, platform detection.
+
+**Common Culprits**:
+- `git` Python libraries
+- Cryptographic libraries
+- Build tools invoked programmatically
+
+**Tactical Fix**: Mock `subprocess.run` or `subprocess.Popen`.
+```python
+@pytest.mark.small
+def test_git_info(mocker):
+    mocker.patch("subprocess.run", return_value=mocker.Mock(
+        stdout="abc123\n", returncode=0
+    ))
+    result = get_git_commit()
+    assert result == "abc123"
+```
+
+**Architectural Fix**: Abstract command execution.
+```python
+class CommandRunner(Protocol):
+    def run(self, cmd: list[str]) -> str: ...
+
+class RealCommandRunner:
+    def run(self, cmd: list[str]) -> str:
+        return subprocess.run(cmd, capture_output=True, text=True).stdout
+
+class FakeCommandRunner:
+    def __init__(self, responses: dict[tuple, str]):
+        self.responses = responses
+
+    def run(self, cmd: list[str]) -> str:
+        return self.responses.get(tuple(cmd), "")
+```
+
+### 5. Network from Unexpected Places
+
+**Symptom**: Network violation not from obvious HTTP calls.
+
+**Cause**: DNS resolution, telemetry, license checks, update checks, analytics.
+
+**Common Culprits**:
+- Libraries with built-in telemetry (disable via environment variable)
+- License validation on import
+- Auto-update checks
+- Analytics SDKs
+
+**Detection**: Run with environment variable `PYTEST_TEST_CATEGORIES_DEBUG=1` to see detailed violation info.
+
+**Tactical Fix**: Disable telemetry via environment or config.
+```python
+# conftest.py
+import os
+os.environ["DISABLE_TELEMETRY"] = "1"
+os.environ["NO_UPDATE_CHECK"] = "1"
+```
+
+**Architectural Fix**: Use dependency injection for HTTP clients.
+```python
+# BEFORE: Hard-coded client
+def fetch_user(user_id):
+    return httpx.get(f"https://api.example.com/users/{user_id}").json()
+
+# AFTER: Injectable client
+def fetch_user(user_id, client=None):
+    client = client or httpx.Client()
+    return client.get(f"https://api.example.com/users/{user_id}").json()
+```
+
+### 6. Database Connection at Import
+
+**Symptom**: Database connection attempt before test runs.
+
+**Cause**: ORM models or connection pools that initialize at import time.
+
+**Example**:
+```python
+# models.py - PROBLEMATIC
+from sqlalchemy import create_engine
+engine = create_engine(DATABASE_URL)  # Runs at import!
+```
+
+**Architectural Fix**: Lazy initialization.
+```python
+# models.py - FIXED
+from functools import lru_cache
+
+@lru_cache
+def get_engine():
+    return create_engine(get_database_url())
+
+# Only connect when actually needed
+```
+
+### Summary: The Pattern
+
+All these surprises share a common theme: **implicit dependencies**.
+
+The architectural fix is always the same:
+1. **Make dependencies explicit** (pass them as arguments)
+2. **Delay initialization** (lazy loading)
+3. **Abstract behind ports** (interfaces that can be faked)
+
+These aren't just testing improvements—they're architecture improvements. The constraint (hermetic small tests) drives better design (explicit boundaries, dependency injection).
+
 ## Phase 4: Enabling Strict Enforcement
 
 Once all tests are categorized and violations are fixed:

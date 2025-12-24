@@ -81,6 +81,7 @@ user-guide/index
 :caption: Configuration
 
 configuration
+compatibility
 ide-integration
 ```
 

@@ -192,6 +192,59 @@ Use this decision tree to choose the appropriate test size:
    - Yes: Use `@pytest.mark.small`
    - No: Consider refactoring or use `@pytest.mark.medium`
 
+## What Counts as Medium
+
+The line between "small" and "medium" can be confusing. Here's explicit guidance:
+
+### Allowed in Medium Tests
+
+| Resource | Examples | Notes |
+|----------|----------|-------|
+| Localhost HTTP | Test spins up `httpx.MockTransport`, Flask test client | Server created and controlled by the test |
+| Local Database | SQLite in `tmp_path`, PostgreSQL in Docker | Isolated per-test instance |
+| Filesystem | `tmp_path` fixture, tempfile | Only within test-controlled directories |
+| In-Memory Stores | Redis mock, in-memory SQLite | No persistent state between tests |
+
+### NOT What We Mean by Medium
+
+| Scenario | Why It's Wrong | Correct Category |
+|----------|----------------|------------------|
+| Docker-compose sprawl | Orchestration = Large | `@pytest.mark.large` |
+| LocalStack / moto | AWS simulation = external-like complexity | `@pytest.mark.large` |
+| Your laptop's Postgres | Shared state, not isolated | `@pytest.mark.large` |
+| "Kinda integration" | If you're hedging, it's probably Large | `@pytest.mark.large` |
+| Staging environment | External network | `@pytest.mark.large` |
+
+### The Heuristic
+
+> **If it requires orchestration, it's Large.**
+
+Medium tests should be:
+- **Self-contained**: The test creates what it needs
+- **Isolated**: No shared state with other tests
+- **Fast enough**: Under 5 minutes
+- **Localhost-only**: No external network calls
+
+### Example: When to Choose Medium vs. Large
+
+```python
+# MEDIUM: Test creates and controls the database
+@pytest.mark.medium
+def test_user_repository(tmp_path):
+    db = sqlite3.connect(tmp_path / "test.db")
+    repo = UserRepository(db)
+    repo.create(User(name="Alice"))
+    assert repo.count() == 1
+
+# LARGE: Test uses external orchestration
+@pytest.mark.large
+def test_user_service_with_docker(docker_compose):
+    # docker-compose.yml defines postgres, redis, etc.
+    client = ServiceClient(docker_compose.get_url("api"))
+    client.create_user("Alice")
+    assert client.get_users() == ["Alice"]
+```
+
 ## Using Base Test Classes
 
 As an alternative to markers, inherit from base test classes:
