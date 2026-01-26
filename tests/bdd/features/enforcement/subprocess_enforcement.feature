@@ -17,7 +17,7 @@ Feature: Subprocess Spawn Enforcement
     And a test file with a small test that uses "subprocess.run(['echo', 'test'])"
     When the test suite runs
     Then the test fails with a process violation error
-    And the error message contains "Subprocess Violation"
+    And the error message contains "Subprocess Spawn Violation"
 
   @strict @subprocess.Popen
   Scenario: Small test using subprocess.Popen() in strict mode fails
@@ -25,7 +25,7 @@ Feature: Subprocess Spawn Enforcement
     And a test file with a small test that uses "subprocess.Popen(['echo', 'test'])"
     When the test suite runs
     Then the test fails with a process violation error
-    And the error message contains "Subprocess Violation"
+    And the error message contains "Subprocess Spawn Violation"
 
   @strict @subprocess.call
   Scenario: Small test using subprocess.call() in strict mode fails
@@ -33,7 +33,7 @@ Feature: Subprocess Spawn Enforcement
     And a test file with a small test that uses "subprocess.call(['echo', 'test'])"
     When the test suite runs
     Then the test fails with a process violation error
-    And the error message contains "Subprocess Violation"
+    And the error message contains "Subprocess Spawn Violation"
 
   @strict @subprocess.check_output
   Scenario: Small test using subprocess.check_output() in strict mode fails
@@ -41,7 +41,7 @@ Feature: Subprocess Spawn Enforcement
     And a test file with a small test that uses "subprocess.check_output(['echo', 'test'])"
     When the test suite runs
     Then the test fails with a process violation error
-    And the error message contains "Subprocess Violation"
+    And the error message contains "Subprocess Spawn Violation"
 
   @strict @subprocess.check_call
   Scenario: Small test using subprocess.check_call() in strict mode fails
@@ -49,7 +49,7 @@ Feature: Subprocess Spawn Enforcement
     And a test file with a small test that uses "subprocess.check_call(['echo', 'test'])"
     When the test suite runs
     Then the test fails with a process violation error
-    And the error message contains "Subprocess Violation"
+    And the error message contains "Subprocess Spawn Violation"
 
   @strict @os.system
   Scenario: Small test using os.system() in strict mode fails
@@ -57,7 +57,7 @@ Feature: Subprocess Spawn Enforcement
     And a test file with a small test that calls os system function
     When the test suite runs
     Then the test fails with a process violation error
-    And the error message contains "Subprocess Violation"
+    And the error message contains "Subprocess Spawn Violation"
 
   @strict @os.popen
   Scenario: Small test using os.popen() in strict mode fails
@@ -65,7 +65,7 @@ Feature: Subprocess Spawn Enforcement
     And a test file with a small test that calls os popen function
     When the test suite runs
     Then the test fails with a process violation error
-    And the error message contains "Subprocess Violation"
+    And the error message contains "Subprocess Spawn Violation"
 
   @strict @os.execv
   Scenario: Small test using os.execv() in strict mode fails
@@ -73,7 +73,7 @@ Feature: Subprocess Spawn Enforcement
     And a test file with a small test that calls os execv function
     When the test suite runs
     Then the test fails with a process violation error
-    And the error message contains "Subprocess Violation"
+    And the error message contains "Subprocess Spawn Violation"
 
   @strict @os.spawn
   Scenario: Small test using os.spawnl() in strict mode fails
@@ -81,7 +81,7 @@ Feature: Subprocess Spawn Enforcement
     And a test file with a small test that uses os.spawnl
     When the test suite runs
     Then the test fails with a process violation error
-    And the error message contains "Subprocess Violation"
+    And the error message contains "Subprocess Spawn Violation"
 
   # =============================================================================
   # Warn Mode Scenarios

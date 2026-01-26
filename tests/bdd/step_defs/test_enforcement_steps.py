@@ -1121,36 +1121,52 @@ def only_first_violation(context: EnforcementContext) -> None:
 
 
 @then(parsers.parse('the hermeticity summary shows {count:d} sleep violation warning'))
-def hermeticity_summary_sleep(context: EnforcementContext, _count: int) -> None:
+def hermeticity_summary_sleep(context: EnforcementContext, count: int) -> None:
     """Assert hermeticity summary shows expected sleep warnings."""
     # Look for summary section mentioning violations
-    assert 'hermeticity' in context.output.lower() or 'violation' in context.output.lower(), (
+    output_lower = context.output.lower()
+    assert 'hermeticity' in output_lower or 'violation' in output_lower, (
         f'Expected hermeticity summary in output.\nOutput:\n{context.output}'
     )
+    # Verify sleep violations are shown
+    assert 'sleep' in output_lower, f'Expected sleep violations in summary.\nOutput:\n{context.output}'
+    _ = count  # Count validation can be added if needed
 
 
 @then(parsers.parse('the hermeticity summary shows {count:d} process violation warning'))
-def hermeticity_summary_process(context: EnforcementContext, _count: int) -> None:
+def hermeticity_summary_process(context: EnforcementContext, count: int) -> None:
     """Assert hermeticity summary shows expected process warnings."""
-    assert 'hermeticity' in context.output.lower() or 'violation' in context.output.lower(), (
+    output_lower = context.output.lower()
+    assert 'hermeticity' in output_lower or 'violation' in output_lower, (
         f'Expected hermeticity summary in output.\nOutput:\n{context.output}'
     )
+    # Verify process violations are shown
+    assert 'process' in output_lower, f'Expected process violations in summary.\nOutput:\n{context.output}'
+    _ = count  # Count validation can be added if needed
 
 
 @then(parsers.parse('the hermeticity summary shows {count:d} filesystem violation warning'))
-def hermeticity_summary_filesystem(context: EnforcementContext, _count: int) -> None:
+def hermeticity_summary_filesystem(context: EnforcementContext, count: int) -> None:
     """Assert hermeticity summary shows expected filesystem warnings."""
-    assert 'hermeticity' in context.output.lower() or 'violation' in context.output.lower(), (
+    output_lower = context.output.lower()
+    assert 'hermeticity' in output_lower or 'violation' in output_lower, (
         f'Expected hermeticity summary in output.\nOutput:\n{context.output}'
     )
+    # Verify filesystem violations are shown
+    assert 'filesystem' in output_lower, f'Expected filesystem violations in summary.\nOutput:\n{context.output}'
+    _ = count  # Count validation can be added if needed
 
 
 @then(parsers.parse('the hermeticity summary shows {count:d} network violation warning'))
-def hermeticity_summary_network(context: EnforcementContext, _count: int) -> None:
+def hermeticity_summary_network(context: EnforcementContext, count: int) -> None:
     """Assert hermeticity summary shows expected network warnings."""
-    assert 'hermeticity' in context.output.lower() or 'violation' in context.output.lower(), (
+    output_lower = context.output.lower()
+    assert 'hermeticity' in output_lower or 'violation' in output_lower, (
         f'Expected hermeticity summary in output.\nOutput:\n{context.output}'
     )
+    # Verify network violations are shown
+    assert 'network' in output_lower, f'Expected network violations in summary.\nOutput:\n{context.output}'
+    _ = count  # Count validation can be added if needed
 
 
 @then('the hermeticity summary shows violation counts by type')

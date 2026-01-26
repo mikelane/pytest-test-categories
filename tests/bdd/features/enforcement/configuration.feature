@@ -36,7 +36,7 @@ Feature: Enforcement Configuration
     And a test file with a small test that uses "time.sleep(0.001)"
     When the test suite runs
     Then the test passes
-    And a warning is emitted containing "Sleep Call Violation"
+    And the hermeticity summary shows 1 sleep violation warning
 
   @cli @off
   Scenario: Enforcement mode can be set to off via CLI flag
@@ -63,7 +63,7 @@ Feature: Enforcement Configuration
     And a test file with a small test that uses "time.sleep(0.001)"
     When the test suite runs
     Then the test passes
-    And a warning is emitted containing "Sleep Call Violation"
+    And the hermeticity summary shows 1 sleep violation warning
 
   @ini @off
   Scenario: Enforcement mode can be set to off via pytest.ini

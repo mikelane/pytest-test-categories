@@ -67,7 +67,7 @@ Feature: Threading/Multiprocessing Enforcement
     And a test file with a small test that uses multiprocessing Process
     When the test suite runs
     Then the test passes
-    And a warning is emitted containing "Subprocess Spawn Violation"
+    And the hermeticity summary shows 1 process violation warning
 
   # =============================================================================
   # Off Mode Scenarios

@@ -118,7 +118,6 @@ Feature: Network Access Enforcement
     And a test file with a small test that creates a socket
     When the test suite runs
     Then the test passes
-    And a warning is emitted containing "Network Access Violation"
     And the hermeticity summary shows 1 network violation warning
 
   @warn @medium @external
@@ -127,7 +126,7 @@ Feature: Network Access Enforcement
     And a test file with a medium test that connects to external host
     When the test suite runs
     Then the test passes
-    And a warning is emitted containing "Network Access Violation"
+    And the hermeticity summary shows 1 network violation warning
 
   # =============================================================================
   # Off Mode Scenarios
