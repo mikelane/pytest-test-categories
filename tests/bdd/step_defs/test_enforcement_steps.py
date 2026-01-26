@@ -41,7 +41,7 @@ scenarios('enforcement/configuration.feature')
 
 
 @given('the pytest-test-categories plugin is installed')
-def plugin_installed(context: EnforcementContext) -> None:
+def plugin_installed(_context: EnforcementContext) -> None:
     """Verify the plugin is installed (always true in test environment)."""
     # Plugin is installed via pyproject.toml dependencies
 
@@ -933,11 +933,12 @@ def run_test_suite(context: EnforcementContext, pytester: Pytester) -> None:
         pytester.makepyfile(**{filename.replace('.py', ''): content})
 
     # Build pytest arguments
-    args = ['-v']
+    # Disable distribution enforcement - BDD tests focus on hermeticity, not distribution
+    args = ['-v', '--test-categories-distribution-enforcement=off']
 
     # Handle quiet mode
     if context.quiet_mode:
-        args = ['-q']
+        args = ['-q', '--test-categories-distribution-enforcement=off']
 
     # Handle enforcement configuration
     if context.cli_enforcement_mode:
@@ -1071,7 +1072,7 @@ def no_process_errors(context: EnforcementContext) -> None:
 
 
 @then('no threading warnings are emitted')
-def no_threading_warnings(context: EnforcementContext) -> None:
+def no_threading_warnings(_context: EnforcementContext) -> None:
     """Assert no threading warnings were emitted."""
     # This is hard to assert without specific marker
     # Threading warnings are soft, test should still pass
@@ -1178,7 +1179,7 @@ def hermeticity_summary_by_type(context: EnforcementContext) -> None:
 
 
 @then('the hermeticity summary distinguishes warnings from failures')
-def hermeticity_summary_distinguishes(context: EnforcementContext) -> None:
+def hermeticity_summary_distinguishes(_context: EnforcementContext) -> None:
     """Assert summary distinguishes warnings from failures."""
     # In warn mode, all should be warnings not failures
     # Test passes if we get here
@@ -1191,7 +1192,7 @@ def hermeticity_summary_failure(context: EnforcementContext) -> None:
 
 
 @then('the hermeticity summary is abbreviated')
-def hermeticity_summary_abbreviated(context: EnforcementContext) -> None:
+def hermeticity_summary_abbreviated(_context: EnforcementContext) -> None:
     """Assert summary is abbreviated in quiet mode."""
     # Quiet mode reduces output
     # Test passes if we get here
