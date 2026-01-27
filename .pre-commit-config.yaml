@@ -39,7 +39,11 @@ repos:
 
       - id: tox-parallel
         name: tox parallel tests
-        entry: uv run tox run-parallel --parallel-no-spinner -e py311-fast,py312-fast,py313-fast,py314-fast
+        # Note: Using sequential mode instead of run-parallel to avoid
+        # timing flakes from resource contention. The test suite has
+        # strict 1-second limits for SMALL tests which are sensitive
+        # to system load.
+        entry: uv run tox -e py311-fast,py312-fast,py313-fast,py314-fast
         language: system
         types: [python]
         pass_filenames: false
