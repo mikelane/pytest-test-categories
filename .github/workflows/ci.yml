@@ -44,7 +44,15 @@ jobs:
         run: uv sync --all-groups
 
       - name: Run tests with coverage
-        run: uv run coverage run -m pytest
+        # Exclude BDD tests from coverage - they use pytester subprocesses which
+        # interfere with coverage data collection. BDD tests are run separately.
+        run: uv run coverage run -m pytest --ignore=tests/bdd --ignore=tests/benchmarks
+
+      - name: Run BDD tests (no coverage)
+        # BDD tests use pytester which spawns subprocesses - coverage doesn't track these
+        # Skip on Windows due to pytester issues (see #225)
+        if: runner.os != 'Windows'
+        run: uv run pytest tests/bdd -v
 
       - name: Generate coverage XML report
         run: uv run coverage xml
@@ -100,7 +108,13 @@ jobs:
         run: uv run mypy .
 
       - name: Run tests with coverage
-        run: uv run coverage run -m pytest
+        # Exclude BDD tests from coverage - they use pytester subprocesses which
+        # interfere with coverage data collection. BDD tests are run separately.
+        run: uv run coverage run -m pytest --ignore=tests/bdd --ignore=tests/benchmarks
+
+      - name: Run BDD tests (no coverage)
+        # BDD tests use pytester which spawns subprocesses - coverage doesn't track these
+        run: uv run pytest tests/bdd -v
 
       - name: Generate coverage report
         run: uv run coverage report
