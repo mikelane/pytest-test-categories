@@ -1,0 +1,101 @@
+# =============================================================================
+# Enforcement Demo Configuration
+# =============================================================================
+#
+# This pyproject.toml demonstrates the full range of pytest-test-categories
+# configuration options for enforcing hermetic testing practices.
+
+[project]
+name = "enforcement-demo"
+version = "1.0.0"
+description = "Demo project showcasing pytest-test-categories enforcement features"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+test = [
+    # Core testing
+    "pytest>=8.0.0",
+    # Note: When using this demo standalone, install pytest-test-categories:
+    # pip install pytest-test-categories>=1.2.0
+    # For development within the repo, pytest-test-categories is already installed.
+    "pytest-mock>=3.12.0",
+
+    # HTTP mocking options (choose one based on your stack)
+    "pytest-httpx>=0.30.0",     # For httpx users
+    "responses>=0.25.0",         # For requests users
+
+    # Filesystem mocking
+    "pyfakefs>=5.0.0",
+]
+dev = [
+    "ruff>=0.3.0",
+]
+
+# =============================================================================
+# pytest Configuration
+# =============================================================================
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*", "it_*"]
+python_classes = ["Test*", "Describe*"]
+
+# Add src to path for imports
+pythonpath = ["src"]
+
+# ---------------------------------------------------------------------------
+# pytest-test-categories: Resource Enforcement
+# ---------------------------------------------------------------------------
+# Controls how strictly the plugin enforces test hermeticity.
+#
+# Options:
+#   - "off"    : No enforcement (default) - violations are not detected
+#   - "warn"   : Emit warnings on violations - tests pass but violations logged
+#   - "strict" : Fail tests on violations - recommended for production
+#
+# Start with "warn" during adoption, move to "strict" when clean.
+#
+test_categories_enforcement = "warn"
+
+# ---------------------------------------------------------------------------
+# pytest-test-categories: Distribution Enforcement
+# ---------------------------------------------------------------------------
+# Controls validation of test size distribution (Google's 80/15/5 rule).
+#
+# Options:
+#   - "off"    : No validation (default)
+#   - "warn"   : Warn if distribution is outside targets
+#   - "strict" : Fail if distribution is outside targets
+#
+# Target distribution:
+#   - 80% small tests (fast, hermetic)
+#   - 15% medium tests (localhost, containers)
+#   - 5% large tests (full integration)
+#
+test_categories_distribution_enforcement = "off"
+
+# ---------------------------------------------------------------------------
+# pytest Markers
+# ---------------------------------------------------------------------------
+# Register test size markers for documentation.
+#
+markers = [
+    "small: Fast unit tests - no network, filesystem, subprocess, database, or sleep",
+    "medium: Integration tests - localhost network and filesystem allowed",
+    "large: System tests - full network and resource access allowed",
+    "xlarge: Extended tests - same as large, for very long-running tests",
+]
+
+# =============================================================================
+# Code Quality
+# =============================================================================
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
