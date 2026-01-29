@@ -272,7 +272,7 @@ class DescribeShellRunnerWithFakeExecutor:
             stdout="git version 2.40.0",
         )
 
-        runner = ShellRunner(executor=fake_executor)
+        runner = ShellRunner(_executor=fake_executor)
         version = runner.git_version()
 
         assert version == "git version 2.40.0"
@@ -287,7 +287,7 @@ class DescribeShellRunnerWithFakeExecutor:
             stderr="command not found: git",
         )
 
-        runner = ShellRunner(executor=fake_executor)
+        runner = ShellRunner(_executor=fake_executor)
         version = runner.git_version()
 
         assert version == "unknown"
@@ -300,7 +300,7 @@ class DescribeShellRunnerWithFakeExecutor:
             stdout="Documents\nDownloads\nPictures",
         )
 
-        runner = ShellRunner(executor=fake_executor)
+        runner = ShellRunner(_executor=fake_executor)
         files = runner.list_directory("/home/user")
 
         assert files == ["Documents", "Downloads", "Pictures"]
@@ -314,7 +314,7 @@ class DescribeShellRunnerWithFakeExecutor:
             stdout="2.5G\t/var/log",
         )
 
-        runner = ShellRunner(executor=fake_executor)
+        runner = ShellRunner(_executor=fake_executor)
         usage = runner.disk_usage("/var/log")
 
         assert usage == "2.5G\t/var/log"
@@ -328,7 +328,7 @@ class DescribeShellRunnerWithFakeExecutor:
             stderr="ls: cannot access: No such file or directory",
         )
 
-        runner = ShellRunner(executor=fake_executor)
+        runner = ShellRunner(_executor=fake_executor)
         files = runner.list_directory("/nonexistent")
 
         assert files == []
