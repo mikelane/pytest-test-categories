@@ -22,7 +22,7 @@ def fake_executor() -> FakeCommandExecutor:
     Example:
         def test_git_command(fake_executor):
             fake_executor.add_response(['git', '--version'], stdout='git version 2.40.0')
-            runner = ShellRunner(executor=fake_executor)
+            runner = ShellRunner(_executor=fake_executor)
             assert runner.git_version() == 'git version 2.40.0'
 
     """

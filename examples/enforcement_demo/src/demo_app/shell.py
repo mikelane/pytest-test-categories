@@ -126,12 +126,18 @@ class ShellRunner:
     actually spawning processes.
     """
 
-    executor: CommandExecutor | None = None
+    _executor: CommandExecutor | None = None
 
     def __post_init__(self) -> None:
         """Set default executor if not provided."""
-        if self.executor is None:
-            self.executor = RealCommandExecutor()
+        if self._executor is None:
+            self._executor = RealCommandExecutor()
+
+    @property
+    def executor(self) -> CommandExecutor:
+        """Get the executor, guaranteed to be set after init."""
+        assert self._executor is not None  # Guaranteed by __post_init__
+        return self._executor
 
     def run(self, command: str, *args: str) -> CommandResult:
         """Run a shell command.

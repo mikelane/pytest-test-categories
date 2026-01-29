@@ -49,7 +49,7 @@ class ApiClient:
     def __init__(
         self,
         base_url: str,
-        http_get: Callable[[str], dict[str, Any]] | None = None,
+        http_get: Callable[[str], Any] | None = None,
     ) -> None:
         """Initialize the API client.
 
@@ -62,10 +62,11 @@ class ApiClient:
         self.base_url = base_url.rstrip("/")
         self._http_get = http_get or self._real_http_get
 
-    def _real_http_get(self, url: str) -> dict[str, Any]:
+    def _real_http_get(self, url: str) -> Any:
         """Make a real HTTP GET request.
 
         This is what causes flaky tests - it hits the real network.
+        Returns the parsed JSON, which could be a dict, list, or primitive.
         """
         with urllib.request.urlopen(url, timeout=10) as response:  # noqa: S310
             return json.loads(response.read().decode())
