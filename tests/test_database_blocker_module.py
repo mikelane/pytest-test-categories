@@ -732,6 +732,10 @@ class DescribeIsCoverageDataFile:
         """A file whose parent dir contains 'coverage' but whose basename does not match."""
         assert is_coverage_data_file('/coverage/.data/test.db') is False
 
+    def it_returns_false_for_empty_string(self) -> None:
+        """An empty string has no basename and is not a coverage data file."""
+        assert is_coverage_data_file('') is False
+
 
 @pytest.mark.small
 class DescribeCoverageDataFileExclusion:
@@ -751,11 +755,11 @@ class DescribeCoverageDataFileExclusion:
         blocker.activate(TestSize.SMALL, EnforcementMode.STRICT)
 
         try:
-            result = blocker.check_connection_allowed('sqlite3', '.coverage')
+            is_connection_allowed = blocker.check_connection_allowed('sqlite3', '.coverage')
         finally:
             blocker.deactivate()
 
-        assert result is True
+        assert is_connection_allowed is True
 
     def it_allows_coverage_suffixed_file_for_small_test_with_patching_blocker(self) -> None:
         """DatabasePatchingBlocker allows '.coverage.myhost.12345.abcdef' for SMALL/STRICT."""
@@ -763,11 +767,11 @@ class DescribeCoverageDataFileExclusion:
         blocker.activate(TestSize.SMALL, EnforcementMode.STRICT)
 
         try:
-            result = blocker.check_connection_allowed('sqlite3', '.coverage.myhost.12345.abcdef')
+            is_connection_allowed = blocker.check_connection_allowed('sqlite3', '.coverage.myhost.12345.abcdef')
         finally:
             blocker.deactivate()
 
-        assert result is True
+        assert is_connection_allowed is True
 
     def it_allows_coverage_file_in_subdirectory_for_small_test_with_patching_blocker(
         self,
@@ -777,14 +781,14 @@ class DescribeCoverageDataFileExclusion:
         blocker.activate(TestSize.SMALL, EnforcementMode.STRICT)
 
         try:
-            result = blocker.check_connection_allowed(
+            is_connection_allowed = blocker.check_connection_allowed(
                 'sqlite3',
                 '/path/to/project/.coverage.myhost.12345.abc',
             )
         finally:
             blocker.deactivate()
 
-        assert result is True
+        assert is_connection_allowed is True
 
     def it_still_blocks_regular_sqlite_for_small_test_with_patching_blocker(self) -> None:
         """DatabasePatchingBlocker still blocks ':memory:' for SMALL/STRICT."""
@@ -792,11 +796,11 @@ class DescribeCoverageDataFileExclusion:
         blocker.activate(TestSize.SMALL, EnforcementMode.STRICT)
 
         try:
-            result = blocker.check_connection_allowed('sqlite3', ':memory:')
+            is_connection_allowed = blocker.check_connection_allowed('sqlite3', ':memory:')
         finally:
             blocker.deactivate()
 
-        assert result is False
+        assert is_connection_allowed is False
 
     def it_still_blocks_file_sqlite_for_small_test_with_patching_blocker(self) -> None:
         """DatabasePatchingBlocker still blocks '/tmp/test.db' for SMALL/STRICT."""
@@ -804,38 +808,41 @@ class DescribeCoverageDataFileExclusion:
         blocker.activate(TestSize.SMALL, EnforcementMode.STRICT)
 
         try:
-            result = blocker.check_connection_allowed('sqlite3', '/tmp/test.db')
+            is_connection_allowed = blocker.check_connection_allowed('sqlite3', '/tmp/test.db')
         finally:
             blocker.deactivate()
 
-        assert result is False
+        assert is_connection_allowed is False
 
     def it_allows_coverage_default_file_for_small_test_with_fake_blocker(self) -> None:
         """FakeDatabaseBlocker allows '.coverage' for SMALL/STRICT tests."""
         blocker = FakeDatabaseBlocker()
         blocker.activate(TestSize.SMALL, EnforcementMode.STRICT)
 
-        result = blocker.check_connection_allowed('sqlite3', '.coverage')
+        is_connection_allowed = blocker.check_connection_allowed('sqlite3', '.coverage')
 
         blocker.deactivate()
-        assert result is True
+        assert is_connection_allowed is True
+        assert blocker.connection_attempts[-1].allowed is True
 
     def it_allows_coverage_suffixed_file_for_small_test_with_fake_blocker(self) -> None:
         """FakeDatabaseBlocker allows '.coverage.host.123.abc' for SMALL/STRICT."""
         blocker = FakeDatabaseBlocker()
         blocker.activate(TestSize.SMALL, EnforcementMode.STRICT)
 
-        result = blocker.check_connection_allowed('sqlite3', '.coverage.host.123.abc')
+        is_connection_allowed = blocker.check_connection_allowed('sqlite3', '.coverage.host.123.abc')
 
         blocker.deactivate()
-        assert result is True
+        assert is_connection_allowed is True
+        assert blocker.connection_attempts[-1].allowed is True
 
     def it_still_blocks_regular_sqlite_for_small_test_with_fake_blocker(self) -> None:
         """FakeDatabaseBlocker still blocks ':memory:' for SMALL/STRICT."""
         blocker = FakeDatabaseBlocker()
         blocker.activate(TestSize.SMALL, EnforcementMode.STRICT)
 
-        result = blocker.check_connection_allowed('sqlite3', ':memory:')
+        is_connection_allowed = blocker.check_connection_allowed('sqlite3', ':memory:')
 
         blocker.deactivate()
-        assert result is False
+        assert is_connection_allowed is False
+        assert blocker.connection_attempts[-1].allowed is False
