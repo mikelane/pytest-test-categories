@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.2.1 (2026-03-03)
+
+### Fixed
+
+- Exclude coverage.py sqlite3 data files (`.coverage`, `.coverage.*`) from database hermeticity detection, preventing false `DatabaseViolationError` when running small tests under `coverage run` (#230)
+
+### Added
+
+- Comprehensive enforcement demo under `examples/enforcement_demo/` showing before/after patterns for writing hermetic small tests (#221)
+
 ## v1.2.0 (2025-12-23)
 
 ### Feat
