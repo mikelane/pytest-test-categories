@@ -30,11 +30,11 @@ import socket
 
 from pydantic import Field
 
-from pytest_test_categories.adapters.fake_network import is_localhost
 from pytest_test_categories.exceptions import NetworkAccessViolationError
 from pytest_test_categories.ports.network import (
     EnforcementMode,
     NetworkBlockerPort,
+    is_localhost,
 )
 from pytest_test_categories.types import TestSize
 

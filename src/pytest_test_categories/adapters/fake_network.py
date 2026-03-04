@@ -33,40 +33,9 @@ from pytest_test_categories.ports.network import (
     ConnectionAttempt,
     EnforcementMode,
     NetworkBlockerPort,
+    is_localhost,
 )
 from pytest_test_categories.types import TestSize
-
-# Localhost identifiers for medium test allowlist
-LOCALHOST_HOSTS = frozenset(
-    {
-        'localhost',
-        '127.0.0.1',
-        '::1',
-        '0:0:0:0:0:0:0:1',
-    }
-)
-
-
-def is_localhost(host: str) -> bool:
-    """Check if a host is a localhost address.
-
-    Args:
-        host: The hostname or IP address to check.
-
-    Returns:
-        True if the host is a localhost address, False otherwise.
-
-    """
-    # Case-insensitive check for 'localhost'
-    if host.lower() == 'localhost':
-        return True
-
-    # Check for 127.x.x.x range
-    if host.startswith('127.'):
-        return True
-
-    # Check other localhost representations
-    return host in LOCALHOST_HOSTS
 
 
 class FakeNetworkBlocker(NetworkBlockerPort):
