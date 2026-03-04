@@ -99,8 +99,9 @@ class FakeDatabaseBlocker(DatabaseBlockerPort):
     def _do_check_connection_allowed(self, library: str, connection_string: str) -> bool:
         """Check if database connection is allowed and record the attempt.
 
-        Returns whether connection would be allowed based on the test size:
-        - SMALL: Block all database connections
+        Returns whether connection would be allowed based on the connection string and test size:
+        - coverage.py data files (.coverage, .coverage.*): Always allowed
+        - SMALL: Block all other database connections
         - MEDIUM/LARGE/XLARGE: Allow all database connections
 
         Args:
