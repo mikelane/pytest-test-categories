@@ -29,7 +29,7 @@ from pytest_test_categories.adapters.fake_database import FakeDatabaseBlocker
 from pytest_test_categories.exceptions import DatabaseViolationError
 from pytest_test_categories.ports.database import (
     DatabaseAccessAttempt,
-    _is_coverage_data_file,
+    is_coverage_data_file,
 )
 from pytest_test_categories.ports.network import (
     BlockerState,
@@ -693,7 +693,7 @@ class DescribeDatabasePatchingBlockerViolationCallback:
 
 @pytest.mark.small
 class DescribeIsCoverageDataFile:
-    """Tests for the _is_coverage_data_file helper function.
+    """Tests for the is_coverage_data_file helper function.
 
     Each test verifies a distinct path that forces the real basename-matching
     logic rather than a hardcoded return value.  Tests for True and False are
@@ -702,35 +702,35 @@ class DescribeIsCoverageDataFile:
 
     def it_returns_true_for_bare_coverage_file(self) -> None:
         """Bare '.coverage' filename is a coverage data file."""
-        assert _is_coverage_data_file('.coverage') is True
+        assert is_coverage_data_file('.coverage') is True
 
     def it_returns_true_for_suffixed_coverage_file(self) -> None:
         """'.coverage.host.pid.suffix' filename is a coverage data file."""
-        assert _is_coverage_data_file('.coverage.myhost.12345.abcdef') is True
+        assert is_coverage_data_file('.coverage.myhost.12345.abcdef') is True
 
     def it_returns_true_for_coverage_file_in_subdirectory(self) -> None:
         """Full path whose basename is '.coverage' is a coverage data file."""
-        assert _is_coverage_data_file('/path/to/project/.coverage') is True
+        assert is_coverage_data_file('/path/to/project/.coverage') is True
 
     def it_returns_true_for_suffixed_coverage_file_in_subdirectory(self) -> None:
         """Full path whose basename starts with '.coverage.' is a coverage data file."""
-        assert _is_coverage_data_file('/path/to/project/.coverage.myhost.12345.abc') is True
+        assert is_coverage_data_file('/path/to/project/.coverage.myhost.12345.abc') is True
 
     def it_returns_false_for_memory_database(self) -> None:
         """':memory:' is not a coverage data file."""
-        assert _is_coverage_data_file(':memory:') is False
+        assert is_coverage_data_file(':memory:') is False
 
     def it_returns_false_for_regular_sqlite_file(self) -> None:
         """A plain .db file is not a coverage data file."""
-        assert _is_coverage_data_file('/tmp/test.db') is False
+        assert is_coverage_data_file('/tmp/test.db') is False
 
     def it_returns_false_for_file_named_coverage_without_dot_prefix(self) -> None:
         """'coverage.db' does not start with '.coverage' — not a coverage file."""
-        assert _is_coverage_data_file('coverage.db') is False
+        assert is_coverage_data_file('coverage.db') is False
 
     def it_returns_false_for_file_with_coverage_in_directory_name(self) -> None:
         """A file whose parent dir contains 'coverage' but whose basename does not match."""
-        assert _is_coverage_data_file('/coverage/.data/test.db') is False
+        assert is_coverage_data_file('/coverage/.data/test.db') is False
 
 
 @pytest.mark.small

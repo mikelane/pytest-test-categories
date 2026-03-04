@@ -62,7 +62,7 @@ if TYPE_CHECKING:
     from pytest_test_categories.types import TestSize
 
 
-def _is_coverage_data_file(connection_string: str) -> bool:
+def is_coverage_data_file(connection_string: str) -> bool:
     """Return True if the connection string refers to a coverage.py data file.
 
     coverage.py stores coverage data in sqlite3 databases named:

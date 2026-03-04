@@ -32,7 +32,7 @@ from pytest_test_categories.exceptions import DatabaseViolationError
 from pytest_test_categories.ports.database import (
     DatabaseAccessAttempt,
     DatabaseBlockerPort,
-    _is_coverage_data_file,
+    is_coverage_data_file,
 )
 from pytest_test_categories.ports.network import EnforcementMode
 from pytest_test_categories.types import TestSize
@@ -139,7 +139,7 @@ class FakeDatabaseBlocker(DatabaseBlockerPort):
             True if allowed, False otherwise.
 
         """
-        if _is_coverage_data_file(connection_string):
+        if is_coverage_data_file(connection_string):
             return True
         return self.current_test_size != TestSize.SMALL
 

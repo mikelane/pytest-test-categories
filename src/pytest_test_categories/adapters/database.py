@@ -52,7 +52,7 @@ from pytest_test_categories.adapters.database_optional_libraries import (
 from pytest_test_categories.exceptions import DatabaseViolationError
 from pytest_test_categories.ports.database import (
     DatabaseBlockerPort,
-    _is_coverage_data_file,
+    is_coverage_data_file,
 )
 from pytest_test_categories.ports.network import EnforcementMode
 from pytest_test_categories.types import TestSize
@@ -161,7 +161,7 @@ class DatabasePatchingBlocker(DatabaseBlockerPort):
             True if the connection is allowed, False if it should be blocked.
 
         """
-        if _is_coverage_data_file(connection_string):
+        if is_coverage_data_file(connection_string):
             return True
         return self.current_test_size != TestSize.SMALL
 
