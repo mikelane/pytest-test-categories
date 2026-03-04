@@ -50,7 +50,10 @@ from pytest_test_categories.adapters.database_optional_libraries import (
     restore_optional_libraries,
 )
 from pytest_test_categories.exceptions import DatabaseViolationError
-from pytest_test_categories.ports.database import DatabaseBlockerPort
+from pytest_test_categories.ports.database import (
+    DatabaseBlockerPort,
+    is_coverage_data_file,
+)
 from pytest_test_categories.ports.network import EnforcementMode
 from pytest_test_categories.types import TestSize
 
@@ -146,7 +149,8 @@ class DatabasePatchingBlocker(DatabaseBlockerPort):
         """Check if database connection is allowed by test size rules.
 
         Rules applied:
-        - SMALL: Block all database connections
+        - coverage.py data files (.coverage, .coverage.*): Always allowed
+        - SMALL: Block all other database connections
         - MEDIUM/LARGE/XLARGE: Allow all database connections
 
         Args:
@@ -157,6 +161,8 @@ class DatabasePatchingBlocker(DatabaseBlockerPort):
             True if the connection is allowed, False if it should be blocked.
 
         """
+        if is_coverage_data_file(connection_string):
+            return True
         return self.current_test_size != TestSize.SMALL
 
     def _do_on_violation(

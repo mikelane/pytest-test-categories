@@ -32,6 +32,7 @@ from pytest_test_categories.exceptions import DatabaseViolationError
 from pytest_test_categories.ports.database import (
     DatabaseAccessAttempt,
     DatabaseBlockerPort,
+    is_coverage_data_file,
 )
 from pytest_test_categories.ports.network import EnforcementMode
 from pytest_test_categories.types import TestSize
@@ -98,8 +99,9 @@ class FakeDatabaseBlocker(DatabaseBlockerPort):
     def _do_check_connection_allowed(self, library: str, connection_string: str) -> bool:
         """Check if database connection is allowed and record the attempt.
 
-        Returns whether connection would be allowed based on the test size:
-        - SMALL: Block all database connections
+        Returns whether connection would be allowed based on the connection string and test size:
+        - coverage.py data files (.coverage, .coverage.*): Always allowed
+        - SMALL: Block all other database connections
         - MEDIUM/LARGE/XLARGE: Allow all database connections
 
         Args:
@@ -112,7 +114,7 @@ class FakeDatabaseBlocker(DatabaseBlockerPort):
         """
         self.check_count += 1
 
-        allowed = self._is_connection_allowed()
+        allowed = self._is_connection_allowed(connection_string)
 
         self.connection_attempts.append(
             DatabaseAccessAttempt(
@@ -125,13 +127,21 @@ class FakeDatabaseBlocker(DatabaseBlockerPort):
 
         return allowed
 
-    def _is_connection_allowed(self) -> bool:
+    def _is_connection_allowed(self, connection_string: str) -> bool:
         """Determine if database connection is allowed based on test size.
+
+        coverage.py data files (.coverage, .coverage.*) are always allowed
+        regardless of test size.
+
+        Args:
+            connection_string: The connection string or database path.
 
         Returns:
             True if allowed, False otherwise.
 
         """
+        if is_coverage_data_file(connection_string):
+            return True
         return self.current_test_size != TestSize.SMALL
 
     def _do_on_violation(

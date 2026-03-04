@@ -44,6 +44,7 @@ from abc import (
     ABC,
     abstractmethod,
 )
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from icontract import (
@@ -59,6 +60,27 @@ from pytest_test_categories.ports.network import (
 
 if TYPE_CHECKING:
     from pytest_test_categories.types import TestSize
+
+
+def is_coverage_data_file(connection_string: str) -> bool:
+    """Return True if the connection string refers to a coverage.py data file.
+
+    coverage.py stores coverage data in sqlite3 databases named:
+      - .coverage              (default output file)
+      - .coverage.<host>.<pid>.<suffix>  (parallel mode / dynamic_context)
+
+    These are infrastructure files, not application databases, and must not
+    trigger hermeticity violations even in SMALL/STRICT tests.
+
+    Args:
+        connection_string: The path passed to sqlite3.connect().
+
+    Returns:
+        True if the basename is '.coverage' or starts with '.coverage.'.
+
+    """
+    basename = Path(connection_string).name
+    return basename == '.coverage' or basename.startswith('.coverage.')
 
 
 class DatabaseAccessAttempt(BaseModel, frozen=True):
