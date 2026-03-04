@@ -653,3 +653,36 @@ class DescribeDatabasePatchingBlockerViolationCallback:
                 blocker.on_violation('sqlite3', ':memory:', 'test_module.py::test_fn')
         finally:
             blocker.reset()
+
+    def it_does_not_raise_and_calls_callback_with_failed_false_in_off_mode(self) -> None:
+        """Verify OFF mode calls callback with failed=False and does not raise."""
+        callback_invocations: list[tuple[str, str, str, bool]] = []
+
+        def callback(violation_type: str, test_nodeid: str, details: str, *, failed: bool) -> None:
+            callback_invocations.append((violation_type, test_nodeid, details, failed))
+
+        blocker = DatabasePatchingBlocker(violation_callback=callback)
+        blocker.activate(TestSize.SMALL, EnforcementMode.OFF)
+
+        try:
+            blocker.on_violation('sqlite3', ':memory:', 'test_mod::test_fn')
+
+            assert len(callback_invocations) == 1
+            violation_type, test_nodeid, details, failed = callback_invocations[0]
+            assert violation_type == 'database'
+            assert test_nodeid == 'test_mod::test_fn'
+            assert 'sqlite3' in details
+            assert ':memory:' in details
+            assert failed is False
+        finally:
+            blocker.reset()
+
+    def it_does_not_raise_without_callback_in_off_mode(self) -> None:
+        """Verify OFF mode does not raise even without a callback attached."""
+        blocker = DatabasePatchingBlocker()
+        blocker.activate(TestSize.SMALL, EnforcementMode.OFF)
+
+        try:
+            blocker.on_violation('sqlite3', ':memory:', 'test_mod::test_fn')
+        finally:
+            blocker.reset()
