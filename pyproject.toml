@@ -260,6 +260,12 @@ module = "pytest_test_categories.adapters.database"
 disable_error_code = ["import-untyped", "import-not-found", "assignment", "no-any-return", "unused-ignore"]
 
 [[tool.mypy.overrides]]
+module = "pytest_test_categories.adapters.database_optional_libraries"
+# This module patches optional database libraries using the same dynamic
+# patching patterns as database.py
+disable_error_code = ["import-untyped", "import-not-found", "assignment", "no-any-return", "unused-ignore"]
+
+[[tool.mypy.overrides]]
 module = ["psycopg2", "psycopg2.*", "psycopg", "psycopg.*", "pymysql", "pymysql.*", "pymongo", "pymongo.*", "redis", "redis.*", "sqlalchemy", "sqlalchemy.*"]
 ignore_missing_imports = true
 
