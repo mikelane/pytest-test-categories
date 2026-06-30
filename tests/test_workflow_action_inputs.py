@@ -82,3 +82,23 @@ def test_all_workflow_action_inputs_are_valid() -> None:
                 failures.extend(_invalid_inputs_for_step(path, uses, inputs))
 
     assert not failures, '\n'.join(failures)
+
+
+@pytest.mark.medium
+def test_codecov_validation_is_not_disabled() -> None:
+    """The Codecov upload step must verify the CLI binary integrity."""
+    workflow_path = Path(__file__).resolve().parents[1] / WORKFLOWS_DIR / 'ci.yml'
+    workflow = yaml.safe_load(workflow_path.read_text())
+    failures: list[str] = []
+
+    for job in workflow.get('jobs', {}).values():
+        for step in job.get('steps', []):
+            uses = step.get('uses', '')
+            inputs = step.get('with') or {}
+            if not isinstance(inputs, dict):
+                continue
+            skip_validation = str(inputs.get('skip_validation', '')).lower()
+            if 'codecov/codecov-action' in uses and skip_validation == 'true':
+                failures.append(f'{workflow_path.name}: {uses}: skip_validation must not be true')
+
+    assert not failures, '\n'.join(failures)

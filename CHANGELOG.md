@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Raise `pytest` minimum version to `>=9.1.1` in `pyproject.toml` and update `uv.lock` for `pytest`, `pygments`, `virtualenv`, and `filelock` to resolve reported vulnerabilities (#248)
 - Fix Dependency Security Scan workflow: scope production export with `--no-dev`, use `--save-json` for artifact generation, remove `|| true` masking, allow dev scan to report without blocking, and keep `safety check` (auth-free open-source DB) until a migration to an alternative scanner is completed (#248)
-- Fix CI workflow: disable Codecov CLI integrity verification (`skip_validation: true`) because Codecov's published GPG key URL is no longer available, preventing coverage upload failures (#249)
+- Re-enable Codecov CLI integrity verification by upgrading `codecov/codecov-action` to `v5.5.5` and removing `skip_validation: true`; the newer action uses the corrected Keybase URL for the Codecov signing key (#250)
 
 ## v1.2.1 (2026-03-03)
 
