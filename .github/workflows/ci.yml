@@ -69,7 +69,7 @@ jobs:
           flags: unittests
           name: pytest-test-categories
           fail_ci_if_error: true
-          gpg_verify: false  # Codecov's published GPG key URL is no longer available
+          skip_validation: true  # Codecov's published GPG key URL is no longer available
 
   quality-checks:
     name: Code Quality Checks
