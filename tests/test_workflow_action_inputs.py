@@ -93,20 +93,21 @@ def _codecov_skip_validation_failures(path: Path, workflow: dict[str, Any]) -> l
             inputs = step.get('with') or {}
             if not isinstance(inputs, dict):
                 continue
-            if 'skip_validation' not in inputs:
-                continue
             match = USES_RE.match(uses)
             if not match:
                 continue
             owner_repo = match.group(1).lower()
             if owner_repo != 'codecov/codecov-action':
                 continue
-            value = inputs['skip_validation']
-            value_str = str(value).strip().lower()
-            if value_str in {'true', 'yes', 'on', '1'}:
-                failures.append(f'{path.name}: {uses}: skip_validation must not be set to a truthy value')
-            elif '${{' in value_str:
-                failures.append(f'{path.name}: {uses}: skip_validation must not be an expression')
+            for key, value in inputs.items():
+                normalized_key = key.upper().replace(' ', '_')
+                if normalized_key != 'SKIP_VALIDATION':
+                    continue
+                value_str = str(value).strip().lower()
+                if value_str in {'true', 'yes', 'on', 'y', '1'}:
+                    failures.append(f'{path.name}: {uses}: skip_validation must not be set to a truthy value')
+                elif '${{' in value_str:
+                    failures.append(f'{path.name}: {uses}: skip_validation must not be an expression')
     return failures
 
 
@@ -145,7 +146,22 @@ def test_rejects_truthy_skip_validation_values(value: object) -> None:
 @pytest.mark.small
 @pytest.mark.parametrize(
     'value',
-    ['false', 'False', 'FALSE', 'no', 'No', 'NO', 'off', 'Off', 'OFF', '0', False, 0],
+    [
+        'false',
+        'False',
+        'FALSE',
+        'no',
+        'No',
+        'NO',
+        'n',
+        'N',
+        'off',
+        'Off',
+        'OFF',
+        '0',
+        False,
+        0,
+    ],
 )
 def test_allows_falsy_skip_validation_values(value: object) -> None:
     """GitHub-Actions falsy values for skip_validation must be allowed."""

@@ -89,3 +89,55 @@ def test_rejects_expression_based_truthy_skip_validation(value: str) -> None:
     }
     failures = _codecov_skip_validation_failures(Path('ci.yml'), workflow)
     assert failures, f'Expression bypass for skip_validation={value!r}'
+
+
+@pytest.mark.small
+@pytest.mark.parametrize(
+    'key',
+    [
+        'Skip_Validation',
+        'SKIP_VALIDATION',
+        'skip_Validation',
+        'skip validation',
+        'SKIP VALIDATION',
+    ],
+)
+def test_detects_skip_validation_with_case_insensitive_keys(key: str) -> None:
+    """GitHub Actions input names are case-insensitive and spaces become underscores."""
+    workflow: dict[str, Any] = {
+        'jobs': {
+            'test': {
+                'steps': [
+                    {
+                        'uses': 'codecov/codecov-action@v5',
+                        'with': {key: True},
+                    },
+                ],
+            },
+        },
+    }
+    failures = _codecov_skip_validation_failures(Path('ci.yml'), workflow)
+    assert failures, f'Case-variant key bypass for {key!r}'
+
+
+@pytest.mark.small
+@pytest.mark.parametrize(
+    'value',
+    ['y', 'Y'],
+)
+def test_rejects_yaml_truthy_y_values(value: str) -> None:
+    """YAML truthy spellings 'y' and 'Y' must be rejected like 'yes' and 'on'."""
+    workflow: dict[str, Any] = {
+        'jobs': {
+            'test': {
+                'steps': [
+                    {
+                        'uses': 'codecov/codecov-action@v5',
+                        'with': {'skip_validation': value},
+                    },
+                ],
+            },
+        },
+    }
+    failures = _codecov_skip_validation_failures(Path('ci.yml'), workflow)
+    assert failures, f'YAML truthy bypass for skip_validation={value!r}'
