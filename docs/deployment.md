@@ -107,7 +107,7 @@ The project uses GitHub Actions for continuous integration and continuous deploy
 
 1. **Dependency Security Scan**
    - Exports dependencies via uv
-   - Runs Safety check on production and dev dependencies
+   - Runs `pip-audit` on production and dev dependencies
    - Generates security report artifact
 
 2. **CodeQL Analysis**
