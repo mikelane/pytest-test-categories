@@ -34,10 +34,13 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
 
+      - name: Verify uv.lock is up to date
+        run: uv lock --check
+
       - name: Export dependencies
         run: |
-          uv export --no-hashes --no-dev > requirements.txt
-          uv export --no-hashes --all-groups > requirements-dev.txt
+          uv export --no-hashes --no-dev --locked > requirements.txt
+          uv export --no-hashes --all-groups --locked > requirements-dev.txt
 
       - name: Generate production audit report
         run: uv run --with pip-audit==2.10.1 pip-audit --requirement=requirements.txt --format=json --output=security-report.json

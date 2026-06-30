@@ -255,11 +255,12 @@ Configure in **Settings → Code security and analysis**:
 **Manual Security Audit**:
 
 ```bash
-# Export dependencies with uv
-uv export --no-hashes --no-dev > requirements.txt
+# Export dependencies with uv (must match the committed lock file)
+uv lock --check
+uv export --no-hashes --no-dev --locked > requirements.txt
 
-# Run pip-audit
-uv run pip-audit --requirement requirements.txt --format=json
+# Run pip-audit (it is not a project dependency, so use --with)
+uv run --with pip-audit==2.10.1 pip-audit --requirement requirements.txt --format=json
 
 # Check for outdated packages
 uv run pip list --outdated
@@ -289,9 +290,8 @@ uv export --format requirements-txt > requirements.txt
 pip install cyclonedx-bom
 cyclonedx-py --requirements requirements.txt --output sbom.json
 
-# Or use pip-audit
-pip install pip-audit
-pip-audit --format cyclonedx-json
+# Or use pip-audit via uv
+uv run --with pip-audit==2.10.1 pip-audit --format cyclonedx-json
 ```
 
 ## Troubleshooting
