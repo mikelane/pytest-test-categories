@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Resolve vulnerable dependencies in `uv.lock`: `pytest` to `>=9.1.1`, `pygments` to `>=2.20.0`, `virtualenv` to `>=20.36.1`, and `filelock` to `>=3.20.3` (#248)
 - Fix Dependency Security Scan workflow: scope production export with `--no-dev`, use `--save-json` for artifact generation, remove `|| true` masking, allow dev scan to report without blocking, and keep `safety check` (auth-free open-source DB) until a migration to an alternative scanner is completed (#248)
+- Fix CI workflow: import the Codecov GPG public key before the coverage upload step to prevent signature verification failures (#249)
 
 ## v1.2.1 (2026-03-03)
 
