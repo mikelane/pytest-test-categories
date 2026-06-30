@@ -97,7 +97,7 @@ def _codecov_skip_validation_failures(path: Path, workflow: dict[str, Any]) -> l
                 continue
             skip_validation = str(inputs['skip_validation']).lower()
             if 'codecov/codecov-action' in uses and skip_validation in {'true', 'yes', 'on', '1'}:
-                failures.append(f'{path.name}: {uses}: skip_validation must not be true')
+                failures.append(f'{path.name}: {uses}: skip_validation must not be set to a truthy value')
     return failures
 
 
