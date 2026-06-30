@@ -60,12 +60,6 @@ jobs:
       - name: Generate coverage terminal report
         run: uv run coverage report --show-missing
 
-      - name: Import Codecov GPG key
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
-        run: |
-          curl -fsSL --proto '=https' https://keybase.io/codecovsecurity/pgp_keys.asc -o /tmp/codecov.asc
-          gpg --import /tmp/codecov.asc
-
       - name: Upload coverage to Codecov
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
         uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de  # v5.5.2
@@ -75,6 +69,7 @@ jobs:
           flags: unittests
           name: pytest-test-categories
           fail_ci_if_error: true
+          gpg_verify: false  # Codecov's published GPG key URL is no longer available
 
   quality-checks:
     name: Code Quality Checks
