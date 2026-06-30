@@ -121,15 +121,10 @@ The project uses GitHub Actions for continuous integration and continuous deploy
    - Blocks GPL-3.0, AGPL-3.0 licenses
    - Posts summary comment in PR
 
-4. **Secret Scanning**
-   - TruffleHog OSS for secret detection
-   - Scans commit history
-   - Only verified secrets fail the check
-
-5. **OpenSSF Scorecard** (scheduled/manual only)
+4. **OpenSSF Scorecard** (scheduled/manual only)
    - Security best practices scorecard
    - Uploads results to Security tab
-   - Runs weekly to track improvements
+   - Runs on the daily scheduled scan and manual dispatch
 
 ### Dependency Automation
 
@@ -260,7 +255,7 @@ uv lock --check
 uv export --no-hashes --no-dev --locked > requirements.txt
 
 # Run pip-audit (it is not a project dependency, so use --with)
-uv run --with pip-audit==2.10.1 pip-audit --requirement requirements.txt --format=json
+uv run --with pip-audit==2.10.1 pip-audit --requirement=requirements.txt --format=json
 
 # Check for outdated packages
 uv run pip list --outdated
@@ -291,7 +286,7 @@ uv export --format requirements-txt --locked > requirements.txt
 uv run --with cyclonedx-bom cyclonedx-py --requirements requirements.txt --output sbom.json
 
 # Or use pip-audit via uv
-uv run --with pip-audit==2.10.1 pip-audit --format cyclonedx-json
+uv run --with pip-audit==2.10.1 pip-audit --requirement=requirements.txt --format cyclonedx-json
 ```
 
 ## Troubleshooting

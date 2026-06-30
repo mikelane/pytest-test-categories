@@ -6,9 +6,10 @@ We take security seriously and actively maintain the following versions:
 
 | Version | Supported          | End of Support |
 | ------- | ------------------ | -------------- |
-| 0.7.x   | :white_check_mark: | Current        |
-| 0.6.x   | :white_check_mark: | 6 months after 0.7.0 |
-| < 0.6   | :x:                | Ended          |
+| 1.2.x   | :white_check_mark: | Current        |
+| 1.1.x   | :white_check_mark: | 6 months after 1.2.0 |
+| 1.0.x   | :x:                | Ended          |
+| < 1.0   | :x:                | Ended          |
 
 **Recommendation**: Always use the latest stable version to ensure you have the latest security patches.
 
@@ -95,7 +96,7 @@ This plugin is designed for test organization and timing, **not** for:
 ### Dependencies
 
 We maintain minimal dependencies to reduce attack surface:
-- `pytest` (>=8.4.2) - Core testing framework (trusted)
+- `pytest` (>=9.1.1) - Core testing framework (trusted)
 - `pydantic` (>=2.12.4) - Data validation (widely used, actively maintained)
 - `beartype` (>=0.22.5) - Runtime type checking (minimal dependencies)
 - `icontract` (>=2.7.1) - Design by contract (pure Python)
@@ -114,7 +115,7 @@ We use:
 - **Dependabot**: Automatic dependency vulnerability scanning
 - **GitHub Security Advisories**: Monitoring for known vulnerabilities
 - **pip-audit**: Dependency vulnerability scanning in CI
-- **Bandit**: Static security analysis in CI
+- **Bandit**: Static security analysis (available as a dev dependency for local scans)
 - **Ruff**: Comprehensive linting including security checks
 
 ### Manual Review
@@ -190,19 +191,19 @@ jobs:
   security:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
 
       - name: Run Bandit security scan
-        run: uv run bandit -r src/
+        run: uv run --with bandit bandit -r src/
 
       - name: Verify uv.lock is up to date
         run: uv lock --check
+
+      - name: Export dependencies
+        run: uv export --no-hashes --no-dev --locked > requirements.txt
 
       - name: Check for known vulnerabilities
-        run: uv run --with pip-audit==2.10.1 pip-audit --requirement requirements.txt
-
-      - name: Verify uv.lock is up to date
-        run: uv lock --check
+        run: uv run --with pip-audit==2.10.1 pip-audit --requirement=requirements.txt
 ```
 
 ## Compliance
@@ -266,7 +267,7 @@ All security concerns are properly addressed by the current implementation.
 
 ### Under Consideration
 
-- [ ] CodeQL static analysis in CI
+- [x] CodeQL static analysis in CI
 - [ ] SBOM (Software Bill of Materials) generation
 - [ ] Signed releases with GPG
 - [ ] Security advisory mailing list
@@ -282,4 +283,4 @@ Security questions that aren't vulnerabilities:
 
 **Thank you for helping keep pytest-test-categories and our users safe!**
 
-*Last updated: November 2025*
+*Last updated: June 2026*
