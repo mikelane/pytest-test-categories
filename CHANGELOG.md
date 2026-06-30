@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Migrate Dependency Security Scan workflow from deprecated `safety check` to `pip-audit==2.10.1` for auth-free production and development vulnerability scanning, rename artifact to `security-report`, and keep production scan as a hard gate while development scan reports without blocking (#251)
+
 ### Fixed
 
 - Raise `pytest` minimum version to `>=9.1.1` in `pyproject.toml` and update `uv.lock` for `pytest`, `pygments`, `virtualenv`, and `filelock` to resolve reported vulnerabilities (#248)

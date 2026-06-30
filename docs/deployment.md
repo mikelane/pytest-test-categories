@@ -248,7 +248,7 @@ Configure in **Settings → Code security and analysis**:
 
 **Security Scanning**:
 - Daily security scans at 2 AM UTC
-- Safety checks all dependencies for CVEs
+- `pip-audit` checks all dependencies for CVEs
 - CodeQL analyzes code for security issues
 - Dependency Review blocks vulnerable dependencies in PRs
 
@@ -256,11 +256,10 @@ Configure in **Settings → Code security and analysis**:
 
 ```bash
 # Export dependencies with uv
-uv export --format requirements-txt > requirements.txt
+uv export --no-hashes --no-dev > requirements.txt
 
-# Run Safety
-pip install safety
-safety check --file requirements.txt --json
+# Run pip-audit
+uv run pip-audit --requirement requirements.txt --format=json
 
 # Check for outdated packages
 uv run pip list --outdated
@@ -364,9 +363,9 @@ git tag -a "v$VERSION" -m "Release v$VERSION"
 
 ### Security Scan Failures
 
-**Safety Check Finds Vulnerability**:
+**pip-audit Finds Vulnerability**:
 
-1. Review the CVE details in the safety report
+1. Review the CVE details in the `security-report` artifact
 2. Check if update is available: `uv lock --upgrade-package {package}`
 3. If no fix available, assess risk and consider alternatives
 4. Document decision in security advisory if accepting risk

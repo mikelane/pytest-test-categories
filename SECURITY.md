@@ -196,7 +196,7 @@ jobs:
         run: uv run bandit -r src/
 
       - name: Check for known vulnerabilities
-        run: uv run safety check
+        run: uv run pip-audit --requirement requirements.txt
 
       - name: Verify uv.lock is up to date
         run: uv lock --check
