@@ -18,6 +18,9 @@ jobs:
     name: Dependency Security Scan
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read  # Read repository code
+      actions: write  # Required for uploading safety-report artifact
 
     steps:
       - name: Checkout code
@@ -61,6 +64,7 @@ jobs:
           name: safety-report
           path: safety-report*.json
           retention-days: 30
+          if-no-files-found: warn
 
   # CodeQL Advanced Setup - REQUIRES MANUAL CONFIGURATION
   #
