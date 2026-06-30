@@ -283,12 +283,12 @@ uv run pip list --outdated
 Generate SBOM for supply chain security:
 
 ```bash
-# Export dependencies with uv
-uv export --format requirements-txt > requirements.txt
+# Export dependencies with uv (must match the committed lock file)
+uv lock --check
+uv export --format requirements-txt --locked > requirements.txt
 
-# Generate SBOM
-pip install cyclonedx-bom
-cyclonedx-py --requirements requirements.txt --output sbom.json
+# Generate SBOM (cyclonedx-bom is not a project dependency, so use --with)
+uv run --with cyclonedx-bom cyclonedx-py --requirements requirements.txt --output sbom.json
 
 # Or use pip-audit via uv
 uv run --with pip-audit==2.10.1 pip-audit --format cyclonedx-json

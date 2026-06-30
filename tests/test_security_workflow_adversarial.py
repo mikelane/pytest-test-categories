@@ -66,3 +66,137 @@ def test_security_workflow_validates_uv_lock_before_export() -> None:
         'Security workflow must run `uv lock --check` or `uv export --locked` '
         'before scanning so it audits the committed lock file'
     )
+
+
+@pytest.mark.medium
+def test_security_workflow_lock_check_precedes_export() -> None:
+    """The lock validity check must run before dependency export in the security workflow."""
+    workflow_path = REPO_ROOT / WORKFLOWS_DIR / 'security.yml'
+    workflow = yaml.safe_load(workflow_path.read_text())
+
+    lock_check_index: int | None = None
+    export_index: int | None = None
+    for job in workflow.get('jobs', {}).values():
+        for index, step in enumerate(job.get('steps', [])):
+            run = step.get('run', '')
+            if 'uv lock --check' in run and lock_check_index is None:
+                lock_check_index = index
+            if 'uv export' in run and '--locked' in run and export_index is None:
+                export_index = index
+
+    assert lock_check_index is not None, 'Security workflow missing `uv lock --check` step'
+    assert export_index is not None, 'Security workflow missing locked `uv export` step'
+    assert lock_check_index < export_index, (
+        '`uv lock --check` must run before `uv export --locked` so stale locks fail fast'
+    )
+
+
+@pytest.mark.medium
+def test_security_workflow_pins_pip_audit_version() -> None:
+    """All pip-audit invocations in the security workflow must use the same pinned version."""
+    workflow_path = REPO_ROOT / WORKFLOWS_DIR / 'security.yml'
+    workflow = yaml.safe_load(workflow_path.read_text())
+
+    versions: set[str] = set()
+    for job in workflow.get('jobs', {}).values():
+        for step in job.get('steps', []):
+            run = step.get('run', '')
+            for line in run.splitlines():
+                if 'pip-audit' in line and '--with' in line:
+                    match = re.search(r'pip-audit==([^\s\']+)', line)
+                    assert match is not None, (
+                        f'Job "{job.get("name", "")}" step "{step.get("name", "")}" '
+                        f'runs pip-audit without a pinned version: {line!r}'
+                    )
+                    versions.add(match.group(1))
+
+    assert len(versions) == 1, (
+        f'Security workflow uses inconsistent pip-audit versions: {sorted(versions)}; '
+        f'pin a single version to ensure reproducible scans'
+    )
+
+
+@pytest.mark.medium
+def test_security_workflow_production_scan_is_hard_gate() -> None:
+    """The production dependency scan must fail the workflow when vulnerabilities are found."""
+    workflow_path = REPO_ROOT / WORKFLOWS_DIR / 'security.yml'
+    workflow = yaml.safe_load(workflow_path.read_text())
+
+    production_scan_step = None
+    for job in workflow.get('jobs', {}).values():
+        for step in job.get('steps', []):
+            name = step.get('name', '')
+            run = step.get('run', '')
+            if 'Scan production dependencies' in name or (
+                'pip-audit' in run and '--requirement=requirements.txt' in run and '--format' not in run
+            ):
+                production_scan_step = step
+                break
+        if production_scan_step is not None:
+            break
+
+    assert production_scan_step is not None, 'Production dependency scan step not found'
+    assert production_scan_step.get('continue-on-error') is not True, (
+        'Production dependency scan must be a hard gate; remove continue-on-error'
+    )
+
+
+@pytest.mark.medium
+def test_security_workflow_dev_scan_is_non_blocking() -> None:
+    """The development dependency scan must report without blocking the workflow."""
+    workflow_path = REPO_ROOT / WORKFLOWS_DIR / 'security.yml'
+    workflow = yaml.safe_load(workflow_path.read_text())
+
+    dev_scan_step = None
+    for job in workflow.get('jobs', {}).values():
+        for step in job.get('steps', []):
+            name = step.get('name', '')
+            if 'Scan development dependencies' in name:
+                dev_scan_step = step
+                break
+        if dev_scan_step is not None:
+            break
+
+    assert dev_scan_step is not None, 'Development dependency scan step not found'
+    assert dev_scan_step.get('continue-on-error') is True, (
+        'Development dependency scan must be non-blocking; add continue-on-error: true'
+    )
+
+
+@pytest.mark.medium
+def test_security_workflow_does_not_mask_failures() -> None:
+    """The security workflow must not use `|| true` to mask command failures."""
+    workflow_text = (REPO_ROOT / WORKFLOWS_DIR / 'security.yml').read_text()
+    assert '|| true' not in workflow_text, (
+        'Security workflow uses `|| true` which silently masks failures; '
+        'use continue-on-error or explicit conditionals instead'
+    )
+
+
+@pytest.mark.medium
+def test_security_workflow_artifact_glob_matches_report_outputs() -> None:
+    """The artifact upload glob must match the JSON report filenames produced by pip-audit."""
+    workflow_path = REPO_ROOT / WORKFLOWS_DIR / 'security.yml'
+    workflow = yaml.safe_load(workflow_path.read_text())
+
+    report_outputs: list[str] = []
+    upload_glob: str | None = None
+    for job in workflow.get('jobs', {}).values():
+        for step in job.get('steps', []):
+            run = step.get('run', '')
+            if 'pip-audit' in run and '--output=' in run:
+                report_outputs.extend(match.group(1) for match in re.finditer(r'--output=([^\s]+)', run))
+            if step.get('uses', '').startswith('actions/upload-artifact'):
+                upload_glob = step.get('with', {}).get('path')
+
+    assert upload_glob is not None, 'Artifact upload step not found'
+    # The glob may contain a single `*` wildcard in the middle.
+    assert '*' in upload_glob, (
+        f'Artifact upload glob {upload_glob!r} has no wildcard; cannot match report outputs {report_outputs}'
+    )
+    prefix, suffix = upload_glob.split('*', 1)
+    for output in report_outputs:
+        assert output.startswith(prefix), (
+            f'Report output {output!r} does not start with artifact glob prefix {prefix!r}'
+        )
+        assert output.endswith(suffix), f'Report output {output!r} does not end with artifact glob suffix {suffix!r}'
