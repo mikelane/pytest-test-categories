@@ -85,7 +85,7 @@ def test_all_workflow_action_inputs_are_valid() -> None:
 
 
 def _codecov_skip_validation_failures(path: Path, workflow: dict[str, Any]) -> list[str]:
-    """Return failures for any Codecov step that disables CLI validation."""
+    """Return failures for any official Codecov step that disables CLI validation."""
     failures: list[str] = []
     for job in workflow.get('jobs', {}).values():
         for step in job.get('steps', []):
@@ -95,9 +95,18 @@ def _codecov_skip_validation_failures(path: Path, workflow: dict[str, Any]) -> l
                 continue
             if 'skip_validation' not in inputs:
                 continue
-            skip_validation = str(inputs['skip_validation']).lower()
-            if 'codecov/codecov-action' in uses and skip_validation in {'true', 'yes', 'on', '1'}:
+            match = USES_RE.match(uses)
+            if not match:
+                continue
+            owner_repo = match.group(1).lower()
+            if owner_repo != 'codecov/codecov-action':
+                continue
+            value = inputs['skip_validation']
+            value_str = str(value).strip().lower()
+            if value_str in {'true', 'yes', 'on', '1'}:
                 failures.append(f'{path.name}: {uses}: skip_validation must not be set to a truthy value')
+            elif '${{' in value_str:
+                failures.append(f'{path.name}: {uses}: skip_validation must not be an expression')
     return failures
 
 
