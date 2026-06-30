@@ -84,8 +84,14 @@ def test_all_workflow_action_inputs_are_valid() -> None:
     assert not failures, '\n'.join(failures)
 
 
-def _codecov_skip_validation_failures(path: Path, workflow: dict[str, Any]) -> list[str]:
-    """Return failures for any official Codecov step that disables CLI validation."""
+def _is_truthy_or_expression(value: object) -> bool:
+    """Return True if a GitHub Actions input value is truthy or an expression."""
+    value_str = str(value).strip().lower()
+    return value_str in {'true', 'yes', 'on', 'y', '1'} or '${{' in value_str
+
+
+def _codecov_validation_bypass_failures(path: Path, workflow: dict[str, Any]) -> list[str]:
+    """Return failures for any official Codecov step that bypasses CLI validation."""
     failures: list[str] = []
     for job in workflow.get('jobs', {}).values():
         for step in job.get('steps', []):
@@ -101,13 +107,12 @@ def _codecov_skip_validation_failures(path: Path, workflow: dict[str, Any]) -> l
                 continue
             for key, value in inputs.items():
                 normalized_key = key.upper().replace(' ', '_')
-                if normalized_key != 'SKIP_VALIDATION':
-                    continue
-                value_str = str(value).strip().lower()
-                if value_str in {'true', 'yes', 'on', 'y', '1'}:
+                if normalized_key == 'SKIP_VALIDATION' and _is_truthy_or_expression(value):
                     failures.append(f'{path.name}: {uses}: skip_validation must not be set to a truthy value')
-                elif '${{' in value_str:
-                    failures.append(f'{path.name}: {uses}: skip_validation must not be an expression')
+                elif normalized_key == 'BINARY' and str(value).strip():
+                    failures.append(f'{path.name}: {uses}: binary input bypasses CLI validation')
+                elif normalized_key == 'USE_PYPI' and _is_truthy_or_expression(value):
+                    failures.append(f'{path.name}: {uses}: use_pypi must not be set to a truthy value')
     return failures
 
 
@@ -116,7 +121,7 @@ def test_codecov_validation_is_not_disabled() -> None:
     """The Codecov upload step must verify the CLI binary integrity."""
     workflow_path = Path(__file__).resolve().parents[1] / WORKFLOWS_DIR / 'ci.yml'
     workflow = yaml.safe_load(workflow_path.read_text())
-    failures = _codecov_skip_validation_failures(workflow_path, workflow)
+    failures = _codecov_validation_bypass_failures(workflow_path, workflow)
     assert not failures, '\n'.join(failures)
 
 
@@ -139,7 +144,7 @@ def test_rejects_truthy_skip_validation_values(value: object) -> None:
             },
         },
     }
-    failures = _codecov_skip_validation_failures(Path('ci.yml'), workflow)
+    failures = _codecov_validation_bypass_failures(Path('ci.yml'), workflow)
     assert failures, f'Expected failure for skip_validation={value!r}'
 
 
@@ -177,5 +182,5 @@ def test_allows_falsy_skip_validation_values(value: object) -> None:
             },
         },
     }
-    failures = _codecov_skip_validation_failures(Path('ci.yml'), workflow)
+    failures = _codecov_validation_bypass_failures(Path('ci.yml'), workflow)
     assert not failures, f'Unexpected failure for skip_validation={value!r}'

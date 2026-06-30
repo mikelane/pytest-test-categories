@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from tests.test_workflow_action_inputs import _codecov_skip_validation_failures
+from tests.test_workflow_action_inputs import _codecov_validation_bypass_failures
 
 
 @pytest.mark.small
@@ -32,7 +32,7 @@ def test_does_not_flag_non_official_codecov_actions(uses: str) -> None:
             },
         },
     }
-    failures = _codecov_skip_validation_failures(Path('ci.yml'), workflow)
+    failures = _codecov_validation_bypass_failures(Path('ci.yml'), workflow)
     assert not failures, f'False positive for unrelated action {uses!r}: {failures}'
 
 
@@ -59,7 +59,7 @@ def test_detects_codecov_action_regardless_of_case(uses: str) -> None:
             },
         },
     }
-    failures = _codecov_skip_validation_failures(Path('ci.yml'), workflow)
+    failures = _codecov_validation_bypass_failures(Path('ci.yml'), workflow)
     assert failures, f'Case-variant bypass for {uses!r}'
 
 
@@ -87,7 +87,7 @@ def test_rejects_expression_based_truthy_skip_validation(value: str) -> None:
             },
         },
     }
-    failures = _codecov_skip_validation_failures(Path('ci.yml'), workflow)
+    failures = _codecov_validation_bypass_failures(Path('ci.yml'), workflow)
     assert failures, f'Expression bypass for skip_validation={value!r}'
 
 
@@ -116,7 +116,7 @@ def test_detects_skip_validation_with_case_insensitive_keys(key: str) -> None:
             },
         },
     }
-    failures = _codecov_skip_validation_failures(Path('ci.yml'), workflow)
+    failures = _codecov_validation_bypass_failures(Path('ci.yml'), workflow)
     assert failures, f'Case-variant key bypass for {key!r}'
 
 
@@ -139,5 +139,55 @@ def test_rejects_yaml_truthy_y_values(value: str) -> None:
             },
         },
     }
-    failures = _codecov_skip_validation_failures(Path('ci.yml'), workflow)
+    failures = _codecov_validation_bypass_failures(Path('ci.yml'), workflow)
     assert failures, f'YAML truthy bypass for skip_validation={value!r}'
+
+
+@pytest.mark.small
+@pytest.mark.parametrize(
+    'value',
+    [
+        './codecov',
+        '/usr/local/bin/codecov',
+        '${{ vars.CODECOV_BINARY }}',
+    ],
+)
+def test_rejects_binary_input_that_bypasses_validation(value: str) -> None:
+    """The binary input supplies a pre-downloaded CLI and bypasses integrity checking."""
+    workflow: dict[str, Any] = {
+        'jobs': {
+            'test': {
+                'steps': [
+                    {
+                        'uses': 'codecov/codecov-action@v5',
+                        'with': {'binary': value},
+                    },
+                ],
+            },
+        },
+    }
+    failures = _codecov_validation_bypass_failures(Path('ci.yml'), workflow)
+    assert failures, f'binary input bypass for binary={value!r}'
+
+
+@pytest.mark.small
+@pytest.mark.parametrize(
+    'value',
+    [True, 'true', 'yes', 'on', '1', '${{ vars.USE_PYPI }}'],
+)
+def test_rejects_use_pypi_input_that_bypasses_validation(value: object) -> None:
+    """The use_pypi input installs the CLI from PyPI and bypasses GPG/SHA validation."""
+    workflow: dict[str, Any] = {
+        'jobs': {
+            'test': {
+                'steps': [
+                    {
+                        'uses': 'codecov/codecov-action@v5',
+                        'with': {'use_pypi': value},
+                    },
+                ],
+            },
+        },
+    }
+    failures = _codecov_validation_bypass_failures(Path('ci.yml'), workflow)
+    assert failures, f'use_pypi input bypass for use_pypi={value!r}'
