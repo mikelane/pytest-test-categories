@@ -84,21 +84,73 @@ def test_all_workflow_action_inputs_are_valid() -> None:
     assert not failures, '\n'.join(failures)
 
 
-@pytest.mark.medium
-def test_codecov_validation_is_not_disabled() -> None:
-    """The Codecov upload step must verify the CLI binary integrity."""
-    workflow_path = Path(__file__).resolve().parents[1] / WORKFLOWS_DIR / 'ci.yml'
-    workflow = yaml.safe_load(workflow_path.read_text())
+def _codecov_skip_validation_failures(path: Path, workflow: dict[str, Any]) -> list[str]:
+    """Return failures for any Codecov step that disables CLI validation."""
     failures: list[str] = []
-
     for job in workflow.get('jobs', {}).values():
         for step in job.get('steps', []):
             uses = step.get('uses', '')
             inputs = step.get('with') or {}
             if not isinstance(inputs, dict):
                 continue
-            skip_validation = str(inputs.get('skip_validation', '')).lower()
-            if 'codecov/codecov-action' in uses and skip_validation == 'true':
-                failures.append(f'{workflow_path.name}: {uses}: skip_validation must not be true')
+            if 'skip_validation' not in inputs:
+                continue
+            skip_validation = str(inputs['skip_validation']).lower()
+            if 'codecov/codecov-action' in uses and skip_validation in {'true', 'yes', 'on', '1'}:
+                failures.append(f'{path.name}: {uses}: skip_validation must not be true')
+    return failures
 
+
+@pytest.mark.medium
+def test_codecov_validation_is_not_disabled() -> None:
+    """The Codecov upload step must verify the CLI binary integrity."""
+    workflow_path = Path(__file__).resolve().parents[1] / WORKFLOWS_DIR / 'ci.yml'
+    workflow = yaml.safe_load(workflow_path.read_text())
+    failures = _codecov_skip_validation_failures(workflow_path, workflow)
     assert not failures, '\n'.join(failures)
+
+
+@pytest.mark.small
+@pytest.mark.parametrize(
+    'value',
+    ['true', 'True', 'TRUE', 'yes', 'Yes', 'YES', 'on', 'On', 'ON', '1', True, 1],
+)
+def test_rejects_truthy_skip_validation_values(value: object) -> None:
+    """Any GitHub-Actions truthy value for skip_validation must be rejected."""
+    workflow: dict[str, Any] = {
+        'jobs': {
+            'test': {
+                'steps': [
+                    {
+                        'uses': 'codecov/codecov-action@v5',
+                        'with': {'skip_validation': value},
+                    },
+                ],
+            },
+        },
+    }
+    failures = _codecov_skip_validation_failures(Path('ci.yml'), workflow)
+    assert failures, f'Expected failure for skip_validation={value!r}'
+
+
+@pytest.mark.small
+@pytest.mark.parametrize(
+    'value',
+    ['false', 'False', 'FALSE', 'no', 'No', 'NO', 'off', 'Off', 'OFF', '0', False, 0],
+)
+def test_allows_falsy_skip_validation_values(value: object) -> None:
+    """GitHub-Actions falsy values for skip_validation must be allowed."""
+    workflow: dict[str, Any] = {
+        'jobs': {
+            'test': {
+                'steps': [
+                    {
+                        'uses': 'codecov/codecov-action@v5',
+                        'with': {'skip_validation': value},
+                    },
+                ],
+            },
+        },
+    }
+    failures = _codecov_skip_validation_failures(Path('ci.yml'), workflow)
+    assert not failures, f'Unexpected failure for skip_validation={value!r}'
