@@ -552,6 +552,16 @@ def test_config_loading():
 
 Document the technical debt and create a tracking issue.
 
+### pyfakefs Suspends Enforcement
+
+If a test uses the `fs` fixture (or a `Patcher` instance), filesystem enforcement is
+suspended for the duration pyfakefs is active - every operation is already
+purely in-memory, so there's nothing to block. If you still see a violation on a
+test that uses `fs`, check whether the operation happened *before* the `fs`
+fixture was set up, or after a `fs.pause()` call: real filesystem access made
+while paused is not detected as a violation, because enforcement only resumes
+once pyfakefs itself is deactivated.
+
 ## Getting Help
 
 If you encounter a violation you cannot resolve:

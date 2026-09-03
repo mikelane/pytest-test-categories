@@ -94,6 +94,30 @@ def test_fetch_user(httpx_mock):
     assert result["name"] == "Alice"
 ```
 
+### pyfakefs
+
+`pyfakefs` provides an in-memory fake filesystem via its `fs` fixture, letting small
+tests exercise real file-handling code without touching the real filesystem.
+
+```python
+@pytest.mark.small
+def test_write_report(fs):  # pyfakefs fixture
+    fs.create_file("/data/input.txt", contents="hello")
+    write_report("/data/input.txt", "/data/output.txt")
+    assert Path("/data/output.txt").read_text() == "HELLO"
+```
+
+**Enforcement is suspended while pyfakefs is active.** Every filesystem operation a
+test performs while `fs` (or a `Patcher`) is installed is already purely in-memory,
+so there is nothing for this plugin to block — attempting to intercept pyfakefs's
+own fake classes would only produce false `FilesystemAccessViolationError`s on
+operations that never touch the real filesystem.
+
+**Caveat:** if a test calls `fs.pause()` to temporarily restore real filesystem
+access while pyfakefs is still installed, that real access is *not* detected as a
+violation. Enforcement only resumes once pyfakefs itself is deactivated (i.e., the
+`fs` fixture's teardown, or after `fs.resume()` is followed by test completion).
+
 ### Time Mocking Libraries
 
 For tests that involve time:

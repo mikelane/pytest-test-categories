@@ -17,11 +17,13 @@ test values for testing path matching logic, not actual insecure temp file usage
 
 from __future__ import annotations
 
+import builtins
 from pathlib import Path
 
 import pytest
 from icontract import ViolationError
 
+from pytest_test_categories.adapters import filesystem as filesystem_module
 from pytest_test_categories.adapters.fake_filesystem import FakeFilesystemBlocker
 from pytest_test_categories.adapters.filesystem import FilesystemPatchingBlocker
 from pytest_test_categories.exceptions import FilesystemAccessViolationError
@@ -450,3 +452,122 @@ class DescribeFilesystemPatchingBlocker:
         blocker.reset()
 
         assert builtins.open is original_open
+
+
+class _StandInFakePath:
+    """Stand-in for pyfakefs's FakePath: a real class so patching it is harmless.
+
+    Carries stub implementations of every attribute FilesystemPatchingBlocker
+    patches, so that patching this stand-in succeeds identically to patching a
+    real pathlib.Path, regardless of whether the fix under test is in place.
+    """
+
+    __module__ = 'pyfakefs.fake_pathlib'
+
+    read_text = staticmethod(lambda *args, **kwargs: '')  # noqa: ARG005
+    write_text = staticmethod(lambda *args, **kwargs: 0)  # noqa: ARG005
+    read_bytes = staticmethod(lambda *args, **kwargs: b'')  # noqa: ARG005
+    write_bytes = staticmethod(lambda *args, **kwargs: 0)  # noqa: ARG005
+    open = staticmethod(lambda *args, **kwargs: None)  # noqa: ARG005
+    unlink = staticmethod(lambda *args, **kwargs: None)  # noqa: ARG005
+    mkdir = staticmethod(lambda *args, **kwargs: None)  # noqa: ARG005
+    rmdir = staticmethod(lambda *args, **kwargs: None)  # noqa: ARG005
+    rename = staticmethod(lambda *args, **kwargs: None)  # noqa: ARG005
+    replace = staticmethod(lambda *args, **kwargs: None)  # noqa: ARG005
+
+
+class _StandInFakePathlibModule:
+    """Stand-in for pyfakefs's FakePathlibModule, exposing only `Path`."""
+
+    Path = _StandInFakePath
+
+
+@pytest.mark.medium
+class DescribeFilesystemPatchingBlockerWithVirtualFilesystem:
+    """Tests for FilesystemPatchingBlocker behavior when a virtual filesystem is active.
+
+    Simulates pyfakefs having already rebound the adapter module's `pathlib` global to
+    a fake pathlib module (the way pyfakefs replaces `pathlib` with
+    `FakePathlibModule` in every already-imported module, including this adapter's
+    own module). The blocker must treat this as evidence that a virtualizer already
+    owns filesystem interception and must not install its own patches or report
+    violations.
+
+    Marked medium (not small) for the same reason as DescribeFakeFilesystemBlocker:
+    the plugin's own filesystem enforcement only activates for @pytest.mark.small
+    tests. If this class were small, the plugin's own blocker would patch the real
+    pathlib.Path around these test bodies too, and monkeypatch's teardown of the
+    `pathlib` global (which happens in pytest's teardown phase, after the plugin's
+    own call-phase deactivation) would make the plugin's restore target the
+    monkeypatched stand-in instead of the real class -- corrupting the real
+    pathlib.Path for the rest of the test session. Running as medium sidesteps the
+    outer enforcement entirely, matching how these tests already drive
+    TestSize.SMALL explicitly through their own local blocker instances.
+    """
+
+    def it_skips_patching_builtins_open_when_virtual_filesystem_active(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Verify activation installs no patches when a virtual filesystem is active."""
+        monkeypatch.setattr(filesystem_module, 'pathlib', _StandInFakePathlibModule())
+        original_open = builtins.open
+        blocker = FilesystemPatchingBlocker()
+
+        blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, frozenset())
+
+        assert builtins.open is original_open
+
+        blocker.deactivate()
+
+    def it_allows_access_for_small_tests_when_virtual_filesystem_active(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Verify small tests are allowed filesystem access when pyfakefs is active."""
+        monkeypatch.setattr(filesystem_module, 'pathlib', _StandInFakePathlibModule())
+        blocker = FilesystemPatchingBlocker()
+        blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, frozenset())
+
+        assert blocker.check_access_allowed(Path('/etc/passwd'), FilesystemOperation.READ) is True
+
+        blocker.deactivate()
+
+    def it_still_blocks_access_for_small_tests_when_no_virtual_filesystem_active(self) -> None:
+        """Verify small tests remain blocked when no virtual filesystem is active."""
+        blocker = FilesystemPatchingBlocker()
+        blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, frozenset())
+
+        assert blocker.check_access_allowed(Path('/etc/passwd'), FilesystemOperation.READ) is False
+
+        blocker.deactivate()
+
+    def it_allows_access_when_builtins_open_has_been_replaced(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Verify a foreign builtins.open (pathlib/os/shutil untouched) is detected."""
+
+        def foreign_open(*args: object, **kwargs: object) -> None:  # noqa: ARG001
+            return None
+
+        monkeypatch.setattr(builtins, 'open', foreign_open)
+        blocker = FilesystemPatchingBlocker()
+        blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, frozenset())
+
+        assert blocker.check_access_allowed(Path('/etc/passwd'), FilesystemOperation.READ) is True
+
+        blocker.deactivate()
+
+    def it_allows_access_when_os_has_been_replaced_with_a_non_module(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Verify a non-module `os` global (pathlib/open untouched) is detected."""
+        monkeypatch.setattr(filesystem_module, 'os', object())
+        blocker = FilesystemPatchingBlocker()
+        blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, frozenset())
+
+        assert blocker.check_access_allowed(Path('/etc/passwd'), FilesystemOperation.READ) is True
+
+        blocker.deactivate()

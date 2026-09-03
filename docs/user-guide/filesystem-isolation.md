@@ -239,6 +239,12 @@ def test_with_fake_filesystem(fs):  # pyfakefs fixture
     assert config["key"] == "value"
 ```
 
+While pyfakefs is active, filesystem enforcement is intentionally suspended: every
+operation is already purely in-memory, so there's no real access left to block.
+This also means a test that escapes back to the real filesystem while pyfakefs is
+still installed (for example, by calling `fs.pause()`) is **not** detected as a
+violation — enforcement only resumes once pyfakefs itself is no longer active.
+
 ### 2. Use io.StringIO or io.BytesIO
 
 For tests that need file-like objects but not actual files:

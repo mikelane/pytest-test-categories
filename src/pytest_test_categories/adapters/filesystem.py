@@ -39,6 +39,7 @@ from io import (
     TextIOWrapper,
 )
 from pathlib import Path
+from types import ModuleType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -58,6 +59,47 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 OpenReturnType = TextIOWrapper | BufferedReader | BufferedWriter | BufferedRandom | FileIO
+
+# Baselines captured at import time, before any filesystem virtualizer (e.g. pyfakefs)
+# could have run. pyfakefs rebinds module-level globals in every already-imported
+# module -- including this one -- to point at its own fake implementations. Plain
+# strings (a class's __module__) and types.ModuleType identity survive that rebinding
+# unaffected, which is why they make reliable baselines: comparing the *current*
+# value of `pathlib.Path.__module__` against `_REAL_PATH_MODULE` at check time reveals
+# whether pyfakefs (or a similar tool) has swapped this module's `pathlib` global for
+# its own fake module.
+_REAL_PATH_MODULE = pathlib.Path.__module__
+_REAL_OPEN_MODULE = builtins.open.__module__
+
+
+def _virtual_filesystem_is_active() -> bool:
+    """Detect whether a third-party filesystem virtualizer already owns interception.
+
+    pyfakefs (the tool this project's own docs recommend for hermetic small tests)
+    works by rebinding the `pathlib`, `os`, and `shutil` globals in every already
+    -imported module -- including this adapter module -- to its own fake
+    implementations, and by replacing `builtins.open` globally. When that has
+    happened, every filesystem operation a test performs is already purely
+    in-memory: there is no real I/O for this blocker to guard against, and
+    patching pyfakefs's own fake classes would only make this blocker intercept
+    (and misreport as violations) operations that never touch the real filesystem.
+
+    Returns:
+        True if any of `pathlib.Path`, `builtins.open`, `os`, or `shutil` no longer
+        match what was captured at import time, meaning a virtualizer has already
+        replaced this module's interception points.
+
+    """
+    if pathlib.Path.__module__ != _REAL_PATH_MODULE:
+        return True
+    if builtins.open.__module__ != _REAL_OPEN_MODULE:
+        return True
+    if not isinstance(os, ModuleType):
+        # mypy sees `os` as statically typed to the real module and considers this
+        # branch unreachable, but that's exactly the runtime rebinding pyfakefs
+        # performs -- the whole point of this check is to catch it.
+        return True  # type: ignore[unreachable]
+    return not isinstance(shutil, ModuleType)
 
 
 class _OriginalFunctions:
@@ -154,6 +196,12 @@ class FilesystemPatchingBlocker(FilesystemBlockerPort):
         self.current_enforcement_mode = enforcement_mode
         self.current_allowed_paths = allowed_paths
 
+        if _virtual_filesystem_is_active():
+            # A virtualizer already owns interception; installing patches here would
+            # wrap its fake classes instead of the real filesystem (see module
+            # docstring on _virtual_filesystem_is_active for why).
+            return
+
         originals: _OriginalFunctions = object.__getattribute__(self, '_originals')
 
         # Store and patch builtins.open
@@ -195,6 +243,12 @@ class FilesystemPatchingBlocker(FilesystemBlockerPort):
             True if the access is allowed, False if it should be blocked.
 
         """
+        if _virtual_filesystem_is_active():
+            # No real I/O can occur once a virtualizer (e.g. pyfakefs) is active,
+            # even if it started mid-test (e.g. `with Patcher():`) after this
+            # blocker's own wrappers were already installed. There is no
+            # hermeticity violation to report.
+            return True
         # BREAKING: No paths are allowed for small tests - strict hermeticity
         return self.current_test_size != TestSize.SMALL
 
@@ -629,6 +683,16 @@ class FilesystemPatchingBlocker(FilesystemBlockerPort):
                 blocker._do_on_violation(path, operation, blocker.current_test_nodeid)  # noqa: SLF001
 
             return original_open(file, mode, *args, **kwargs)
+
+        # builtins.open is the interception point itself, not an attribute holder
+        # like pathlib.Path or the os/shutil modules, so replacing it replaces the
+        # very object _virtual_filesystem_is_active() inspects. Without this, our
+        # own patched_open (defined in this module) would make that check see a
+        # "foreign" __module__ and mistake our own instrumentation for a virtual
+        # filesystem on every subsequent access check. Reporting the wrapped
+        # function's real module keeps the check honest about what actually
+        # replaced builtins.open.
+        patched_open.__module__ = original_open.__module__
 
         return patched_open
 
