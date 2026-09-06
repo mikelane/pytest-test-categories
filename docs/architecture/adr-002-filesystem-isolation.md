@@ -2,7 +2,7 @@
 
 ## Status
 
-**Implemented** (v1.0.0, updated v1.1.0)
+**Implemented** (v1.0.0, updated v1.1.0, clarified v1.2.x — see #254)
 
 > **Implementation Complete**: All components are fully implemented and production-ready:
 > - `FilesystemBlockerPort` interface with state machine
@@ -10,7 +10,9 @@
 > - `FakeFilesystemBlocker` test adapter
 > - `FilesystemAccessViolationError` exception with remediation guidance
 > - Pytest hook integration
-> - Small tests: **ALL filesystem access blocked** (no exceptions)
+> - Small tests: **ALL filesystem access blocked** (no exceptions), *unless a filesystem
+>   virtualizer such as `pyfakefs` already owns interception — see
+>   [Virtualizer Detection and Stand-Down](#virtualizer-detection-and-stand-down) below.
 
 ### No Override Markers - By Design
 
@@ -24,6 +26,14 @@ This is a deliberate architectural decision, not a missing feature.
 - The correct remediation is to use `pyfakefs`, `io.StringIO`/`io.BytesIO`, or upgrade the test category.
 
 **If you need filesystem access in a test, use `pyfakefs` for mocking, `io.StringIO`/`io.BytesIO` for in-memory file-like objects, or change to `@pytest.mark.medium`.**
+
+**"No escape hatches" describes the marker surface, not the enforcement mechanism.**
+This plugin still provides no `@pytest.mark.allow_filesystem`-style opt-out that a
+test author can request. But when a test brings its own filesystem virtualizer
+(`pyfakefs`), this plugin's blocking becomes redundant — the virtualizer has already
+replaced the real interception points, so there is no real I/O left to block. See
+[Virtualizer Detection and Stand-Down](#virtualizer-detection-and-stand-down) for
+exactly what this plugin does (and does not) still catch in that case.
 
 ## Context
 
@@ -577,6 +587,50 @@ Estimated overhead: <1ms per filesystem operation (dominated by actual I/O in pr
 2. **Performance Overhead**: Minor overhead from path checking on every operation
 3. **Incomplete Coverage**: Some obscure filesystem operations may not be intercepted
 4. **Global Patching**: Affects entire process during test execution
+5. **Enforcement Stands Down for Virtualized Tests**: A small test using `pyfakefs`
+   gets *zero* filesystem enforcement from this plugin, not fake-aware enforcement.
+   pyfakefs itself supports allowlisting real paths for pass-through
+   (`fs.add_real_directory(...)`, `fs.add_real_file(...)`), so a small test can
+   perform genuine disk I/O against an allowlisted real path with no violation
+   reported — see [Virtualizer Detection and Stand-Down](#virtualizer-detection-and-stand-down).
+
+### Virtualizer Detection and Stand-Down
+
+Added in v1.2.x (#254). `FilesystemPatchingBlocker` detects whether a filesystem
+virtualizer has already replaced this module's interception points
+(`pathlib.Path`, `builtins.open`, `os`, `shutil`) by comparing their current
+identity against baselines captured at import time. If any of them no longer
+match — which is how `pyfakefs`'s `fs` fixture and `Patcher` operate, and how any
+similar tool that globally rebinds these names would look — the blocker:
+
+- Installs no patches of its own on activation (patching a virtualizer's fake
+  classes instead of the real filesystem would misreport in-memory operations as
+  violations).
+- Treats every filesystem access as allowed for the duration of that test.
+
+**This is a detection-and-stand-down, not a co-existence mechanism.** The plugin
+does not distinguish "faked" I/O from "real" I/O once a virtualizer is detected —
+it simply steps aside entirely. Concretely:
+
+- **Intentional and reachable**: a `@pytest.mark.small` test using `pyfakefs`'s
+  `fs` fixture is exactly the documented, recommended path (see
+  `docs/compatibility.md`) to avoid `[TC002]` — this is the fix this ADR update
+  documents.
+- **Also reachable, not specific to pyfakefs**: the detection triggers on *any*
+  global replacement of the four interception points, not a pyfakefs allowlist
+  check. A test that does `mocker.patch('builtins.open', ...)` (or any tool that
+  rebinds `os`/`shutil`/`pathlib.Path`) also disables this plugin's filesystem
+  enforcement for that test, even though no filesystem virtualization is
+  happening at all. There is currently no narrower check that distinguishes
+  "a real virtualizer is active" from "something replaced one of these four
+  names for an unrelated reason."
+
+This trade-off was accepted because the alternative — patching a virtualizer's own
+fake classes — produces the false positives this fix exists to close (#254), and
+because narrowing detection to pyfakefs specifically would require depending on
+pyfakefs or maintaining a per-library allowlist of virtualizers, which conflicts
+with the "no hard dependency on pyfakefs" position in
+[Alternative 1](#alternative-1-use-pyfakefs-directly) below.
 
 ### Risks and Mitigations
 
@@ -586,7 +640,7 @@ Estimated overhead: <1ms per filesystem operation (dominated by actual I/O in pr
 | Path resolution edge cases | Comprehensive unit tests for path resolution logic |
 | pytest fixture compatibility | Test with tmp_path, tmp_path_factory explicitly |
 | Performance regression | Benchmark before/after, optimize hot paths |
-| Conflicts with pyfakefs | Incompatible by design - document that users should choose one approach (blocking vs faking) |
+| Conflicts with pyfakefs | Resolved (v1.2.x, #254): the blocker detects an active virtualizer (pyfakefs or anything else that globally rebinds `pathlib`/`open`/`os`/`shutil`) and stands its own enforcement down entirely for that test, rather than patching the virtualizer's fake classes. See [Virtualizer Detection and Stand-Down](#virtualizer-detection-and-stand-down) for what this does and does not still catch. |
 
 ## Alternatives Considered
 
@@ -604,7 +658,11 @@ Estimated overhead: <1ms per filesystem operation (dominated by actual I/O in pr
 - Different philosophy (faking vs blocking)
 - May conflict with user's own pyfakefs usage
 
-**Verdict**: Rejected - we want blocking with clear errors, not silent faking.
+**Verdict**: Rejected - we want our own enforcement to be independent of pyfakefs, not
+built on top of it as a hard dependency. This is a decision about *how this plugin's
+own blocking is implemented*, not a rejection of pyfakefs as a tool: as documented
+above, when a user brings their own pyfakefs, this plugin now detects it and yields
+to it (#254) rather than trying to enforce blocking through it.
 
 ### Alternative 2: Environment Variable Isolation
 
