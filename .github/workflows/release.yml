@@ -176,8 +176,10 @@ jobs:
         id: extract_notes
         run: |
           VERSION=${{ needs.validate.outputs.version }}
-          # Extract the section for this version from CHANGELOG.md
-          awk "/## \[$VERSION\]/,/## \[/" CHANGELOG.md | sed '1d;$d' > release_notes.md
+          # Extract the section for this version from CHANGELOG.md.
+          # Headings look like "## v1.2.2 (2026-09-07)" (no brackets), so match
+          # the version heading and stop at the next "## v" heading or EOF.
+          awk "/^## v$VERSION /{flag=1; next} /^## v/{flag=0} flag" CHANGELOG.md > release_notes.md
           if [ ! -s release_notes.md ]; then
             echo "No release notes found for version $VERSION, using default message"
             echo "Release version $VERSION" > release_notes.md
