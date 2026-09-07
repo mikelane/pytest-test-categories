@@ -189,7 +189,7 @@ pip install pytest pytest-test-categories pytest-httpx pyfakefs pytest-mock time
 
 ## Known Incompatibilities
 
-None currently known. If you discover a compatibility issue, please [open an issue](https://github.com/mikelane/pytest-test-categories/issues).
+None beyond the scoped pyfakefs gaps documented above (module/class/session-scoped fixtures and the manual `Patcher()` context manager — see the [pyfakefs](#pyfakefs) section). If you discover a compatibility issue, please [open an issue](https://github.com/mikelane/pytest-test-categories/issues).
 
 ## Integration Testing
 
