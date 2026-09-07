@@ -625,8 +625,8 @@ it simply steps aside entirely. Concretely:
   "a real virtualizer is active" from "something replaced one of these four
   names for an unrelated reason."
 - **Known scope limitation**: only a `@pytest.mark.small` test using the
-  function-scoped `fs` fixture is currently verified safe. Module/class/session
-  -scoped pyfakefs fixtures (`fs_module`, `fs_class`, `fs_session`) call
+  function-scoped `fs` fixture is currently verified safe. Module/class/session-scoped
+  pyfakefs fixtures (`fs_module`, `fs_class`, `fs_session`) call
   `Patcher().setUp()` during pytest's SETUP phase but leave the Patcher resumed
   across the rest of that scope, which can let a fake filesystem leak into a
   *sibling* test that never requested pyfakefs at all, with no violation
