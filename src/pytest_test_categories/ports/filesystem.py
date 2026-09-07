@@ -267,6 +267,8 @@ class FilesystemBlockerPort(BaseModel, ABC):
         - The test size (set during activate())
         - The path being accessed
         - Whether the path is in the allowed set
+        - Whether a third-party filesystem virtualizer (e.g. pyfakefs) is active,
+          in which case all operations are allowed unconditionally
 
         Args:
             path: The target path (should be resolved to absolute).
