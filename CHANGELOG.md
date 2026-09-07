@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## v1.2.2 (2026-09-07)
+
 ### Fixed
 
 - Fix false `FilesystemAccessViolationError` (`[TC002]`) for small tests using pyfakefs's `fs` fixture under `--test-categories-enforcement=strict`. pyfakefs rebinds `pathlib`, `os`, `shutil`, and `builtins.open` in every already-imported module, including this plugin's own filesystem adapter, so the blocker was patching pyfakefs's fake classes instead of the real filesystem and misreporting purely in-memory operations as violations. The blocker now detects an active virtual filesystem and stands its own enforcement down for the duration of that test. Verified safe for the function-scoped `fs` fixture; module/class/session-scoped fixtures and the manual `Patcher()` context manager remain open gaps (#256, #257) (#254)
