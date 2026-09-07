@@ -912,6 +912,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pyfakefs"
+version = "6.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/98/0d/c80012ee6e885c293ad63c5f5b049d3ef3fd2b32bbe6fa8739145f392ec6/pyfakefs-6.2.0.tar.gz", hash = "sha256:e59a36db447bf509ce9c97ab3d1510c08cc51895c5311325a560a5e5b5dc1940", size = 228273, upload-time = "2026-04-12T13:38:50.411Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b2/80/97571ac8295289c267367b7b60aadeae1a9a841e83f0a96ad9b65d1dd3c0/pyfakefs-6.2.0-py3-none-any.whl", hash = "sha256:0968a49db692694ffed420e54a9f1cbae4636637b880e8ab09c8ccc0f11bd7ae", size = 241113, upload-time = "2026-04-12T13:38:48.927Z" },
+]
+
+[[package]]
 name = "pygments"
 version = "2.20.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1037,6 +1046,7 @@ lint = [
     { name = "ruff" },
 ]
 test = [
+    { name = "pyfakefs" },
     { name = "pytest-bdd" },
     { name = "pytest-benchmark" },
     { name = "pytest-cov" },
@@ -1075,6 +1085,7 @@ lint = [
     { name = "ruff", specifier = ">=0.14.4" },
 ]
 test = [
+    { name = "pyfakefs", specifier = ">=6.2.0" },
     { name = "pytest-bdd", specifier = ">=8.1.0" },
     { name = "pytest-benchmark", specifier = ">=5.1.0" },
     { name = "pytest-cov", specifier = ">=7.0.0" },

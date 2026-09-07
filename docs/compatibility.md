@@ -12,7 +12,7 @@ pytest-test-categories is designed to work alongside the existing pytest ecosyst
 | `pytest-httpx` | ✅ Recommended | Mock HTTP calls to make tests hermetic |
 | `responses` | ✅ Recommended | Alternative HTTP mocking library |
 | `httpretty` | ✅ Compatible | Another HTTP mocking option |
-| `pyfakefs` | ✅ Recommended | Filesystem virtualization for hermetic tests |
+| `pyfakefs` | ✅ Recommended (scoped, see below) | Filesystem virtualization for hermetic tests |
 | `pytest-mock` | ✅ Recommended | General-purpose mocking |
 | `freezegun` | ✅ Recommended | Time mocking for deterministic tests |
 | `time-machine` | ✅ Recommended | Modern alternative to freezegun (faster) |
@@ -94,6 +94,46 @@ def test_fetch_user(httpx_mock):
     assert result["name"] == "Alice"
 ```
 
+### pyfakefs
+
+`pyfakefs` provides an in-memory fake filesystem via its `fs` fixture, letting small
+tests exercise real file-handling code without touching the real filesystem.
+
+```python
+@pytest.mark.small
+def test_write_report(fs):  # pyfakefs fixture
+    fs.create_file("/data/input.txt", contents="hello")
+    write_report("/data/input.txt", "/data/output.txt")
+    assert Path("/data/output.txt").read_text() == "HELLO"
+```
+
+**Enforcement is suspended while pyfakefs is active.** Every filesystem operation a
+test performs while `fs` is installed is already purely in-memory, so there is
+nothing for this plugin to block — attempting to intercept pyfakefs's own fake
+classes would only produce false `FilesystemAccessViolationError` reports on
+operations that never touch the real filesystem.
+
+**Only the function-scoped `fs` fixture is currently verified safe.** Two related
+gaps are open, tracked separately:
+
+- Module/class/session-scoped pyfakefs fixtures (`fs_module`, `fs_class`,
+  `fs_session`) can leave a fake filesystem resumed for a *sibling* test that
+  never requested pyfakefs at all, with no violation reported for that sibling
+  ([#256](https://github.com/mikelane/pytest-test-categories/issues/256)).
+- Using pyfakefs's own `with Patcher():` context manager directly inside a test
+  body (instead of through the `fs` fixture) can reproduce the exact false
+  positive this page's recommendation exists to avoid, on a cold import
+  ([#257](https://github.com/mikelane/pytest-test-categories/issues/257)).
+
+Until those are resolved, prefer `fs` over `fs_module`/`fs_class`/`fs_session` and
+over a bare `with Patcher():` in the test body.
+
+**Caveat:** if a test calls `fs.pause()` to temporarily restore real filesystem
+access while pyfakefs is still installed, that real access is *not* detected as a
+violation. Enforcement only resumes once pyfakefs itself is torn down (normally
+at the `fs` fixture's teardown) — calling `fs.resume()` restores the fake
+filesystem but does not restore this plugin's enforcement.
+
 ### Time Mocking Libraries
 
 For tests that involve time:
@@ -150,14 +190,13 @@ pip install pytest pytest-test-categories pytest-httpx pyfakefs pytest-mock time
 
 ## Known Incompatibilities
 
-None currently known. If you discover a compatibility issue, please [open an issue](https://github.com/mikelane/pytest-test-categories/issues).
+None beyond the scoped pyfakefs gaps documented above (module/class/session-scoped fixtures and the manual `Patcher()` context manager — see the [pyfakefs](#pyfakefs) section). If you discover a compatibility issue, please [open an issue](https://github.com/mikelane/pytest-test-categories/issues).
 
 ## Integration Testing
 
 The plugin is tested against the following pytest versions:
 
-- pytest 7.x
-- pytest 8.x
+- pytest >=9.1.1
 
 And Python versions:
 

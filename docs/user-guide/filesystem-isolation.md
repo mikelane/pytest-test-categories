@@ -165,11 +165,11 @@ Details:
   Attempted write on: /home/user/project/output/report.txt
 
 Small tests have restricted resource access. Options:
-  1. Use pyfakefs for comprehensive filesystem mocking (pip install pyfakefs)
-  2. Use io.StringIO or io.BytesIO for in-memory file-like objects
-  3. Mock file operations using pytest-mock (mocker.patch("builtins.open", ...))
-  4. Embed test data as Python constants or use importlib.resources
-  5. Change test category to @pytest.mark.medium (if filesystem access is required)
+  - Use pyfakefs for comprehensive filesystem mocking (pip install pyfakefs)
+  - Use io.StringIO or io.BytesIO for in-memory file-like objects
+  - Mock file operations using pytest-mock (mocker.patch("builtins.open", ...))
+  - Embed test data as Python constants or use importlib.resources
+  - Change test category to @pytest.mark.medium (if filesystem access is required)
 
 Documentation: See docs/architecture/adr-002-filesystem-isolation.md
 ============================================================
@@ -239,6 +239,21 @@ def test_with_fake_filesystem(fs):  # pyfakefs fixture
     assert config["key"] == "value"
 ```
 
+While pyfakefs is active, filesystem enforcement is intentionally suspended: every
+operation is already purely in-memory, so there's no real access left to block.
+This also means a test that escapes back to the real filesystem while pyfakefs is
+still installed (for example, by calling `fs.pause()`) is **not** detected as a
+violation — enforcement only resumes once pyfakefs itself is no longer active.
+
+**Only the function-scoped `fs` fixture above is currently verified safe.**
+Module/class/session-scoped fixtures (`fs_module`, `fs_class`, `fs_session`) can
+leave a fake filesystem resumed for a sibling test that never requested pyfakefs
+at all ([#256](https://github.com/mikelane/pytest-test-categories/issues/256)),
+and using `Patcher()` directly inside a test body instead of the `fs` fixture can
+reproduce this same page's TC002 false positive on a cold import
+([#257](https://github.com/mikelane/pytest-test-categories/issues/257)). Prefer
+`fs` until both are resolved.
+
 ### 2. Use io.StringIO or io.BytesIO
 
 For tests that need file-like objects but not actual files:
@@ -264,6 +279,11 @@ def test_config_loader(mocker):
     config = load_config("/etc/myapp/config.ini")
     assert config["key"] == "value"
 ```
+
+Note: replacing `builtins.open` this way is itself one of the global rebinds this
+plugin's virtualizer detection looks for, so its own filesystem enforcement stands
+down for the duration of the patch — the mock is doing all the isolation here, not
+this plugin.
 
 ### 4. Embed Test Data
 

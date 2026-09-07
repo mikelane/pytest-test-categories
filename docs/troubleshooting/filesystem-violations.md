@@ -39,7 +39,7 @@ The error tells you:
 
 ### 1. Writing Output Files
 
-**Symptom**: Write operation on a path outside allowed directories.
+**Symptom**: Write operation blocked (small tests have no allowed paths).
 
 ```
 Attempted write on: /home/user/project/output/report.txt
@@ -129,6 +129,10 @@ def test_load_config(mocker):
 
     assert config["database"]["host"] == "localhost"
 ```
+
+Note: patching `builtins.open` is itself a global rebind, so it also triggers this
+plugin's virtualizer stand-down — the mock is what's isolating this test, not the
+plugin's own enforcement.
 
 ### 3. Creating Directories
 
@@ -267,13 +271,13 @@ def test_parse_xml():
 
 ### 6. Deleting Files
 
-**Symptom**: Delete operation on a non-allowed path.
+**Symptom**: Delete operation blocked (small tests have no allowed paths).
 
 ```
 Attempted delete on: /home/user/project/temp/cache.db
 ```
 
-**Cause**: Test cleans up files outside allowed directories:
+**Cause**: Test cleans up files on the real filesystem:
 
 ```python
 from pathlib import Path
@@ -313,7 +317,7 @@ def test_clear_cache(tmp_path):
 
 ### 7. Listing Directory Contents
 
-**Symptom**: List operation on a non-allowed path.
+**Symptom**: List operation blocked (small tests have no allowed paths).
 
 ```
 Attempted list on: /home/user/project/plugins/
@@ -505,6 +509,30 @@ Run coverage to see which code paths access files:
 coverage run --branch -m pytest tests/test_reports.py::test_save_report
 coverage report --show-missing
 ```
+
+## pyfakefs Suspends Enforcement
+
+If a test uses the `fs` fixture, filesystem enforcement is suspended for the
+duration pyfakefs is active - every operation is already purely in-memory, so
+there's nothing to block. If you still see a violation on a test that uses `fs`,
+check whether the operation happened *before* the `fs` fixture was set up, or
+after a `fs.pause()` call: real filesystem access made while paused is not
+detected as a violation, because enforcement only resumes once pyfakefs itself
+is deactivated.
+
+**If you're using `fs_module`, `fs_class`, or `fs_session` and still see
+unexpected behavior:** these broader-scoped fixtures can leave a fake filesystem
+resumed for a *sibling* test that never requested pyfakefs at all, with no
+violation reported for that sibling
+([#256](https://github.com/mikelane/pytest-test-categories/issues/256)). Only the
+function-scoped `fs` fixture is currently verified safe.
+
+**If you're using `Patcher()` directly instead of the `fs` fixture:** entering
+`with Patcher():` inside a test body (rather than letting the `fs` fixture call
+`Patcher().setUp()` for you) can reproduce the exact false positive documented
+above, on a cold import
+([#257](https://github.com/mikelane/pytest-test-categories/issues/257)). Prefer
+the `fs` fixture until this is resolved.
 
 ## Temporary Workarounds
 

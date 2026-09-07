@@ -64,6 +64,7 @@ test_categories = "pytest_test_categories.plugin"
 
 [dependency-groups]
 test = [
+    "pyfakefs>=6.2.0",
     "pytest-bdd>=8.1.0",
     "pytest-benchmark>=5.1.0",
     "pytest-cov>=7.0.0",

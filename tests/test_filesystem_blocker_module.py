@@ -17,11 +17,14 @@ test values for testing path matching logic, not actual insecure temp file usage
 
 from __future__ import annotations
 
+import builtins
+import types
 from pathlib import Path
 
 import pytest
 from icontract import ViolationError
 
+from pytest_test_categories.adapters import filesystem as filesystem_module
 from pytest_test_categories.adapters.fake_filesystem import FakeFilesystemBlocker
 from pytest_test_categories.adapters.filesystem import FilesystemPatchingBlocker
 from pytest_test_categories.exceptions import FilesystemAccessViolationError
@@ -414,8 +417,6 @@ class DescribeFilesystemPatchingBlocker:
 
     def it_patches_builtins_open_on_activate(self) -> None:
         """Verify builtins.open is patched when activated."""
-        import builtins
-
         original_open = builtins.open
         blocker = FilesystemPatchingBlocker()
 
@@ -429,8 +430,6 @@ class DescribeFilesystemPatchingBlocker:
 
     def it_restores_builtins_open_on_deactivate(self) -> None:
         """Verify builtins.open is restored when deactivated."""
-        import builtins
-
         original_open = builtins.open
         blocker = FilesystemPatchingBlocker()
 
@@ -441,8 +440,6 @@ class DescribeFilesystemPatchingBlocker:
 
     def it_restores_builtins_open_on_reset(self) -> None:
         """Verify builtins.open is restored on reset."""
-        import builtins
-
         original_open = builtins.open
         blocker = FilesystemPatchingBlocker()
 
@@ -450,3 +447,203 @@ class DescribeFilesystemPatchingBlocker:
         blocker.reset()
 
         assert builtins.open is original_open
+
+
+class _StandInFakePath:
+    """Stand-in for pyfakefs's FakePath: a real class so patching it is harmless.
+
+    Carries stub implementations of every attribute FilesystemPatchingBlocker
+    patches, so that patching this stand-in succeeds identically to patching a
+    real pathlib.Path, regardless of whether the fix under test is in place.
+    """
+
+    __module__ = 'pyfakefs.fake_pathlib'
+
+    read_text = staticmethod(lambda *args, **kwargs: '')  # noqa: ARG005
+    write_text = staticmethod(lambda *args, **kwargs: 0)  # noqa: ARG005
+    read_bytes = staticmethod(lambda *args, **kwargs: b'')  # noqa: ARG005
+    write_bytes = staticmethod(lambda *args, **kwargs: 0)  # noqa: ARG005
+    open = staticmethod(lambda *args, **kwargs: None)  # noqa: ARG005
+    unlink = staticmethod(lambda *args, **kwargs: None)  # noqa: ARG005
+    mkdir = staticmethod(lambda *args, **kwargs: None)  # noqa: ARG005
+    rmdir = staticmethod(lambda *args, **kwargs: None)  # noqa: ARG005
+    rename = staticmethod(lambda *args, **kwargs: None)  # noqa: ARG005
+    replace = staticmethod(lambda *args, **kwargs: None)  # noqa: ARG005
+
+
+class _StandInFakePathlibModule:
+    """Stand-in for pyfakefs's FakePathlibModule, exposing only `Path`."""
+
+    Path = _StandInFakePath
+
+
+@pytest.mark.medium
+class DescribeFilesystemPatchingBlockerWithVirtualFilesystem:
+    """Tests for FilesystemPatchingBlocker behavior when a virtual filesystem is active.
+
+    Simulates pyfakefs having already rebound the adapter module's `pathlib` global to
+    a fake pathlib module (the way pyfakefs replaces `pathlib` with
+    `FakePathlibModule` in every already-imported module, including this adapter's
+    own module). The blocker must treat this as evidence that a virtualizer already
+    owns filesystem interception and must not install its own patches or report
+    violations.
+
+    Marked medium (not small) for the same reason as DescribeFakeFilesystemBlocker:
+    the plugin's own filesystem enforcement only activates for @pytest.mark.small
+    tests. If this class were small, the plugin's own blocker would patch the real
+    pathlib.Path around these test bodies too, and monkeypatch's teardown of the
+    `pathlib` global (which happens in pytest's teardown phase, after the plugin's
+    own call-phase deactivation) would make the plugin's restore target the
+    monkeypatched stand-in instead of the real class -- corrupting the real
+    pathlib.Path for the rest of the test session. Running as medium sidesteps the
+    outer enforcement entirely, matching how these tests already drive
+    TestSize.SMALL explicitly through their own local blocker instances.
+    """
+
+    def it_skips_patching_builtins_open_when_virtual_filesystem_active(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Verify activation installs no patches when a virtual filesystem is active."""
+        monkeypatch.setattr(filesystem_module, 'pathlib', _StandInFakePathlibModule())
+        original_open = builtins.open
+        original_read_text = _StandInFakePath.read_text
+        blocker = FilesystemPatchingBlocker()
+
+        blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, frozenset())
+
+        assert builtins.open is original_open
+        assert _StandInFakePath.read_text is original_read_text
+
+        blocker.deactivate()
+
+        assert builtins.open is original_open
+        assert _StandInFakePath.read_text is original_read_text
+
+    def it_allows_access_for_small_tests_when_virtual_filesystem_active(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Verify small tests are allowed filesystem access when pyfakefs is active."""
+        monkeypatch.setattr(filesystem_module, 'pathlib', _StandInFakePathlibModule())
+        blocker = FilesystemPatchingBlocker()
+        blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, frozenset())
+
+        assert blocker.check_access_allowed(Path('/etc/passwd'), FilesystemOperation.READ) is True
+
+        blocker.deactivate()
+
+    def it_still_blocks_access_for_small_tests_when_no_virtual_filesystem_active(self) -> None:
+        """Verify small tests remain blocked when no virtual filesystem is active."""
+        blocker = FilesystemPatchingBlocker()
+        blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, frozenset())
+
+        assert blocker.check_access_allowed(Path('/etc/passwd'), FilesystemOperation.READ) is False
+
+        blocker.deactivate()
+
+    def it_allows_access_when_builtins_open_has_been_replaced(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Verify a foreign builtins.open (pathlib/os/shutil untouched) is detected."""
+
+        def foreign_open(*args: object, **kwargs: object) -> None:  # noqa: ARG001
+            return None
+
+        monkeypatch.setattr(builtins, 'open', foreign_open)
+        blocker = FilesystemPatchingBlocker()
+        blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, frozenset())
+
+        assert blocker.check_access_allowed(Path('/etc/passwd'), FilesystemOperation.READ) is True
+
+        blocker.deactivate()
+
+    def it_allows_access_when_os_has_been_replaced_with_a_non_module(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Verify a non-module `os` global (pathlib/open untouched) is detected."""
+        monkeypatch.setattr(filesystem_module, 'os', object())
+        blocker = FilesystemPatchingBlocker()
+        blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, frozenset())
+
+        assert blocker.check_access_allowed(Path('/etc/passwd'), FilesystemOperation.READ) is True
+
+        blocker.deactivate()
+
+    def it_allows_access_when_shutil_has_been_replaced_with_a_non_module(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Verify a non-module `shutil` global (pathlib/os/open untouched) is detected."""
+        monkeypatch.setattr(filesystem_module, 'shutil', object())
+        blocker = FilesystemPatchingBlocker()
+        blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, frozenset())
+
+        assert blocker.check_access_allowed(Path('/etc/passwd'), FilesystemOperation.READ) is True
+
+        blocker.deactivate()
+
+    @pytest.mark.xfail(
+        reason=(
+            'Known gap tracked in issue #258: any exception raised inside _do_activate strands '
+            'already-installed patches (builtins.open, pathlib.Path methods) with no recovery '
+            'through the public API, because activate() only sets state = ACTIVE after '
+            '_do_activate returns and deactivate() requires state == ACTIVE. Pre-existing '
+            'fragility, not introduced by the #254 fix.'
+        ),
+        strict=True,
+    )
+    def it_does_not_leak_patched_builtins_open_when_activation_fails_partway_through(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """BUG (issue #254 follow-up).
+
+        A bare `types.ModuleType` satisfies
+        `isinstance(os, ModuleType)` -- the only check `_virtual_filesystem_is_active()`
+        performs on `os` -- even though it has none of the real `os` module's
+        functions. This lets a stand-in that merely LOOKS like a module (but
+        is not pyfakefs's FakeOsModule, and provides none of `os.remove`,
+        `os.mkdir`, etc.) sail past virtualizer detection.
+
+        `_do_activate` therefore proceeds: it successfully patches
+        `builtins.open` and every `pathlib.Path` method, then crashes with
+        `AttributeError` inside `_patch_os_functions` (no `.remove` on the bare
+        module). Because this happens inside `_do_activate`, which the base
+        class's `activate()` calls BEFORE setting `self.state = ACTIVE`, the
+        blocker's state never transitions to ACTIVE. `deactivate()` requires
+        `state == ACTIVE` (icontract precondition), so nothing can restore the
+        already-patched `builtins.open` / `pathlib.Path` through the normal
+        deactivation path -- they stay corrupted.
+
+        Note: this exact trigger (a bare `types.ModuleType` standing in for
+        `os`) requires a deliberate monkeypatch -- no real tool used by this
+        project's test suite produces that shape (pyfakefs's own `os`
+        stand-in is `FakeOsModule`, which passes `isinstance(..., ModuleType)`
+        fine, see `it_allows_access_when_os_has_been_replaced_with_a_non_module`
+        above for the actually-reachable non-module case). The underlying
+        fragility this proves -- ANY exception raised inside `_do_activate`
+        leaves already-installed patches stranded with no recovery through
+        the public API, because `FilesystemBlockerPort.activate()` only sets
+        `state = ACTIVE` after `_do_activate` returns, and `deactivate()`
+        requires `state == ACTIVE` -- predates this PR's diff (the pre-fix
+        `_do_activate` had no virtualizer guard at all and would strand
+        patches identically on any mid-patch exception).
+        """
+        original_open = builtins.open
+
+        broken_os = types.ModuleType('broken_os')  # passes isinstance(os, ModuleType), has no os functions
+        monkeypatch.setattr(filesystem_module, 'os', broken_os)
+
+        blocker = FilesystemPatchingBlocker()
+
+        try:
+            with pytest.raises(AttributeError):
+                blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, frozenset())
+
+            assert builtins.open is original_open
+        finally:
+            # Recovery has to bypass deactivate()'s ACTIVE precondition entirely.
+            blocker.reset()
