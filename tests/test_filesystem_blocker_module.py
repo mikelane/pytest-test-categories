@@ -18,6 +18,7 @@ test values for testing path matching logic, not actual insecure temp file usage
 from __future__ import annotations
 
 import builtins
+import types
 from pathlib import Path
 
 import pytest
@@ -571,3 +572,66 @@ class DescribeFilesystemPatchingBlockerWithVirtualFilesystem:
         assert blocker.check_access_allowed(Path('/etc/passwd'), FilesystemOperation.READ) is True
 
         blocker.deactivate()
+
+    @pytest.mark.xfail(
+        reason=(
+            'Known gap tracked in issue #258: any exception raised inside _do_activate strands '
+            'already-installed patches (builtins.open, pathlib.Path methods) with no recovery '
+            'through the public API, because activate() only sets state = ACTIVE after '
+            '_do_activate returns and deactivate() requires state == ACTIVE. Pre-existing '
+            'fragility, not introduced by the #254 fix.'
+        ),
+        strict=True,
+    )
+    def it_does_not_leak_patched_builtins_open_when_activation_fails_partway_through(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """BUG (issue #254 follow-up).
+
+        A bare `types.ModuleType` satisfies
+        `isinstance(os, ModuleType)` -- the only check `_virtual_filesystem_is_active()`
+        performs on `os` -- even though it has none of the real `os` module's
+        functions. This lets a stand-in that merely LOOKS like a module (but
+        is not pyfakefs's FakeOsModule, and provides none of `os.remove`,
+        `os.mkdir`, etc.) sail past virtualizer detection.
+
+        `_do_activate` therefore proceeds: it successfully patches
+        `builtins.open` and every `pathlib.Path` method, then crashes with
+        `AttributeError` inside `_patch_os_functions` (no `.remove` on the bare
+        module). Because this happens inside `_do_activate`, which the base
+        class's `activate()` calls BEFORE setting `self.state = ACTIVE`, the
+        blocker's state never transitions to ACTIVE. `deactivate()` requires
+        `state == ACTIVE` (icontract precondition), so nothing can restore the
+        already-patched `builtins.open` / `pathlib.Path` through the normal
+        deactivation path -- they stay corrupted.
+
+        Note: this exact trigger (a bare `types.ModuleType` standing in for
+        `os`) requires a deliberate monkeypatch -- no real tool used by this
+        project's test suite produces that shape (pyfakefs's own `os`
+        stand-in is `FakeOsModule`, which passes `isinstance(..., ModuleType)`
+        fine, see `it_allows_access_when_os_has_been_replaced_with_a_non_module`
+        above for the actually-reachable non-module case). The underlying
+        fragility this proves -- ANY exception raised inside `_do_activate`
+        leaves already-installed patches stranded with no recovery through
+        the public API, because `FilesystemBlockerPort.activate()` only sets
+        `state = ACTIVE` after `_do_activate` returns, and `deactivate()`
+        requires `state == ACTIVE` -- predates this PR's diff (the pre-fix
+        `_do_activate` had no virtualizer guard at all and would strand
+        patches identically on any mid-patch exception).
+        """
+        original_open = builtins.open
+
+        broken_os = types.ModuleType('broken_os')  # passes isinstance(os, ModuleType), has no os functions
+        monkeypatch.setattr(filesystem_module, 'os', broken_os)
+
+        blocker = FilesystemPatchingBlocker()
+
+        try:
+            with pytest.raises(AttributeError):
+                blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, frozenset())
+
+            assert builtins.open is original_open
+        finally:
+            # Recovery has to bypass deactivate()'s ACTIVE precondition entirely.
+            blocker.reset()
