@@ -417,8 +417,6 @@ class DescribeFilesystemPatchingBlocker:
 
     def it_patches_builtins_open_on_activate(self) -> None:
         """Verify builtins.open is patched when activated."""
-        import builtins
-
         original_open = builtins.open
         blocker = FilesystemPatchingBlocker()
 
@@ -432,8 +430,6 @@ class DescribeFilesystemPatchingBlocker:
 
     def it_restores_builtins_open_on_deactivate(self) -> None:
         """Verify builtins.open is restored when deactivated."""
-        import builtins
-
         original_open = builtins.open
         blocker = FilesystemPatchingBlocker()
 
@@ -444,8 +440,6 @@ class DescribeFilesystemPatchingBlocker:
 
     def it_restores_builtins_open_on_reset(self) -> None:
         """Verify builtins.open is restored on reset."""
-        import builtins
-
         original_open = builtins.open
         blocker = FilesystemPatchingBlocker()
 
@@ -513,13 +507,18 @@ class DescribeFilesystemPatchingBlockerWithVirtualFilesystem:
         """Verify activation installs no patches when a virtual filesystem is active."""
         monkeypatch.setattr(filesystem_module, 'pathlib', _StandInFakePathlibModule())
         original_open = builtins.open
+        original_read_text = _StandInFakePath.read_text
         blocker = FilesystemPatchingBlocker()
 
         blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, frozenset())
 
         assert builtins.open is original_open
+        assert _StandInFakePath.read_text is original_read_text
 
         blocker.deactivate()
+
+        assert builtins.open is original_open
+        assert _StandInFakePath.read_text is original_read_text
 
     def it_allows_access_for_small_tests_when_virtual_filesystem_active(
         self,
@@ -566,6 +565,19 @@ class DescribeFilesystemPatchingBlockerWithVirtualFilesystem:
     ) -> None:
         """Verify a non-module `os` global (pathlib/open untouched) is detected."""
         monkeypatch.setattr(filesystem_module, 'os', object())
+        blocker = FilesystemPatchingBlocker()
+        blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, frozenset())
+
+        assert blocker.check_access_allowed(Path('/etc/passwd'), FilesystemOperation.READ) is True
+
+        blocker.deactivate()
+
+    def it_allows_access_when_shutil_has_been_replaced_with_a_non_module(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Verify a non-module `shutil` global (pathlib/os/open untouched) is detected."""
+        monkeypatch.setattr(filesystem_module, 'shutil', object())
         blocker = FilesystemPatchingBlocker()
         blocker.activate(TestSize.SMALL, EnforcementMode.STRICT, frozenset())
 

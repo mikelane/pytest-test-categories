@@ -27,12 +27,16 @@ import pytest
 class DescribeFilesystemEnforcementWithPyfakefs:
     """Integration tests for filesystem enforcement when pyfakefs is active."""
 
-    def it_allows_open_write_for_small_tests_with_pyfakefs(self, pytester: pytest.Pytester) -> None:
-        """Verify open() writes through pyfakefs don't false-positive under strict mode."""
+    @pytest.fixture(autouse=True)
+    def _strict_enforcement_ini(self, pytester: pytest.Pytester) -> None:
+        """Configure every pytester run in this class for strict enforcement."""
         pytester.makeini("""
             [pytest]
             test_categories_enforcement = strict
         """)
+
+    def it_allows_open_write_for_small_tests_with_pyfakefs(self, pytester: pytest.Pytester) -> None:
+        """Verify open() writes through pyfakefs don't false-positive under strict mode."""
         pytester.makepyfile(
             test_example="""
             import pytest
@@ -56,10 +60,6 @@ class DescribeFilesystemEnforcementWithPyfakefs:
 
     def it_allows_path_write_text_for_small_tests_with_pyfakefs(self, pytester: pytest.Pytester) -> None:
         """Verify Path.write_text through pyfakefs doesn't false-positive under strict mode."""
-        pytester.makeini("""
-            [pytest]
-            test_categories_enforcement = strict
-        """)
         pytester.makepyfile(
             test_example="""
             import pathlib
@@ -83,10 +83,6 @@ class DescribeFilesystemEnforcementWithPyfakefs:
 
     def it_allows_path_read_text_for_small_tests_with_pyfakefs(self, pytester: pytest.Pytester) -> None:
         """Verify Path.read_text through pyfakefs doesn't false-positive under strict mode."""
-        pytester.makeini("""
-            [pytest]
-            test_categories_enforcement = strict
-        """)
         pytester.makepyfile(
             test_example="""
             import pathlib
@@ -110,10 +106,6 @@ class DescribeFilesystemEnforcementWithPyfakefs:
 
     def it_allows_path_mkdir_for_small_tests_with_pyfakefs(self, pytester: pytest.Pytester) -> None:
         """Verify Path.mkdir through pyfakefs doesn't false-positive under strict mode."""
-        pytester.makeini("""
-            [pytest]
-            test_categories_enforcement = strict
-        """)
         pytester.makepyfile(
             test_example="""
             import pathlib
@@ -137,10 +129,6 @@ class DescribeFilesystemEnforcementWithPyfakefs:
 
     def it_allows_os_remove_for_small_tests_with_pyfakefs(self, pytester: pytest.Pytester) -> None:
         """Verify os.remove through pyfakefs doesn't false-positive under strict mode."""
-        pytester.makeini("""
-            [pytest]
-            test_categories_enforcement = strict
-        """)
         pytester.makepyfile(
             test_example="""
             import os
@@ -164,10 +152,6 @@ class DescribeFilesystemEnforcementWithPyfakefs:
 
     def it_allows_shutil_copy_for_small_tests_with_pyfakefs(self, pytester: pytest.Pytester) -> None:
         """Verify shutil.copy through pyfakefs doesn't false-positive under strict mode."""
-        pytester.makeini("""
-            [pytest]
-            test_categories_enforcement = strict
-        """)
         pytester.makepyfile(
             test_example="""
             import shutil
@@ -199,10 +183,6 @@ class DescribeFilesystemEnforcementWithPyfakefs:
         pyfakefs involved at all) must still fail with
         FilesystemAccessViolationError.
         """
-        pytester.makeini("""
-            [pytest]
-            test_categories_enforcement = strict
-        """)
         pytester.makepyfile(
             test_example="""
             import pytest
@@ -260,10 +240,6 @@ class DescribeFilesystemEnforcementWithPyfakefs:
         never used any pyfakefs fixture inherits another test's fake
         filesystem purely as a side effect of pyfakefs's own hook ordering.
         """
-        pytester.makeini("""
-            [pytest]
-            test_categories_enforcement = strict
-        """)
         pytester.makepyfile(
             test_example="""
             import pathlib
@@ -334,10 +310,6 @@ class DescribeFilesystemEnforcementWithPyfakefs:
         without qualifying that only the fixture form (not the documented
         context-manager form) is currently safe.
         """
-        pytester.makeini("""
-            [pytest]
-            test_categories_enforcement = strict
-        """)
         pytester.makepyfile(
             test_example="""
             import pathlib
