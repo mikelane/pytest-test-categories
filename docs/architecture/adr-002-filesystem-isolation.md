@@ -624,6 +624,19 @@ it simply steps aside entirely. Concretely:
   happening at all. There is currently no narrower check that distinguishes
   "a real virtualizer is active" from "something replaced one of these four
   names for an unrelated reason."
+- **Known scope limitation**: only a `@pytest.mark.small` test using the
+  function-scoped `fs` fixture is currently verified safe. Module/class/session
+  -scoped pyfakefs fixtures (`fs_module`, `fs_class`, `fs_session`) call
+  `Patcher().setUp()` during pytest's SETUP phase but leave the Patcher resumed
+  across the rest of that scope, which can let a fake filesystem leak into a
+  *sibling* test that never requested pyfakefs at all, with no violation
+  reported for that sibling
+  ([#256](https://github.com/mikelane/pytest-test-categories/issues/256)).
+  Separately, entering `with Patcher():` directly inside a test body (rather
+  than through a fixture) executes during the CALL phase, after this blocker's
+  own patches are installed, and can reproduce the exact false positive #254
+  fixed for the `fs` fixture on a cold import of `pyfakefs.patched_packages`
+  ([#257](https://github.com/mikelane/pytest-test-categories/issues/257)).
 
 This trade-off was accepted because the alternative — patching a virtualizer's own
 fake classes — produces the false positives this fix exists to close (#254), and
@@ -640,7 +653,7 @@ with the "no hard dependency on pyfakefs" position in
 | Path resolution edge cases | Comprehensive unit tests for path resolution logic |
 | pytest fixture compatibility | Test with tmp_path, tmp_path_factory explicitly |
 | Performance regression | Benchmark before/after, optimize hot paths |
-| Conflicts with pyfakefs | Resolved (v1.2.x, #254): the blocker detects an active virtualizer (pyfakefs or anything else that globally rebinds `pathlib`/`open`/`os`/`shutil`) and stands its own enforcement down entirely for that test, rather than patching the virtualizer's fake classes. See [Virtualizer Detection and Stand-Down](#virtualizer-detection-and-stand-down) for what this does and does not still catch. |
+| Conflicts with pyfakefs | Partially resolved (v1.2.x, #254): the blocker detects an active virtualizer (pyfakefs or anything else that globally rebinds `pathlib`/`open`/`os`/`shutil`) and stands its own enforcement down entirely for that test, rather than patching the virtualizer's fake classes, for the function-scoped `fs` fixture. Module/class/session-scoped fixtures and the `with Patcher():` form remain open — see [Virtualizer Detection and Stand-Down](#virtualizer-detection-and-stand-down) and #256, #257. |
 
 ## Alternatives Considered
 

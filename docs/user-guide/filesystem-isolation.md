@@ -245,6 +245,15 @@ This also means a test that escapes back to the real filesystem while pyfakefs i
 still installed (for example, by calling `fs.pause()`) is **not** detected as a
 violation — enforcement only resumes once pyfakefs itself is no longer active.
 
+**Only the function-scoped `fs` fixture above is currently verified safe.**
+Module/class/session-scoped fixtures (`fs_module`, `fs_class`, `fs_session`) can
+leave a fake filesystem resumed for a sibling test that never requested pyfakefs
+at all ([#256](https://github.com/mikelane/pytest-test-categories/issues/256)),
+and using `Patcher()` directly inside a test body instead of the `fs` fixture can
+reproduce this same page's TC002 false positive on a cold import
+([#257](https://github.com/mikelane/pytest-test-categories/issues/257)). Prefer
+`fs` until both are resolved.
+
 ### 2. Use io.StringIO or io.BytesIO
 
 For tests that need file-like objects but not actual files:

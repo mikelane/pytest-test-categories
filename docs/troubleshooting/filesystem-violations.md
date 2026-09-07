@@ -554,13 +554,27 @@ Document the technical debt and create a tracking issue.
 
 ### pyfakefs Suspends Enforcement
 
-If a test uses the `fs` fixture (or a `Patcher` instance), filesystem enforcement is
-suspended for the duration pyfakefs is active - every operation is already
-purely in-memory, so there's nothing to block. If you still see a violation on a
-test that uses `fs`, check whether the operation happened *before* the `fs`
-fixture was set up, or after a `fs.pause()` call: real filesystem access made
-while paused is not detected as a violation, because enforcement only resumes
-once pyfakefs itself is deactivated.
+If a test uses the `fs` fixture, filesystem enforcement is suspended for the
+duration pyfakefs is active - every operation is already purely in-memory, so
+there's nothing to block. If you still see a violation on a test that uses `fs`,
+check whether the operation happened *before* the `fs` fixture was set up, or
+after a `fs.pause()` call: real filesystem access made while paused is not
+detected as a violation, because enforcement only resumes once pyfakefs itself
+is deactivated.
+
+**If you're using `fs_module`, `fs_class`, or `fs_session` and still see
+unexpected behavior:** these broader-scoped fixtures can leave a fake filesystem
+resumed for a *sibling* test that never requested pyfakefs at all, with no
+violation reported for that sibling
+([#256](https://github.com/mikelane/pytest-test-categories/issues/256)). Only the
+function-scoped `fs` fixture is currently verified safe.
+
+**If you're using `Patcher()` directly instead of the `fs` fixture:** entering
+`with Patcher():` inside a test body (rather than letting the `fs` fixture call
+`Patcher().setUp()` for you) can reproduce the exact false positive documented
+above, on a cold import
+([#257](https://github.com/mikelane/pytest-test-categories/issues/257)). Prefer
+the `fs` fixture until this is resolved.
 
 ## Getting Help
 
