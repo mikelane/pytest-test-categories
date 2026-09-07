@@ -110,8 +110,8 @@ def test_write_report(fs):  # pyfakefs fixture
 **Enforcement is suspended while pyfakefs is active.** Every filesystem operation a
 test performs while `fs` is installed is already purely in-memory, so there is
 nothing for this plugin to block — attempting to intercept pyfakefs's own fake
-classes would only produce false `FilesystemAccessViolationError`s on operations
-that never touch the real filesystem.
+classes would only produce false `FilesystemAccessViolationError` reports on
+operations that never touch the real filesystem.
 
 **Only the function-scoped `fs` fixture is currently verified safe.** Two related
 gaps are open, tracked separately:
@@ -130,8 +130,9 @@ over a bare `with Patcher():` in the test body.
 
 **Caveat:** if a test calls `fs.pause()` to temporarily restore real filesystem
 access while pyfakefs is still installed, that real access is *not* detected as a
-violation. Enforcement only resumes once pyfakefs itself is deactivated (i.e., the
-`fs` fixture's teardown, or after `fs.resume()` is followed by test completion).
+violation. Enforcement only resumes once pyfakefs itself is torn down (normally
+at the `fs` fixture's teardown) — calling `fs.resume()` restores the fake
+filesystem but does not restore this plugin's enforcement.
 
 ### Time Mocking Libraries
 
@@ -195,8 +196,7 @@ None beyond the scoped pyfakefs gaps documented above (module/class/session-scop
 
 The plugin is tested against the following pytest versions:
 
-- pytest 7.x
-- pytest 8.x
+- pytest >=9.1.1
 
 And Python versions:
 

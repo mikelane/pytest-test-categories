@@ -165,11 +165,11 @@ Details:
   Attempted write on: /home/user/project/output/report.txt
 
 Small tests have restricted resource access. Options:
-  1. Use pyfakefs for comprehensive filesystem mocking (pip install pyfakefs)
-  2. Use io.StringIO or io.BytesIO for in-memory file-like objects
-  3. Mock file operations using pytest-mock (mocker.patch("builtins.open", ...))
-  4. Embed test data as Python constants or use importlib.resources
-  5. Change test category to @pytest.mark.medium (if filesystem access is required)
+  - Use pyfakefs for comprehensive filesystem mocking (pip install pyfakefs)
+  - Use io.StringIO or io.BytesIO for in-memory file-like objects
+  - Mock file operations using pytest-mock (mocker.patch("builtins.open", ...))
+  - Embed test data as Python constants or use importlib.resources
+  - Change test category to @pytest.mark.medium (if filesystem access is required)
 
 Documentation: See docs/architecture/adr-002-filesystem-isolation.md
 ============================================================
@@ -279,6 +279,11 @@ def test_config_loader(mocker):
     config = load_config("/etc/myapp/config.ini")
     assert config["key"] == "value"
 ```
+
+Note: replacing `builtins.open` this way is itself one of the global rebinds this
+plugin's virtualizer detection looks for, so its own filesystem enforcement stands
+down for the duration of the patch — the mock is doing all the isolation here, not
+this plugin.
 
 ### 4. Embed Test Data
 
