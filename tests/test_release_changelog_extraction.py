@@ -75,7 +75,7 @@ def _extract_changelog_extraction_script() -> str:
 
 
 @pytest.mark.medium
-def it_does_not_leak_content_preceding_the_real_version_heading() -> None:
+def it_does_not_leak_content_preceding_the_real_version_heading(bash_exe: str) -> None:
     """A changelog heading that only coincidentally matches via wildcard dots must not be extracted."""
     extraction_script = _extract_changelog_extraction_script()
 
@@ -86,7 +86,7 @@ def it_does_not_leak_content_preceding_the_real_version_heading() -> None:
         # Run exactly as the workflow does: bash expands $VERSION into the
         # awk program text before awk ever sees it.
         extraction_result = subprocess.run(  # noqa: S603
-            ['bash', '-c', f'VERSION=1.2.2\n{extraction_script}'],  # noqa: S607
+            [bash_exe, '-c', f'VERSION=1.2.2\n{extraction_script}'],
             capture_output=True,
             text=True,
             cwd=tmp,

@@ -64,7 +64,7 @@ def _extract_plugin_registration_check() -> str:
 
 
 @pytest.mark.medium
-def it_reports_the_plugin_as_registered_when_it_actually_is() -> None:
+def it_reports_the_plugin_as_registered_when_it_actually_is(bash_exe: str) -> None:
     """The check must report success, not the unverified warning, when the plugin is really installed."""
     registration_check = _extract_plugin_registration_check()
     venv_bin = Path(sys.executable).parent
@@ -76,7 +76,7 @@ def it_reports_the_plugin_as_registered_when_it_actually_is() -> None:
         # Run exactly as the release.yml step does: GitHub Actions' `shell:
         # bash` runs steps as `bash --noprofile --norc -eo pipefail {0}`.
         check_result = subprocess.run(  # noqa: S603
-            ['bash', '--noprofile', '--norc', '-eo', 'pipefail', '-c', registration_check],  # noqa: S607
+            [bash_exe, '--noprofile', '--norc', '-eo', 'pipefail', '-c', registration_check],
             capture_output=True,
             text=True,
             cwd=tmp,
@@ -89,7 +89,7 @@ def it_reports_the_plugin_as_registered_when_it_actually_is() -> None:
 
 
 @pytest.mark.medium
-def it_emits_the_warning_when_the_plugin_is_genuinely_not_registered(tmp_path: Path) -> None:
+def it_emits_the_warning_when_the_plugin_is_genuinely_not_registered(bash_exe: str, tmp_path: Path) -> None:
     """The check must still warn when the plugin trace genuinely lacks the plugin.
 
     This guards against a fix for the exit-code-decoupling bug accidentally
@@ -110,7 +110,7 @@ def it_emits_the_warning_when_the_plugin_is_genuinely_not_registered(tmp_path: P
         env['PATH'] = os.pathsep.join([str(tmp_path), env.get('PATH', '')])
 
         check_result = subprocess.run(  # noqa: S603
-            ['bash', '--noprofile', '--norc', '-eo', 'pipefail', '-c', registration_check],  # noqa: S607
+            [bash_exe, '--noprofile', '--norc', '-eo', 'pipefail', '-c', registration_check],
             capture_output=True,
             text=True,
             cwd=tmp,
