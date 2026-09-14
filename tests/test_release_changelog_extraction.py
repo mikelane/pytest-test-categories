@@ -48,7 +48,14 @@ SPOOFED_CHANGELOG = """## [Unreleased]
 """
 
 
-def _extract_awk_command_line() -> str:
+def _extract_changelog_extraction_script() -> str:
+    """Extract the changelog-extraction shell script from release.yml.
+
+    Returns a script that is one line (just the awk command) when no
+    VERSION_RE setup precedes it in the workflow, or two lines (the
+    VERSION_RE assignment followed by the awk command) when it does.
+    Callers must not assume a single line.
+    """
     workflow_text = WORKFLOW_PATH.read_text()
 
     # Try to extract both VERSION_RE (if present) and the awk command
@@ -70,7 +77,7 @@ def _extract_awk_command_line() -> str:
 @pytest.mark.medium
 def it_does_not_leak_content_preceding_the_real_version_heading() -> None:
     """A changelog heading that only coincidentally matches via wildcard dots must not be extracted."""
-    awk_command_line = _extract_awk_command_line()
+    extraction_script = _extract_changelog_extraction_script()
 
     with tempfile.TemporaryDirectory() as tmp:
         changelog_path = Path(tmp) / 'CHANGELOG.md'
@@ -78,13 +85,13 @@ def it_does_not_leak_content_preceding_the_real_version_heading() -> None:
 
         # Run exactly as the workflow does: bash expands $VERSION into the
         # awk program text before awk ever sees it.
-        result = subprocess.run(  # noqa: S603
-            ['bash', '-c', f'VERSION=1.2.2\n{awk_command_line}'],  # noqa: S607
+        extraction_result = subprocess.run(  # noqa: S603
+            ['bash', '-c', f'VERSION=1.2.2\n{extraction_script}'],  # noqa: S607
             capture_output=True,
             text=True,
             cwd=tmp,
             check=True,
         )
 
-    assert 'SPOOFED CONTENT' not in result.stdout
-    assert 'Real content for this release' in result.stdout
+    assert 'SPOOFED CONTENT' not in extraction_result.stdout
+    assert 'Real content for this release' in extraction_result.stdout

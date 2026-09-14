@@ -54,7 +54,7 @@ def it_reports_the_version_of_the_code_actually_executing() -> None:
         env['PYTHONPATH'] = os.pathsep.join([str(stale_site_packages), str(SRC)])
         env.pop('VIRTUAL_ENV', None)
 
-        result = subprocess.run(  # noqa: S603
+        version_probe_result = subprocess.run(  # noqa: S603
             [sys.executable, '-c', 'import pytest_test_categories as p; print(p.__version__)'],
             env=env,
             capture_output=True,
@@ -68,4 +68,4 @@ def it_reports_the_version_of_the_code_actually_executing() -> None:
         pyproject_data = tomllib.load(pyproject_file)
     expected_version = pyproject_data['project']['version']
 
-    assert result.stdout.strip() == expected_version
+    assert version_probe_result.stdout.strip() == expected_version
