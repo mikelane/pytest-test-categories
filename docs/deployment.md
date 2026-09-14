@@ -107,7 +107,7 @@ The project uses GitHub Actions for continuous integration and continuous deploy
 
 1. **Dependency Security Scan**
    - Exports dependencies via uv
-   - Runs Safety check on production and dev dependencies
+   - Runs `pip-audit` on production and dev dependencies
    - Generates security report artifact
 
 2. **CodeQL Analysis**
@@ -121,15 +121,10 @@ The project uses GitHub Actions for continuous integration and continuous deploy
    - Blocks GPL-3.0, AGPL-3.0 licenses
    - Posts summary comment in PR
 
-4. **Secret Scanning**
-   - TruffleHog OSS for secret detection
-   - Scans commit history
-   - Only verified secrets fail the check
-
-5. **OpenSSF Scorecard** (scheduled/manual only)
+4. **OpenSSF Scorecard** (scheduled/manual only)
    - Security best practices scorecard
    - Uploads results to Security tab
-   - Runs weekly to track improvements
+   - Runs on the daily scheduled scan and manual dispatch
 
 ### Dependency Automation
 
@@ -248,19 +243,19 @@ Configure in **Settings → Code security and analysis**:
 
 **Security Scanning**:
 - Daily security scans at 2 AM UTC
-- Safety checks all dependencies for CVEs
+- `pip-audit` checks all dependencies for CVEs
 - CodeQL analyzes code for security issues
 - Dependency Review blocks vulnerable dependencies in PRs
 
 **Manual Security Audit**:
 
 ```bash
-# Export dependencies with uv
-uv export --format requirements-txt > requirements.txt
+# Export dependencies with uv (must match the committed lock file)
+uv lock --check
+uv export --no-hashes --no-dev --locked > requirements.txt
 
-# Run Safety
-pip install safety
-safety check --file requirements.txt --json
+# Run pip-audit (it is not a project dependency, so use --with)
+uv run --with pip-audit==2.10.1 pip-audit --requirement=requirements.txt --format=json
 
 # Check for outdated packages
 uv run pip list --outdated
@@ -283,16 +278,15 @@ uv run pip list --outdated
 Generate SBOM for supply chain security:
 
 ```bash
-# Export dependencies with uv
-uv export --format requirements-txt > requirements.txt
+# Export dependencies with uv (must match the committed lock file)
+uv lock --check
+uv export --format requirements-txt --locked > requirements.txt
 
-# Generate SBOM
-pip install cyclonedx-bom
-cyclonedx-py --requirements requirements.txt --output sbom.json
+# Generate SBOM (cyclonedx-bom is not a project dependency, so use --with)
+uv run --with cyclonedx-bom cyclonedx-py --requirements requirements.txt --output sbom.json
 
-# Or use pip-audit
-pip install pip-audit
-pip-audit --format cyclonedx-json
+# Or use pip-audit via uv
+uv run --with pip-audit==2.10.1 pip-audit --requirement=requirements.txt --format cyclonedx-json
 ```
 
 ## Troubleshooting
@@ -364,9 +358,9 @@ git tag -a "v$VERSION" -m "Release v$VERSION"
 
 ### Security Scan Failures
 
-**Safety Check Finds Vulnerability**:
+**pip-audit Finds Vulnerability**:
 
-1. Review the CVE details in the safety report
+1. Review the CVE details in the `security-report` artifact
 2. Check if update is available: `uv lock --upgrade-package {package}`
 3. If no fix available, assess risk and consider alternatives
 4. Document decision in security advisory if accepting risk

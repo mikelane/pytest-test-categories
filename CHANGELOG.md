@@ -7,11 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Migrate Dependency Security Scan workflow from deprecated `safety check` to
+  `pip-audit==2.10.1` for auth-free production and development vulnerability scanning,
+  rename artifact to `security-report`, and keep production scan as a hard gate while
+  development scan reports without blocking (#251)
+
 ### Fixed
 
 - Fix false `FilesystemAccessViolationError` (`[TC002]`) for small tests using pyfakefs's `fs` fixture under `--test-categories-enforcement=strict`. pyfakefs rebinds `pathlib`, `os`, `shutil`, and `builtins.open` in every already-imported module, including this plugin's own filesystem adapter, so the blocker was patching pyfakefs's fake classes instead of the real filesystem and misreporting purely in-memory operations as violations. The blocker now detects an active virtual filesystem and stands its own enforcement down for the duration of that test. Verified safe for the function-scoped `fs` fixture; module/class/session-scoped fixtures and the manual `Patcher()` context manager remain open gaps (#256, #257) (#254)
 - Raise `pytest` minimum version to `>=9.1.1` in `pyproject.toml` and update `uv.lock` for `pytest`, `pygments`, `virtualenv`, and `filelock` to resolve reported vulnerabilities (#248)
-- Fix Dependency Security Scan workflow: scope production export with `--no-dev`, use `--save-json` for artifact generation, remove `|| true` masking, allow dev scan to report without blocking, and keep `safety check` (auth-free open-source DB) until a migration to an alternative scanner is completed (#248)
+- Fix Dependency Security Scan workflow: scope production export with `--no-dev`, remove `|| true` masking, and allow dev scan to report without blocking (#248)
 - Fix CI workflow: disable Codecov CLI integrity verification (`skip_validation: true`) because Codecov's published GPG key URL is no longer available, preventing coverage upload failures (#249)
 
 ## v1.2.1 (2026-03-03)
