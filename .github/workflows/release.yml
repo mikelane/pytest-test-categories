@@ -151,7 +151,12 @@ jobs:
         shell: bash
         run: |
           python -c "import pytest_test_categories; print(f'Successfully imported pytest_test_categories version {pytest_test_categories.__version__}')"
-          pytest --co -q --collect-only 2>&1 | grep -i "test_categories" || echo "Plugin loaded successfully"
+          plugin_trace=$(pytest --trace-config 2>&1 || true)
+          if echo "$plugin_trace" | grep -qi "test_categories"; then
+            echo "Plugin registered with pytest"
+          else
+            echo "::warning::pytest_test_categories not found in pytest's plugin list (--trace-config); registration unverified"
+          fi
 
   github-release:
     name: Create GitHub Release
@@ -176,8 +181,11 @@ jobs:
         id: extract_notes
         run: |
           VERSION=${{ needs.validate.outputs.version }}
-          # Extract the section for this version from CHANGELOG.md
-          awk "/## \[$VERSION\]/,/## \[/" CHANGELOG.md | sed '1d;$d' > release_notes.md
+          VERSION_RE=$(printf '%s' "$VERSION" | sed 's/[.[\*^$]/\\&/g')
+          # Extract the section for this version from CHANGELOG.md.
+          # Headings look like "## v1.2.2 (2026-09-07)" (no brackets), so match
+          # the version heading and stop at the next "## v" heading or EOF.
+          awk "/^## v$VERSION_RE /{flag=1; next} /^## v/{flag=0} flag" CHANGELOG.md > release_notes.md
           if [ ! -s release_notes.md ]; then
             echo "No release notes found for version $VERSION, using default message"
             echo "Release version $VERSION" > release_notes.md
