@@ -151,7 +151,8 @@ jobs:
         shell: bash
         run: |
           python -c "import pytest_test_categories; print(f'Successfully imported pytest_test_categories version {pytest_test_categories.__version__}')"
-          if pytest --trace-config 2>&1 | grep -qi "test_categories"; then
+          plugin_trace=$(pytest --trace-config 2>&1 || true)
+          if echo "$plugin_trace" | grep -qi "test_categories"; then
             echo "Plugin registered with pytest"
           else
             echo "::warning::pytest_test_categories not found in pytest's plugin list (--trace-config); registration unverified"
