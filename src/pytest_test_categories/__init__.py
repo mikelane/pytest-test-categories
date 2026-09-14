@@ -5,6 +5,8 @@ The test limits are taken from the book Software Engineering at Google.
 
 from __future__ import annotations
 
+from importlib.metadata import version
+
 from .distribution.stats import (
     DistributionStats,
     TestPercentages,
@@ -37,7 +39,7 @@ from .types import (
     TimingViolationError,
 )
 
-__version__ = '1.0.0'
+__version__ = version('pytest-test-categories')
 
 __all__ = [
     'DistributionStats',

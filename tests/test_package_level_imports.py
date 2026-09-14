@@ -8,8 +8,22 @@ from __future__ import annotations
 
 import importlib
 import sys
+import tomllib
+from pathlib import Path
 
 import pytest
+
+import pytest_test_categories
+
+
+@pytest.mark.medium
+def it_returns_version_matching_pyproject_toml() -> None:
+    """__version__ must track the version declared in pyproject.toml."""
+    pyproject_path = Path(__file__).parent.parent / 'pyproject.toml'
+    with pyproject_path.open('rb') as pyproject_file:
+        pyproject_data = tomllib.load(pyproject_file)
+
+    assert pytest_test_categories.__version__ == pyproject_data['project']['version']
 
 
 @pytest.mark.medium

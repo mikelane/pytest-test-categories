@@ -7,10 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## v1.2.2 (2026-09-07)
+## v1.2.2 (2026-09-13)
 
 ### Fixed
 
+- Fix `pytest_test_categories.__version__` reporting a stale hardcoded `1.0.0` instead of the installed package version. `__version__` is now derived from package metadata (`importlib.metadata.version('pytest-test-categories')`) so it always matches the version published to PyPI
 - Fix false `FilesystemAccessViolationError` (`[TC002]`) for small tests using pyfakefs's `fs` fixture under `--test-categories-enforcement=strict`. pyfakefs rebinds `pathlib`, `os`, `shutil`, and `builtins.open` in every already-imported module, including this plugin's own filesystem adapter, so the blocker was patching pyfakefs's fake classes instead of the real filesystem and misreporting purely in-memory operations as violations. The blocker now detects an active virtual filesystem and stands its own enforcement down for the duration of that test. Verified safe for the function-scoped `fs` fixture; module/class/session-scoped fixtures and the manual `Patcher()` context manager remain open gaps (#256, #257) (#254)
 - Raise `pytest` minimum version to `>=9.1.1` in `pyproject.toml` and update `uv.lock` for `pytest`, `pygments`, `virtualenv`, and `filelock` to resolve reported vulnerabilities (#248)
 - Fix Dependency Security Scan workflow: scope production export with `--no-dev`, use `--save-json` for artifact generation, remove `|| true` masking, allow dev scan to report without blocking, and keep `safety check` (auth-free open-source DB) until a migration to an alternative scanner is completed (#248)
