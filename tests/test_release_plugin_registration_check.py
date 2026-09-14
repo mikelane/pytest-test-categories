@@ -86,3 +86,37 @@ def it_reports_the_plugin_as_registered_when_it_actually_is() -> None:
 
     assert 'Plugin registered with pytest' in check_result.stdout
     assert '::warning::' not in check_result.stdout
+
+
+@pytest.mark.medium
+def it_emits_the_warning_when_the_plugin_is_genuinely_not_registered(tmp_path: Path) -> None:
+    """The check must still warn when the plugin trace genuinely lacks the plugin.
+
+    This guards against a fix for the exit-code-decoupling bug accidentally
+    making the check pass unconditionally -- e.g. by matching on something
+    that is always present, or by no longer treating a non-matching trace as
+    a registration failure.
+    """
+    registration_check = _extract_plugin_registration_check()
+
+    fake_pytest = tmp_path / 'pytest'
+    fake_pytest.write_text(
+        '#!/usr/bin/env bash\necho "plugins: cacheprovider, some-other-plugin"\nexit 5\n',
+    )
+    fake_pytest.chmod(0o755)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        env = dict(os.environ)
+        env['PATH'] = os.pathsep.join([str(tmp_path), env.get('PATH', '')])
+
+        check_result = subprocess.run(  # noqa: S603
+            ['bash', '--noprofile', '--norc', '-eo', 'pipefail', '-c', registration_check],  # noqa: S607
+            capture_output=True,
+            text=True,
+            cwd=tmp,
+            env=env,
+            check=False,
+        )
+
+    assert '::warning::' in check_result.stdout
+    assert 'Plugin registered with pytest' not in check_result.stdout
